@@ -404,6 +404,11 @@ template <DIM D, typename T, typename DeviceType>
 SIZE *Array<D, T, DeviceType>::get_ldvs_d() {
   return ldvs_d;
 }
+
+template <DIM D, typename T, typename DeviceType> 
+bool Array<D, T, DeviceType>::is_pitched() {
+  return pitched;
+}
 }
 
 #endif
