@@ -45,7 +45,6 @@ void CalcCorrection(Hierarchy<D, T, DeviceType> &hierarchy,
     if (singledim_refactoring_debug_print) {
       PrintSubarray("Ipk1Reo", correction);
     }
-
   } else if (curr_dim == D - 2) {
     curr_dim_r = D - 3, curr_dim_c = D - 2, curr_dim_f = D - 1;
     correction.project(curr_dim_r, curr_dim_c, curr_dim_f);
