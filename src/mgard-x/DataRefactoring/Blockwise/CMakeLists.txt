@@ -1,6 +1,4 @@
-add_subdirectory (Blockwise)
-add_subdirectory (MultiDimension)
-add_subdirectory (SingleDimension)
+MgardXGenerateSourceAllCombinations("Decompose")
 set(MGARD_X_SERIAL_SRC ${MGARD_X_SERIAL_SRC} PARENT_SCOPE)
 set(MGARD_X_CUDA_SRC ${MGARD_X_CUDA_SRC} PARENT_SCOPE)
 set(MGARD_X_HIP_SRC ${MGARD_X_HIP_SRC} PARENT_SCOPE)

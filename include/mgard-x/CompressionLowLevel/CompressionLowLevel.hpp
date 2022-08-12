@@ -19,6 +19,7 @@
 
 #include "../DataRefactoring/MultiDimension/DataRefactoring.h"
 #include "../DataRefactoring/SingleDimension/DataRefactoring.h"
+#include "../DataRefactoring/Blockwise/DataRefactoring.h"
 
 #include "../Quantization/LinearQuantization.hpp"
 
@@ -129,6 +130,37 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
     }
   }
 
+
+  { // experiment
+    // PrintSubarray("in_subarray", in_subarray);
+    blockwise::decompose<D, T, 5, 5, 5, DeviceType>(in_subarray, 0);
+    blockwise::decompose<D, T, 5, 5, 5, DeviceType>(in_subarray, 0);
+
+    DeviceRuntime<DeviceType>::SyncQueue(0);
+    timer_each.start();
+    blockwise::decompose<D, T, 3, 3, 3, DeviceType>(in_subarray, 0);
+    DeviceRuntime<DeviceType>::SyncQueue(0);
+    timer_each.end();
+    timer_each.print("blockwise::Decomposition[3]");
+    timer_each.clear();
+
+    DeviceRuntime<DeviceType>::SyncQueue(0);
+    timer_each.start();
+    blockwise::decompose<D, T, 5, 5, 5, DeviceType>(in_subarray, 0);
+    DeviceRuntime<DeviceType>::SyncQueue(0);
+    timer_each.end();
+    timer_each.print("blockwise::Decomposition[5]");
+    timer_each.clear();
+
+    DeviceRuntime<DeviceType>::SyncQueue(0);
+    timer_each.start();
+    blockwise::decompose<D, T, 9, 9, 9, DeviceType>(in_subarray, 0);
+    DeviceRuntime<DeviceType>::SyncQueue(0);
+    timer_each.end();
+    timer_each.print("blockwise::Decomposition[9]");
+    timer_each.clear();
+    // PrintSubarray("after blockwise::Decomposition", in_subarray);
+  }
   // Decomposition
   if (config.timing)
     timer_each.start();
@@ -137,6 +169,8 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
   } else if (config.decomposition == decomposition_type::SingleDim) {
     decompose_single<D, T, DeviceType>(hierarchy, in_subarray, 0, 0);
   }
+
+  DumpSubArray("decomposed_data.dat", in_subarray);
 
   if (config.timing) {
     DeviceRuntime<DeviceType>::SyncQueue(0);
@@ -203,9 +237,11 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
 
   MemoryManager<DeviceType>::Copy1D(&outlier_count, outlier_count_array.data(),
                                     1, 0);
+  DeviceRuntime<DeviceType>::SyncQueue(0);
+  DumpSubArray("quantized_data.dat", quantized_subarray);
 
   if (config.timing) {
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    
     timer_each.end();
     timer_each.print("Quantization");
     timer_each.clear();
@@ -239,6 +275,8 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
           hierarchy.l_target(), quantized_subarray,
           SubArray<1, QUANTIZED_INT, DeviceType>(quantized_linearized_array),
           0);
+      DeviceRuntime<DeviceType>::SyncQueue(0);
+      DumpSubArray("quantized_linearized_data.dat", SubArray(quantized_linearized_array));
     } else {
       std::cout << log::log_err << "wrong reodering type.\n";
     }

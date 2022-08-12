@@ -1,0 +1,22 @@
+/*
+ * Copyright 2022, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ * Date: March 17, 2022
+ */
+
+#include "mgard-x/DataRefactoring/Blockwise/DataRefactoring.hpp"
+// clang-format off
+namespace mgard_x {
+namespace blockwise {
+
+template void decompose<@NUM_DIM@, @DATA_TYPE@, 3, 3, 3, @DEVICE_TYPE@>(
+        SubArray<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@> v, int queue_idx);
+
+template void decompose<@NUM_DIM@, @DATA_TYPE@, 5, 5, 5, @DEVICE_TYPE@>(
+        SubArray<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@> v, int queue_idx);
+
+template void decompose<@NUM_DIM@, @DATA_TYPE@, 9, 9, 9, @DEVICE_TYPE@>(
+        SubArray<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@> v, int queue_idx);
+}
+} // namespace mgard_x// clang-format on
