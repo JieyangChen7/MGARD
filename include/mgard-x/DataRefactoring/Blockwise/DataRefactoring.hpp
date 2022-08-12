@@ -10,6 +10,7 @@
 
 #include "../../RuntimeX/RuntimeX.h"
 #include "../MultiDimension/Coefficient/GPKFunctor.h"
+#include "../MultiDimension/Correction/LPKFunctor.h"
 
 namespace mgard_x {
 
@@ -30,9 +31,9 @@ public:
     w_sm = sm + F * C * R;
     ld1 = F;
     ld2 = C;
-    r = R;
-    c = C;
-    f = F;
+    nr = R;
+    nc = C;
+    nf = F;
 
     r_gl = FunctorBase<DeviceType>::GetBlockIdZ() *
            FunctorBase<DeviceType>::GetBlockDimZ() +
@@ -75,17 +76,17 @@ public:
     } else if (r_sm % 2 == 0 && c_sm % 2 == 0 && f_sm % 2 != 0) {
       T left = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm-1)];
       T right = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+1)];
-      v_sm[get_idx(ld1, ld2, r_sm/2, c_sm/2, f_sm/2+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2, c_sm/2, f_sm/2+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(left, right, (T)0.5);
     } else if (r_sm % 2 == 0 && c_sm % 2 != 0 && f_sm % 2 == 0) {
       T back = w_sm[get_idx(ld1, ld2, r_sm, c_sm-1, f_sm)];
       T front = w_sm[get_idx(ld1, ld2, r_sm, c_sm+1, f_sm)];
-      v_sm[get_idx(ld1, ld2, r_sm/2, c_sm/2+cc, f_sm/2)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2, c_sm/2+ncc, f_sm/2)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(back, front, (T)0.5);
     } else if (r_sm % 2 != 0 && c_sm % 2 == 0 && f_sm % 2 == 0) {
       T top = w_sm[get_idx(ld1, ld2, r_sm-1, c_sm, f_sm)];
       T bottom = w_sm[get_idx(ld1, ld2, r_sm+1, c_sm, f_sm)];
-      v_sm[get_idx(ld1, ld2, r_sm/2+rr, c_sm/2, f_sm/2)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2+nrr, c_sm/2, f_sm/2)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(top, bottom, (T)0.5);
     } else if (r_sm % 2 == 0 && c_sm % 2 != 0 && f_sm % 2 != 0) {
       T back_left = w_sm[get_idx(ld1, ld2, r_sm, c_sm-1, f_sm-1)];
@@ -94,7 +95,7 @@ public:
       T front_right = w_sm[get_idx(ld1, ld2, r_sm, c_sm+1, f_sm+1)];
       T back = lerp(back_left, back_right, (T)0.5);
       T front = lerp(front_left, front_right, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm/2, c_sm/2+cc, f_sm/2+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2, c_sm/2+ncc, f_sm/2+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(back, front, (T)0.5);
     } else if (r_sm % 2 != 0 && c_sm % 2== 0 && f_sm % 2 != 0) {
       T bottom_left = w_sm[get_idx(ld1, ld2, r_sm-1, c_sm, f_sm-1)];
@@ -103,7 +104,7 @@ public:
       T top_right = w_sm[get_idx(ld1, ld2, r_sm+1, c_sm, f_sm+1)];
       T bottom = lerp(bottom_left, bottom_right, (T)0.5);
       T top = lerp(top_left, top_right, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm/2+rr, c_sm/2, f_sm/2+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2+nrr, c_sm/2, f_sm/2+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(bottom, top, (T)0.5);
     } else if (r_sm % 2 != 0 && c_sm % 2!= 0 && f_sm % 2 == 0) {
       T bottom_back = w_sm[get_idx(ld1, ld2, r_sm-1, c_sm-1, f_sm)];
@@ -112,7 +113,7 @@ public:
       T top_front = w_sm[get_idx(ld1, ld2, r_sm+1, c_sm+1, f_sm)];
       T bottom = lerp(bottom_back, bottom_front, (T)0.5);
       T top = lerp(top_back, top_front, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm/2+rr, c_sm/2+cc, f_sm/2)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2+nrr, c_sm/2+ncc, f_sm/2)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(bottom, top, (T)0.5);
     } else if (r_sm % 2 != 0 && c_sm % 2!= 0 && f_sm % 2 == 0) {
       T bottom_back_left = w_sm[get_idx(ld1, ld2, r_sm-1, c_sm-1, f_sm-1)];
@@ -131,7 +132,7 @@ public:
 
       T bottom = lerp(bottom_back, bottom_front, (T)0.5);
       T top = lerp(top_back, top_front, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm/2+rr, c_sm/2+cc, f_sm/2+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm/2+nrr, c_sm/2+ncc, f_sm/2+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] -  lerp(bottom, top, (T)0.5);
     }
   }
@@ -139,96 +140,96 @@ public:
   MGARDX_EXEC void CalculateCoefficientCompactReassignment() {
     int base = 0;
     threadId -= base;
-    if (0 <= threadId && threadId < rr * cc * ff) {
-      r_sm = (threadId / ff) / cc;
-      c_sm = (threadId / ff) % cc;
-      f_sm = threadId % ff;
+    if (0 <= threadId && threadId < nrr * ncc * nff) {
+      r_sm = (threadId / nff) / ncc;
+      c_sm = (threadId / nff) % ncc;
+      f_sm = threadId % nff;
       v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
     }
-    threadId -= rr * cc * ff;
+    threadId -= nrr * ncc * nff;
     // f - 18
-    if (0 <= threadId && threadId < rr * cc * (ff-1)) {
-      r_sm = (threadId / (ff-1)) / cc;
-      c_sm = (threadId / (ff-1)) % cc;
-      f_sm = threadId % (ff-1);
+    if (0 <= threadId && threadId < nrr * ncc * (nff-1)) {
+      r_sm = (threadId / (nff-1)) / ncc;
+      c_sm = (threadId / (nff-1)) % ncc;
+      f_sm = threadId % (nff-1);
       T left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
-      v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+1)] - lerp(left, right, (T)0.5);
     }
-    threadId -= rr * cc * (ff-1);
+    threadId -= nrr * ncc * (nff-1);
     // c - 18
-    if (0 <= threadId && threadId < rr * (cc-1) * ff) {
-      r_sm = (threadId / ff) / (cc-1);
-      c_sm = (threadId / ff) % (cc-1);
-      f_sm = threadId % ff;
+    if (0 <= threadId && threadId < nrr * (ncc-1) * nff) {
+      r_sm = (threadId / nff) / (ncc-1);
+      c_sm = (threadId / nff) % (ncc-1);
+      f_sm = threadId % nff;
       T back = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T front = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
-      v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm)] = 
+      v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2)] - lerp(back, front, (T)0.5);
     }
-    threadId -= rr * (cc-1) * ff;
+    threadId -= nrr * (ncc-1) * nff;
     // r - 18
-    if (0 <= threadId && threadId < (rr-1) * cc * ff) {
-      r_sm = (threadId / ff) / cc;
-      c_sm = (threadId / ff) % cc;
-      f_sm = threadId % ff;
+    if (0 <= threadId && threadId < (nrr-1) * ncc * nff) {
+      r_sm = (threadId / nff) / ncc;
+      c_sm = (threadId / nff) % ncc;
+      f_sm = threadId % nff;
       T bottom = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T top = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
-      v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm, f_sm)] = 
+      v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm, f_sm)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2, f_sm*2)] - lerp(bottom, top, (T)0.5);
     }
-    threadId -= (rr-1) * cc * ff;
+    threadId -= (nrr-1) * ncc * nff;
     // cf - 12
-    if (0 <= threadId && threadId < rr * (cc-1) * (ff-1)) {
-      r_sm = (threadId / (ff-1)) / (cc-1);
-      c_sm = (threadId / (ff-1)) % (cc-1);
-      f_sm = threadId % (ff-1);
+    if (0 <= threadId && threadId < nrr * (ncc-1) * (nff-1)) {
+      r_sm = (threadId / (nff-1)) / (ncc-1);
+      c_sm = (threadId / (nff-1)) % (ncc-1);
+      f_sm = threadId % (nff-1);
       T back_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T back_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
       T front_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
       T front_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2+2)];
       T back = lerp(back_left, back_right, (T)0.5);
       T front = lerp(front_left, front_right, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2+1)] - lerp(back, front, (T)0.5);
     }
-    threadId -= rr * (cc-1) * (ff-1);
+    threadId -= nrr * (ncc-1) * (nff-1);
     // rf - 12
-    if (0 <= threadId && threadId < (rr-1) * cc * (ff-1)) {
-      r_sm = (threadId / (ff-1)) / cc;
-      c_sm = (threadId / (ff-1)) % cc;
-      f_sm = threadId % (ff-1);
+    if (0 <= threadId && threadId < (nrr-1) * ncc * (nff-1)) {
+      r_sm = (threadId / (nff-1)) / ncc;
+      c_sm = (threadId / (nff-1)) % ncc;
+      f_sm = threadId % (nff-1);
       T bottom_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T bottom_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
       T top_left = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
       T top_right = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2+2)];
       T bottom = lerp(bottom_left, bottom_right, (T)0.5);
       T top = lerp(top_left, top_right, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2+1)] - lerp(bottom, top, (T)0.5);
     }
-    threadId -= (rr-1) * cc * (ff-1);
+    threadId -= (nrr-1) * ncc * (nff-1);
     // rc - 12
-    if (0 <= threadId && threadId < (rr-1) * (cc-1) * ff) {
-      r_sm = (threadId / ff) / (cc-1);
-      c_sm = (threadId / ff) % (cc-1);
-      f_sm = threadId % ff;
+    if (0 <= threadId && threadId < (nrr-1) * (ncc-1) * nff) {
+      r_sm = (threadId / nff) / (ncc-1);
+      c_sm = (threadId / nff) % (ncc-1);
+      f_sm = threadId % nff;
       T bottom_back = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T bottom_front = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
       T top_back = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
       T top_front = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2+2, f_sm*2)];
       T bottom = lerp(bottom_back, bottom_front, (T)0.5);
       T top = lerp(top_back, top_front, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm+cc, f_sm)] = 
+      v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm+ncc, f_sm)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2+1, f_sm*2)] - lerp(bottom, top, (T)0.5);
     }
-    threadId -= (rr-1) * (cc-1) * ff;
+    threadId -= (nrr-1) * (ncc-1) * nff;
     //rcf - 8
-    if (0 <= threadId && threadId < (rr-1) * (cc-1) * (ff-1)) {
-      r_sm = (threadId / (ff-1)) / (cc-1);
-      c_sm = (threadId / (ff-1)) % (cc-1);
-      f_sm = threadId % (ff-1);
+    if (0 <= threadId && threadId < (nrr-1) * (ncc-1) * (nff-1)) {
+      r_sm = (threadId / (nff-1)) / (ncc-1);
+      c_sm = (threadId / (nff-1)) % (ncc-1);
+      f_sm = threadId % (nff-1);
       T bottom_back_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
       T bottom_back_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
       T bottom_front_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
@@ -243,10 +244,10 @@ public:
       T top_front = lerp(top_front_left, top_front_right, (T)0.5);
       T bottom = lerp(bottom_back, bottom_front, (T)0.5);
       T top = lerp(top_back, top_front, (T)0.5);
-      v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm+cc, f_sm+ff)] = 
+      v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm+ncc, f_sm+nff)] = 
         w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2+1, f_sm*2+1)] - lerp(bottom, top, (T)0.5);
     }
-    threadId -= (rr-1) * (cc-1) * (ff-1);
+    threadId -= (nrr-1) * (ncc-1) * (nff-1);
   }
 
   MGARDX_EXEC void CalculateCoefficientWarpReassignment() {
@@ -255,90 +256,90 @@ public:
     if constexpr (R == 5 && C == 5 && F == 5) {
       // Total number of full warps: 5^3/32 = 3;
       // Ensure we have enough threads
-      assert(MGARDX_WARP_SIZE > rr * cc * ff);
+      assert(MGARDX_WARP_SIZE > nrr * ncc * nff);
       SIZE warp_id = threadId / MGARDX_WARP_SIZE;
       SIZE lane_id = threadId % MGARDX_WARP_SIZE;
       if (warp_id == 0) { // 0+1+1+1+3 = 6 lerps
-        if (lane_id < rr * cc * ff) {
-          r_sm = (lane_id / ff) / cc;
-          c_sm = (lane_id / ff) % cc;
-          f_sm = lane_id % ff;
+        if (lane_id < nrr * ncc * nff) {
+          r_sm = (lane_id / nff) / ncc;
+          c_sm = (lane_id / nff) % ncc;
+          f_sm = lane_id % nff;
           v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
         }
-        if (lane_id < rr * cc * (ff-1)) {
-          r_sm = (lane_id / (ff-1)) / cc;
-          c_sm = (lane_id / (ff-1)) % cc;
-          f_sm = lane_id % (ff-1);
+        if (lane_id < nrr * ncc * (nff-1)) {
+          r_sm = (lane_id / (nff-1)) / ncc;
+          c_sm = (lane_id / (nff-1)) % ncc;
+          f_sm = lane_id % (nff-1);
           T left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+1)] - lerp(left, right, (T)0.5);
         }
-        if (lane_id < rr * (cc-1) * ff) {
-          r_sm = (lane_id / ff) / (cc-1);
-          c_sm = (lane_id / ff) % (cc-1);
-          f_sm = lane_id % ff;
+        if (lane_id < nrr * (ncc-1) * nff) {
+          r_sm = (lane_id / nff) / (ncc-1);
+          c_sm = (lane_id / nff) % (ncc-1);
+          f_sm = lane_id % nff;
           T back = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T front = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2)] - lerp(back, front, (T)0.5);
         }
-        if (lane_id < (rr-1) * cc * ff) {
-          r_sm = (lane_id / ff) / cc;
-          c_sm = (lane_id / ff) % cc;
-          f_sm = lane_id % ff;
+        if (lane_id < (nrr-1) * ncc * nff) {
+          r_sm = (lane_id / nff) / ncc;
+          c_sm = (lane_id / nff) % ncc;
+          f_sm = lane_id % nff;
           T bottom = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T top = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
-          v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm, f_sm)] = 
+          v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm, f_sm)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2, f_sm*2)] - lerp(bottom, top, (T)0.5);
         }
-        if (lane_id < rr * (cc-1) * (ff-1)) {
-          r_sm = (lane_id / (ff-1)) / (cc-1);
-          c_sm = (lane_id / (ff-1)) % (cc-1);
-          f_sm = lane_id % (ff-1);
+        if (lane_id < nrr * (ncc-1) * (nff-1)) {
+          r_sm = (lane_id / (nff-1)) / (ncc-1);
+          c_sm = (lane_id / (nff-1)) % (ncc-1);
+          f_sm = lane_id % (nff-1);
           T back_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T back_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
           T front_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
           T front_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2+2)];
           T back = lerp(back_left, back_right, (T)0.5);
           T front = lerp(front_left, front_right, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2+1)] - lerp(back, front, (T)0.5);
         }
       }
       if (warp_id == 1) { // 
-        if (lane_id < (rr-1) * cc * (ff-1)) {
-          r_sm = (lane_id / (ff-1)) / cc;
-          c_sm = (lane_id / (ff-1)) % cc;
-          f_sm = lane_id % (ff-1);
+        if (lane_id < (nrr-1) * ncc * (nff-1)) {
+          r_sm = (lane_id / (nff-1)) / ncc;
+          c_sm = (lane_id / (nff-1)) % ncc;
+          f_sm = lane_id % (nff-1);
           T bottom_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T bottom_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
           T top_left = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
           T top_right = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2+2)];
           T bottom = lerp(bottom_left, bottom_right, (T)0.5);
           T top = lerp(top_left, top_right, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2+1)] - lerp(bottom, top, (T)0.5);
         }
-        if (lane_id < (rr-1) * (cc-1) * ff) {
-          r_sm = (lane_id / ff) / (cc-1);
-          c_sm = (lane_id / ff) % (cc-1);
-          f_sm = lane_id % ff;
+        if (lane_id < (nrr-1) * (ncc-1) * nff) {
+          r_sm = (lane_id / nff) / (ncc-1);
+          c_sm = (lane_id / nff) % (ncc-1);
+          f_sm = lane_id % nff;
           T bottom_back = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T bottom_front = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
           T top_back = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
           T top_front = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2+2, f_sm*2)];
           T bottom = lerp(bottom_back, bottom_front, (T)0.5);
           T top = lerp(top_back, top_front, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm+cc, f_sm)] = 
+          v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm+ncc, f_sm)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2+1, f_sm*2)] - lerp(bottom, top, (T)0.5);
         }
       }
       if (warp_id == 2) {
-        if (lane_id < (rr-1) * (cc-1) * (ff-1)) {
-          r_sm = (lane_id / (ff-1)) / (cc-1);
-          c_sm = (lane_id / (ff-1)) % (cc-1);
-          f_sm = lane_id % (ff-1);
+        if (lane_id < (nrr-1) * (ncc-1) * (nff-1)) {
+          r_sm = (lane_id / (nff-1)) / (ncc-1);
+          c_sm = (lane_id / (nff-1)) % (ncc-1);
+          f_sm = lane_id % (nff-1);
           T bottom_back_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T bottom_back_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
           T bottom_front_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
@@ -353,7 +354,7 @@ public:
           T top_front = lerp(top_front_left, top_front_right, (T)0.5);
           T bottom = lerp(bottom_back, bottom_front, (T)0.5);
           T top = lerp(top_back, top_front, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm+cc, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm+ncc, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2+1, f_sm*2+1)] - lerp(bottom, top, (T)0.5);
         }
       }
@@ -367,97 +368,97 @@ public:
       SIZE warp_id = threadId / MGARDX_WARP_SIZE;
       if (0 <= warp_id && warp_id < 4) {
         SIZE hyper_lane_id = (threadId - 0*MGARDX_WARP_SIZE) % (MGARDX_WARP_SIZE * 4);
-        if (hyper_lane_id < rr * cc * ff) {
-          r_sm = (hyper_lane_id / ff) / cc;
-          c_sm = (hyper_lane_id / ff) % cc;
-          f_sm = hyper_lane_id % ff;
+        if (hyper_lane_id < nrr * ncc * nff) {
+          r_sm = (hyper_lane_id / nff) / ncc;
+          c_sm = (hyper_lane_id / nff) % ncc;
+          f_sm = hyper_lane_id % nff;
           v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
         }
-        if (hyper_lane_id < rr * cc * (ff-1)) {
-          r_sm = (hyper_lane_id / (ff-1)) / cc;
-          c_sm = (hyper_lane_id / (ff-1)) % cc;
-          f_sm = hyper_lane_id % (ff-1);
+        if (hyper_lane_id < nrr * ncc * (nff-1)) {
+          r_sm = (hyper_lane_id / (nff-1)) / ncc;
+          c_sm = (hyper_lane_id / (nff-1)) % ncc;
+          f_sm = hyper_lane_id % (nff-1);
           T left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+1)] - lerp(left, right, (T)0.5);
         }
       }
       if (4 <= warp_id && warp_id < 8) {
         SIZE hyper_lane_id = (threadId - 4*MGARDX_WARP_SIZE) % (MGARDX_WARP_SIZE * 4);
-        if (hyper_lane_id < rr * (cc-1) * ff) {
-          r_sm = (hyper_lane_id / ff) / (cc-1);
-          c_sm = (hyper_lane_id / ff) % (cc-1);
-          f_sm = hyper_lane_id % ff;
+        if (hyper_lane_id < nrr * (ncc-1) * nff) {
+          r_sm = (hyper_lane_id / nff) / (ncc-1);
+          c_sm = (hyper_lane_id / nff) % (ncc-1);
+          f_sm = hyper_lane_id % nff;
           T back = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T front = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2)] - lerp(back, front, (T)0.5);
         }
-        if (hyper_lane_id < (rr-1) * cc * ff) {
-          r_sm = (hyper_lane_id / ff) / cc;
-          c_sm = (hyper_lane_id / ff) % cc;
-          f_sm = hyper_lane_id % ff;
+        if (hyper_lane_id < (nrr-1) * ncc * nff) {
+          r_sm = (hyper_lane_id / nff) / ncc;
+          c_sm = (hyper_lane_id / nff) % ncc;
+          f_sm = hyper_lane_id % nff;
           T bottom = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T top = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
-          v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm, f_sm)] = 
+          v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm, f_sm)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2, f_sm*2)] - lerp(bottom, top, (T)0.5);
         }
       }
       if (8 <= warp_id && warp_id < 11) {
         SIZE hyper_lane_id = (threadId - 8*MGARDX_WARP_SIZE) % (MGARDX_WARP_SIZE * 3);
-        if (hyper_lane_id < rr * (cc-1) * (ff-1)) {
-          r_sm = (hyper_lane_id / (ff-1)) / (cc-1);
-          c_sm = (hyper_lane_id / (ff-1)) % (cc-1);
-          f_sm = hyper_lane_id % (ff-1);
+        if (hyper_lane_id < nrr * (ncc-1) * (nff-1)) {
+          r_sm = (hyper_lane_id / (nff-1)) / (ncc-1);
+          c_sm = (hyper_lane_id / (nff-1)) % (ncc-1);
+          f_sm = hyper_lane_id % (nff-1);
           T back_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T back_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
           T front_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
           T front_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2+2)];
           T back = lerp(back_left, back_right, (T)0.5);
           T front = lerp(front_left, front_right, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2+1)] - lerp(back, front, (T)0.5);
         }
       }
       if (11 <= warp_id && warp_id < 14) {
         SIZE hyper_lane_id = (threadId - 11*MGARDX_WARP_SIZE) % (MGARDX_WARP_SIZE * 3);
-        if (hyper_lane_id < (rr-1) * cc * (ff-1)) {
-          r_sm = (hyper_lane_id / (ff-1)) / cc;
-          c_sm = (hyper_lane_id / (ff-1)) % cc;
-          f_sm = hyper_lane_id % (ff-1);
+        if (hyper_lane_id < (nrr-1) * ncc * (nff-1)) {
+          r_sm = (hyper_lane_id / (nff-1)) / ncc;
+          c_sm = (hyper_lane_id / (nff-1)) % ncc;
+          f_sm = hyper_lane_id % (nff-1);
           T bottom_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T bottom_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
           T top_left = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
           T top_right = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2+2)];
           T bottom = lerp(bottom_left, bottom_right, (T)0.5);
           T top = lerp(top_left, top_right, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm, c_sm+cc, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm, c_sm+ncc, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+1, f_sm*2+1)] - lerp(bottom, top, (T)0.5);
         }
       }
       if (14 <= warp_id && warp_id < 17) {
         SIZE hyper_lane_id = (threadId - 14*MGARDX_WARP_SIZE) % (MGARDX_WARP_SIZE * 3);
-        if (hyper_lane_id < (rr-1) * (cc-1) * ff) {
-          r_sm = (hyper_lane_id / ff) / (cc-1);
-          c_sm = (hyper_lane_id / ff) % (cc-1);
-          f_sm = hyper_lane_id % ff;
+        if (hyper_lane_id < (nrr-1) * (ncc-1) * nff) {
+          r_sm = (hyper_lane_id / nff) / (ncc-1);
+          c_sm = (hyper_lane_id / nff) % (ncc-1);
+          f_sm = hyper_lane_id % nff;
           T bottom_back = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T bottom_front = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
           T top_back = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2, f_sm*2)];
           T top_front = w_sm[get_idx(ld1, ld2, r_sm*2+2, c_sm*2+2, f_sm*2)];
           T bottom = lerp(bottom_back, bottom_front, (T)0.5);
           T top = lerp(top_back, top_front, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm+cc, f_sm)] = 
+          v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm+ncc, f_sm)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2+1, f_sm*2)] - lerp(bottom, top, (T)0.5);
         }
       }
       if (17 <= warp_id && warp_id < 19) {
         SIZE hyper_lane_id = (threadId - 17*MGARDX_WARP_SIZE) % (MGARDX_WARP_SIZE * 2);
-        if (hyper_lane_id < (rr-1) * (cc-1) * (ff-1)) {
-          r_sm = (hyper_lane_id / (ff-1)) / (cc-1);
-          c_sm = (hyper_lane_id / (ff-1)) % (cc-1);
-          f_sm = hyper_lane_id % (ff-1);
+        if (hyper_lane_id < (nrr-1) * (ncc-1) * (nff-1)) {
+          r_sm = (hyper_lane_id / (nff-1)) / (ncc-1);
+          c_sm = (hyper_lane_id / (nff-1)) % (ncc-1);
+          f_sm = hyper_lane_id % (nff-1);
           T bottom_back_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2)];
           T bottom_back_right = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2, f_sm*2+2)];
           T bottom_front_left = w_sm[get_idx(ld1, ld2, r_sm*2, c_sm*2+2, f_sm*2)];
@@ -472,7 +473,7 @@ public:
           T top_front = lerp(top_front_left, top_front_right, (T)0.5);
           T bottom = lerp(bottom_back, bottom_front, (T)0.5);
           T top = lerp(top_back, top_front, (T)0.5);
-          v_sm[get_idx(ld1, ld2, r_sm+rr, c_sm+cc, f_sm+ff)] = 
+          v_sm[get_idx(ld1, ld2, r_sm+nrr, c_sm+ncc, f_sm+nff)] = 
             w_sm[get_idx(ld1, ld2, r_sm*2+1, c_sm*2+1, f_sm*2+1)] - lerp(bottom, top, (T)0.5);
         }
       }
@@ -483,17 +484,35 @@ public:
 
   }
 
-  MGARDX_EXEC void CalculateMassTrans() {
-    
+  MGARDX_EXEC void CalculateMassTrans(T h) {
+    T a = 0, b = 0, c = 0, d = 0, e = 0;
+    if (0 <= threadId && threadId < nr * nc * nff) {
+      r_sm = (threadId / nff) / nc;
+      c_sm = (threadId / nff) % nc;
+      f_sm = threadId % nff;
+      if (r_sm >= nrr && c_sm >= ncc) {
+        if (f_sm > 1) a = v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm-1)];
+        c = v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+        if (f_sm+1 < nff) e = v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+1)];
+      }
+      if (f_sm > 1) b = v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+nff-1)];
+      if (f_sm+nff < nf) d = v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm+nff)];
+
+      w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] =
+         mass_trans(a, b, c, d, e, h, h, h, h, (T)0.5, (T)0.5, (T)0.5, (T)0.5);
+
+    }
   }
 
 
 
   MGARDX_EXEC void Operation2() {
+    T h = 1;
     for (int l = 1; l > 0; l--) {
-      rr = r / 2 + 1;
-      cc = c / 2 + 1;
-      ff = f / 2 + 1;
+      nrr = nr / 2 + 1;
+      ncc = nc / 2 + 1;
+      nff = nf / 2 + 1;
+
 
       // Copy from v_sm to w_sm
       r_sm = FunctorBase<DeviceType>::GetThreadIdZ();
@@ -506,6 +525,9 @@ public:
       // CalculateCoefficientCompactReassignment();
       // CalculateCoefficientWarpReassignment();
       // v_sm --> w_sm (correction)
+      CalculateMassTrans(h);
+
+      h *= 2;
     }
   }
 
@@ -532,7 +554,7 @@ private:
   SIZE ld1;
   SIZE ld2;
   T *v_sm, *w_sm;
-  SIZE r, c, f, rr, cc, ff;
+  SIZE nr, nc, nf, nrr, ncc, nff;
 };
 
 template <DIM D, typename T, SIZE R, SIZE C, SIZE F, typename DeviceType>
