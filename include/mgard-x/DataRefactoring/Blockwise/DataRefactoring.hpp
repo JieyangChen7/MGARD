@@ -9,8 +9,10 @@
 #define MGARD_X_BLOCKWISE_DATA_REFACTORING_TEMPLATE
 
 #include "../../RuntimeX/RuntimeX.h"
+#include "../../Hierarchy/Hierarchy.hpp"
 #include "../MultiDimension/Coefficient/GPKFunctor.h"
 #include "../MultiDimension/Correction/LPKFunctor.h"
+#include "../MultiDimension/Correction/IPKFunctor.h"
 
 namespace mgard_x {
 
@@ -20,15 +22,30 @@ template <DIM D, typename T, SIZE R, SIZE C, SIZE F, typename DeviceType>
 class DataRefactoringFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT DataRefactoringFunctor() {}
-  MGARDX_CONT DataRefactoringFunctor(SubArray<D, T, DeviceType> v, SIZE l_target): v(v), l_target(l_target) {
+  MGARDX_CONT DataRefactoringFunctor(SubArray<D, T, DeviceType> v, 
+                                     SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_r,
+                                     SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_c,
+                                     SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_f,
+                                     SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_r,
+                                     SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_c,
+                                     SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_f,
+                                     SIZE l_target): v(v), am_r(am_r), am_c(am_c), am_f(am_f), 
+                                      bm_r(bm_r), bm_c(bm_c), bm_f(bm_f), l_target(l_target) {
     Functor<DeviceType>();
   }
 
   MGARDX_EXEC void Operation1() {
 
     sm = (T *)FunctorBase<DeviceType>::GetSharedMemory();
-    v_sm = sm;
-    w_sm = sm + F * C * R;
+    v_sm = sm; sm += F * C * R;
+    w_sm = sm; sm += F * C * R;
+    am_r_sm = sm; sm += (R+1) * (l_target+1);
+    am_c_sm = sm; sm += (C+1) * (l_target+1);
+    am_f_sm = sm; sm += (F+1) * (l_target+1);
+    bm_r_sm = sm; sm += (R+1) * (l_target+1);
+    bm_c_sm = sm; sm += (C+1) * (l_target+1);
+    bm_f_sm = sm; sm += (F+1) * (l_target+1);
+
     ld1 = F;
     ld2 = C;
     nr = R;
@@ -64,6 +81,51 @@ public:
     }
     // printf("load: %u %u %u -> %f [%u]\n", r_gl, c_gl, f_gl, *v(r_gl, c_gl, f_gl), get_idx(ld1, ld2, r_sm, c_sm, f_sm));
     v_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = *v(r_gl, c_gl, f_gl);
+
+    assert(am_r.shape(0) == l_target + 1);
+    assert(am_c.shape(0) == l_target + 1);
+    assert(am_f.shape(0) == l_target + 1);
+    assert(bm_r.shape(0) == l_target + 1);
+    assert(bm_c.shape(0) == l_target + 1);
+    assert(bm_f.shape(0) == l_target + 1);
+/*
+    for (SIZE l = 0; l < l_target+1; l++) {
+      SubArray<1, T, DeviceType>& ptr = *am_r(l); 
+      if (threadId < ptr.shape(0)) {
+        am_r_sm[l * (R+1) + threadId] = *ptr(threadId);
+      }
+    }
+    for (SIZE l = 0; l < l_target+1; l++) {
+      SubArray<1, T, DeviceType>& ptr = *am_c(l); 
+      if (threadId < ptr.shape(0)) {
+        am_c_sm[l * (C+1) + threadId] = *ptr(threadId);
+      }
+    }
+    for (SIZE l = 0; l < l_target+1; l++) {
+      SubArray<1, T, DeviceType>& ptr = *am_f(l); 
+      if (threadId < ptr.shape(0)) {
+        am_f_sm[l * (F+1) + threadId] = *ptr(threadId);
+      }
+    }
+    for (SIZE l = 0; l < l_target+1; l++) {
+      SubArray<1, T, DeviceType>& ptr = *bm_r(l); 
+      if (threadId < ptr.shape(0)) {
+        bm_r_sm[l * (R+1) + threadId] = *ptr(threadId);
+      }
+    }
+    for (SIZE l = 0; l < l_target+1; l++) {
+      SubArray<1, T, DeviceType>& ptr = *bm_c(l); 
+      if (threadId < ptr.shape(0)) {
+        bm_c_sm[l * (C+1) + threadId] = *ptr(threadId);
+      }
+    }
+    for (SIZE l = 0; l < l_target+1; l++) {
+      SubArray<1, T, DeviceType>& ptr = *bm_f(l); 
+      if (threadId < ptr.shape(0)) {
+        bm_f_sm[l * (F+1) + threadId] = *ptr(threadId);
+      }
+    }
+  */
   }
 
   MGARDX_EXEC void CalculateCoefficientFixedAssignment() {
@@ -504,11 +566,80 @@ public:
     }
   }
 
+  MGARDX_EXEC void CalculateCorrection() {
+    T prev; 
+    if (0 <= threadId && threadId < ncc * nrr) {
+      r_sm = threadId / ncc;
+      c_sm = threadId % ncc;
+      prev = 0.0;
+      for (f_sm = 0; f_sm < nff; f_sm++) {
+        w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = 
+                   tridiag_forward2(prev, am_f_sm[f_sm], bm_f_sm[f_sm],
+                             w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)]);
+        prev = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+      }
+      prev = 0.0;
+      for (f_sm = nff-1; f_sm >= 0; f_sm--) {
+        w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = 
+                   tridiag_backward2(prev, am_f_sm[f_sm], bm_f_sm[f_sm],
+                              w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)]);
+        prev = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+      }
+    }
+#ifdef MGARDX_COMPILE_CUDA
+    // __syncthreads();
+#endif
+    
+    if (0 <= threadId && threadId < nff * nrr) {
+      r_sm = threadId / nff;
+      f_sm = threadId % nff;
+      prev = 0.0;
+      for (c_sm = 0; c_sm < ncc; c_sm++) {
+        w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = 
+                   tridiag_forward2(prev, am_c_sm[c_sm], bm_c_sm[c_sm],
+                             w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)]);
+        prev = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+      }
+      prev = 0.0;
+      for (c_sm = ncc-1; c_sm >= 0; c_sm--) {
+        w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = 
+                   tridiag_backward2(prev, am_c_sm[c_sm], bm_c_sm[c_sm],
+                              w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)]);
+        prev = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+      }
+    }
+#ifdef MGARDX_COMPILE_CUDA
+    // __syncthreads();
+#endif
+    
+    if (0 <= threadId && threadId < nff * ncc) {
+      c_sm = threadId / nff;
+      f_sm = threadId % nff;
+      prev = 0.0;
+      for (r_sm = 0; r_sm < nrr; r_sm++) {
+        w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = 
+                   tridiag_forward2(prev, am_r_sm[r_sm], bm_r_sm[r_sm],
+                             w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)]);
+        prev = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+      }
+      prev = 0.0;
+      for (r_sm = nrr-1; r_sm >= 0; r_sm--) {
+        w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)] = 
+                   tridiag_backward2(prev, am_r_sm[r_sm], bm_r_sm[r_sm],
+                              w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)]);
+        prev = w_sm[get_idx(ld1, ld2, r_sm, c_sm, f_sm)];
+      }
+    }
+#ifdef MGARDX_COMPILE_CUDA
+    // __syncthreads();
+#endif
+  }
+
 
 
   MGARDX_EXEC void Operation2() {
     T h = 1;
-    for (int l = 1; l > 0; l--) {
+    for (int l = l_target; l > 0; l--) {
       nrr = nr / 2 + 1;
       ncc = nc / 2 + 1;
       nff = nf / 2 + 1;
@@ -522,10 +653,17 @@ public:
 
       // w_sm --> v_sm (coefficients)
       CalculateCoefficientFixedAssignment();
+      #ifdef MGARDX_COMPILE_CUDA
+          // __syncthreads();
+      #endif
       // CalculateCoefficientCompactReassignment();
       // CalculateCoefficientWarpReassignment();
       // v_sm --> w_sm (correction)
       CalculateMassTrans(h);
+      #ifdef MGARDX_COMPILE_CUDA
+          // __syncthreads();
+      #endif
+      // CalculateCorrection();
 
       h *= 2;
     }
@@ -545,15 +683,23 @@ public:
 private:
   // functor parameters
   SubArray<D, T, DeviceType> v;
+  SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_r;
+  SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_c;
+  SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_f;
+  SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_r;
+  SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_c;
+  SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_f;
   SIZE l_target;
   // thread local variables
-  SIZE r_sm, c_sm, f_sm;
-  SIZE r_gl, c_gl, f_gl;
+  int r_sm, c_sm, f_sm;
+  int r_gl, c_gl, f_gl;
   int threadId;
   T *sm;
   SIZE ld1;
   SIZE ld2;
   T *v_sm, *w_sm;
+  T *am_r_sm, *am_c_sm, *am_f_sm;
+  T *bm_r_sm, *bm_c_sm, *bm_f_sm;
   SIZE nr, nc, nf, nrr, ncc, nff;
 };
 
@@ -564,20 +710,17 @@ public:
   DataRefactoringKernel() : AutoTuner<DeviceType>() {}
 
   MGARDX_CONT Task<DataRefactoringFunctor<D, T, R, C, F, DeviceType>>
-  GenTask(SubArray<D, T, DeviceType> v, int queue_idx) {
-
-    SIZE l_target;
-    if constexpr (R == 3) {
-      l_target = 1;
-    }
-    if constexpr (R == 5) {
-      l_target = 2;
-    }
-    if constexpr (R == 9){
-      l_target = 3;
-    }
+  GenTask(SubArray<D, T, DeviceType> v, 
+          SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_r,
+          SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_c,
+          SubArray<1, SubArray<1, T, DeviceType>, DeviceType> am_f,
+          SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_r,
+          SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_c,
+          SubArray<1, SubArray<1, T, DeviceType>, DeviceType> bm_f,
+          SIZE l_target, int queue_idx) {
+  
     using FunctorType = DataRefactoringFunctor<D, T, R, C, F, DeviceType>;
-    FunctorType functor(v, l_target);
+    FunctorType functor(v, am_r, am_c, am_f, bm_r, bm_c, bm_f, l_target);
 
     SIZE total_thread_z = v.shape(D-3);
     SIZE total_thread_y = v.shape(D-2);
@@ -588,6 +731,7 @@ public:
     tby = C;
     tbx = F;
     sm_size = R * C * F * sizeof(T) * 2;
+    sm_size += ((R+1) + (C+1) + (F+1)) * 2 * (l_target+1) * sizeof(T); 
     gridz = ceil((float)total_thread_z / tbz);
     gridy = ceil((float)total_thread_y / tby);
     gridx = ceil((float)total_thread_x / tbx);
@@ -599,9 +743,42 @@ public:
   void Execute(SubArray<D, T, DeviceType> v, int queue_idx) {
     using FunctorType = DataRefactoringFunctor<D, T, R, C, F, DeviceType>;
     using TaskType = Task<FunctorType>;
-    TaskType task = GenTask(v, queue_idx);
+
+    // For calculating am and bm
+    Hierarchy<D, T, DeviceType> hierarchy({R, C, F});
+    SIZE l_target = hierarchy.l_target();
+    bool pitched = false, managed = true;
+    // am
+    Array<1, SubArray<1, T, DeviceType>, DeviceType> am_r_array({l_target+1}, pitched, managed);
+    SubArray am_r(am_r_array);
+    for (SIZE l = 0; l < l_target+1; l++) *am_r(l) = hierarchy.am(l, D-3);
+    Array<1, SubArray<1, T, DeviceType>, DeviceType> am_c_array({l_target+1}, pitched, managed);
+    SubArray am_c(am_c_array);
+    for (SIZE l = 0; l < l_target+1; l++) *am_c(l) = hierarchy.am(l, D-2);
+    Array<1, SubArray<1, T, DeviceType>, DeviceType> am_f_array({l_target+1}, pitched, managed);
+    SubArray am_f(am_f_array);
+    for (SIZE l = 0; l < l_target+1; l++) *am_f(l) = hierarchy.am(l, D-1);
+    // bm
+    Array<1, SubArray<1, T, DeviceType>, DeviceType> bm_r_array({l_target+1}, pitched, managed);
+    SubArray bm_r(bm_r_array);
+    for (SIZE l = 0; l < l_target+1; l++) *bm_r(l) = hierarchy.bm(l, D-3);
+    Array<1, SubArray<1, T, DeviceType>, DeviceType> bm_c_array({l_target+1}, pitched, managed);
+    SubArray bm_c(bm_c_array);
+    for (SIZE l = 0; l < l_target+1; l++) *bm_c(l) = hierarchy.bm(l, D-2);
+    Array<1, SubArray<1, T, DeviceType>, DeviceType> bm_f_array({l_target+1}, pitched, managed);
+    SubArray bm_f(bm_f_array);
+    for (SIZE l = 0; l < l_target+1; l++) *bm_f(l) = hierarchy.bm(l, D-1);
+    TaskType task = GenTask(v, am_r, am_c, am_f, bm_r, bm_c, bm_f, l_target, queue_idx);
     DeviceAdapter<TaskType, DeviceType> adapter;
+    Timer timer_each;
+    DeviceRuntime<DeviceType>::SyncDevice();
+    timer_each.start();
+    timer_each.start();
     ExecutionReturn ret = adapter.Execute(task);
+    DeviceRuntime<DeviceType>::SyncDevice();
+    timer_each.end();
+    timer_each.print("blockwise::Decomposition::Kernel");
+    timer_each.clear();
   }
 };
 

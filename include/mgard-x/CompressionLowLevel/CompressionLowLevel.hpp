@@ -136,30 +136,31 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
     blockwise::decompose<D, T, 5, 5, 5, DeviceType>(in_subarray, 0);
     blockwise::decompose<D, T, 5, 5, 5, DeviceType>(in_subarray, 0);
 
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    DeviceRuntime<DeviceType>::SyncDevice();
     timer_each.start();
     blockwise::decompose<D, T, 3, 3, 3, DeviceType>(in_subarray, 0);
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    DeviceRuntime<DeviceType>::SyncDevice();
     timer_each.end();
     timer_each.print("blockwise::Decomposition[3]");
     timer_each.clear();
 
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    DeviceRuntime<DeviceType>::SyncDevice();
     timer_each.start();
     blockwise::decompose<D, T, 5, 5, 5, DeviceType>(in_subarray, 0);
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    DeviceRuntime<DeviceType>::SyncDevice();
     timer_each.end();
     timer_each.print("blockwise::Decomposition[5]");
     timer_each.clear();
 
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    DeviceRuntime<DeviceType>::SyncDevice();
     timer_each.start();
     blockwise::decompose<D, T, 9, 9, 9, DeviceType>(in_subarray, 0);
-    DeviceRuntime<DeviceType>::SyncQueue(0);
+    DeviceRuntime<DeviceType>::SyncDevice();
     timer_each.end();
     timer_each.print("blockwise::Decomposition[9]");
     timer_each.clear();
     // PrintSubarray("after blockwise::Decomposition", in_subarray);
+
   }
   // Decomposition
   if (config.timing)
@@ -170,7 +171,7 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
     decompose_single<D, T, DeviceType>(hierarchy, in_subarray, 0, 0);
   }
 
-  DumpSubArray("decomposed_data.dat", in_subarray);
+  // DumpSubArray("decomposed_data.dat", in_subarray);
 
   if (config.timing) {
     DeviceRuntime<DeviceType>::SyncQueue(0);
@@ -179,6 +180,7 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
     timer_each.clear();
   }
 
+  exit(0);
   // Quantization
   bool prep_huffman =
       config.lossless != lossless_type::CPU_Lossless; // always do Huffman
@@ -238,7 +240,7 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
   MemoryManager<DeviceType>::Copy1D(&outlier_count, outlier_count_array.data(),
                                     1, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
-  DumpSubArray("quantized_data.dat", quantized_subarray);
+  // DumpSubArray("quantized_data.dat", quantized_subarray);
 
   if (config.timing) {
     
@@ -276,7 +278,7 @@ compress(Hierarchy<D, T, DeviceType> &hierarchy,
           SubArray<1, QUANTIZED_INT, DeviceType>(quantized_linearized_array),
           0);
       DeviceRuntime<DeviceType>::SyncQueue(0);
-      DumpSubArray("quantized_linearized_data.dat", SubArray(quantized_linearized_array));
+      // DumpSubArray("quantized_linearized_data.dat", SubArray(quantized_linearized_array));
     } else {
       std::cout << log::log_err << "wrong reodering type.\n";
     }
