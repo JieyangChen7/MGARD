@@ -13,6 +13,10 @@
 #include "IterativeProcessingKernel3D.hpp"
 #include "LinearProcessingKernel3D.hpp"
 
+#ifdef MGARDX_COMPILE_CUDA
+#include "cublas_v2.h"
+#endif
+
 #ifndef MGARD_X_DATA_REFACTORING_CALC_CORRECTION_3D
 #define MGARD_X_DATA_REFACTORING_CALC_CORRECTION_3D
 
@@ -24,6 +28,19 @@ void CalcCorrection3D(Hierarchy<D, T, DeviceType> &hierarchy,
                       SubArray<D, T, DeviceType> &dcorrection, SIZE l,
                       int queue_idx) {
 
+#ifdef MGARDX_COMPILE_CUDA
+  if constexpr (std::is_same<T, float>::value) {
+    printf("[Matrix Multiply CUBLAS] - Starting...\n");
+    Array<2, T, DeviceType> A({10, 10});
+    Array<2, T, DeviceType> B({10, 10});
+    Array<2, T, DeviceType> C({10, 10});
+    const float alpha = 1.0f;
+    const float beta  = 0.0f;
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 10, 10, 10, &alpha, A.data(), A.ld(1), B.data(), B.ld(1), &beta, C.data(), C.ld(1));
+  }
+#endif
   std::string prefix = "decomp_";
   if (sizeof(T) == sizeof(double))
     prefix += "d_";

@@ -353,11 +353,11 @@ if(zstd_FOUND)
 endif()
 
 if(MGARD_ENABLE_CUDA)
-  target_link_libraries(mgard-library PUBLIC nvcomp::nvcomp CUDA::cudart)
+  target_link_libraries(mgard-library PUBLIC nvcomp::nvcomp CUDA::cudart CUDA::cublas)
 endif()
 
 if(MGARD_ENABLE_LEGACY_CUDA)
-  target_link_libraries(mgard-library PUBLIC nvcomp::nvcomp CUDA::cudart)
+  target_link_libraries(mgard-library PUBLIC nvcomp::nvcomp CUDA::cudart CUDA::cublas)
 endif()
 
 if(MGARD_ENABLE_MULTI_DEVICE OR 
