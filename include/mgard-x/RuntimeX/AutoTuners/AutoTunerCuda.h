@@ -72,8 +72,8 @@ public:
   static constexpr int lwdqzk[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
                                                       {0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
-  static constexpr int llk[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
-                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  static constexpr int llk[num_types][num_dims] = {{3, 3, 3, 3, 3, 3, 3, 3, 3},
+                                                    {3, 3, 3, 3, 3, 3, 3, 3, 3}};
 
   static constexpr int sdck[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
                                                     {0, 0, 0, 0, 0, 0, 0, 0, 0}};

@@ -8,6 +8,8 @@
 #ifndef MDR_X_MDR_METADATA_HPP
 #define MDR_X_MDR_METADATA_HPP
 
+#include <cstring>
+
 namespace mgard_x {
 namespace MDR {
 
@@ -136,12 +138,12 @@ public:
   }
 
   template <typename T> void Serialize(Byte *&ptr, T *data, SIZE bytes) {
-    memcpy(ptr, (Byte *)data, bytes);
+    std::memcpy(ptr, (Byte *)data, bytes);
     ptr += bytes;
   }
 
   template <typename T> void Deserialize(Byte *&ptr, T *data, SIZE bytes) {
-    memcpy((Byte *)data, ptr, bytes);
+    std::memcpy((Byte *)data, ptr, bytes);
     ptr += bytes;
   }
 
