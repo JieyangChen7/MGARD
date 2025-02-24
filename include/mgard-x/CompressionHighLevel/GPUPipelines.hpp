@@ -59,7 +59,8 @@ enum compress_status_type compress_pipeline_gpu(
   }
 
   Timer timer_profile;
-  std::vector<float> h2d, d2h, comp, size;
+  std::vector<float> h2d, d2h, comp;
+  std::vector<SIZE> size;
   bool profile = false;
   bool profile_e2e = false;
 
@@ -160,10 +161,7 @@ enum compress_status_type compress_pipeline_gpu(
       comp.push_back(timer_profile.get());
     }
 
-    if (profile || profile_e2e) {
-      size.push_back(compressor.hierarchy->total_num_elems() * sizeof(T) /
-                     1.0e9);
-    }
+    size.push_back(compressor.hierarchy->total_num_elems() * sizeof(T));
 
     // Check if we have enough space
     if (compressed_size >
@@ -206,25 +204,21 @@ enum compress_status_type compress_pipeline_gpu(
     current_queue = next_queue;
   }
 
+  SIZE total_size = 0;
+  for (auto t : size)
+    total_size += t;
+
   if (profile_e2e) {
     DeviceRuntime<DeviceType>::SyncDevice();
     timer_profile.end();
     timer_profile.print("end to end");
-    float s = 0;
-    for (float t : size)
-      s += t;
-    timer_profile.print_throughput("end to end", s * 1e9);
+    
+    timer_profile.print_throughput("end to end", total_size * 1e9);
   }
 
+  
+
   if (profile) {
-    // double total_size = domain_decomposer.shape[0] *
-    // domain_decomposer.shape[1] * domain_decomposer.shape[2] * sizeof(T) /
-    // 1e9; std::cout << "comp: " << comp / domain_decomposer.num_subdomains()
-    // << "(" << total_size / comp << " GB/s)"<< "\n"; std::cout << "h2d: " <<
-    // h2d / domain_decomposer.num_subdomains() << "(" << total_size / h2d << "
-    // GB/s)"<< "\n"; std::cout << "d2h: " << d2h /
-    // domain_decomposer.num_subdomains() << "(" << byte_offset/ 1e9 / d2h << "
-    // GB/s)"<< "\n";
     std::cout << "comp: "
               << "\n";
     for (float t : comp)
@@ -245,7 +239,7 @@ enum compress_status_type compress_pipeline_gpu(
 
     std::cout << "size: "
               << "\n";
-    for (float t : size)
+    for (SIZE t : size)
       std::cout << t << ", ";
     std::cout << "\n";
 
@@ -260,7 +254,7 @@ enum compress_status_type compress_pipeline_gpu(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
-    timer_series.print("Compress subdomains series with prefetch");
+    timer_series.print("Compress pipeline", total_size);
     timer_series.clear();
   }
   return compress_status_type::Success;
@@ -327,7 +321,8 @@ enum compress_status_type decompress_pipeline_gpu(
   }
 
   Timer timer_profile;
-  std::vector<float> h2d, d2h, comp, size;
+  std::vector<float> h2d, d2h, comp;
+  std::vector<SIZE> size;
   bool profile = false;
   bool profile_e2e = false;
 
@@ -485,10 +480,7 @@ enum compress_status_type decompress_pipeline_gpu(
       comp.push_back(timer_profile.get());
     }
 
-    if (profile || profile_e2e) {
-      size.push_back(compressor.hierarchy->total_num_elems() * sizeof(T) /
-                     1.0e9);
-    }
+    size.push_back(compressor.hierarchy->total_num_elems() * sizeof(T));
 
     // Need to ensure decompession is complete without blocking other operations
     DeviceRuntime<DeviceType>::SyncQueue(current_queue);
@@ -510,6 +502,10 @@ enum compress_status_type decompress_pipeline_gpu(
       device_subdomain_buffer[previous_buffer], prev_subdomain_id,
       subdomain_copy_direction::SubdomainToOriginal, previous_queue);
 
+  SIZE total_size = 0;
+  for (auto t : size)
+    total_size += t;
+
   if (profile) {
     DeviceRuntime<DeviceType>::SyncDevice();
     timer_profile.end();
@@ -520,11 +516,10 @@ enum compress_status_type decompress_pipeline_gpu(
     DeviceRuntime<DeviceType>::SyncDevice();
     timer_profile.end();
     timer_profile.print("end to end");
-    float s = 0;
-    for (float t : size)
-      s += t;
-    timer_profile.print_throughput("end to end", s * 1e9);
+    timer_profile.print_throughput("end to end", total_size * 1e9);
   }
+
+  
 
   if (profile) {
     // double total_size = domain_decomposer.shape[0] *
@@ -555,7 +550,7 @@ enum compress_status_type decompress_pipeline_gpu(
 
     std::cout << "size: "
               << "\n";
-    for (float t : size)
+    for (SIZE t : size)
       std::cout << t << ", ";
     std::cout << "\n";
 
@@ -569,7 +564,7 @@ enum compress_status_type decompress_pipeline_gpu(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
-    timer_series.print("Decompress subdomains series with prefetch");
+    timer_series.print("Decompress pipeline", total_size);
     timer_series.clear();
   }
   return compress_status_type::Success;

@@ -95,12 +95,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Decomposition");
-      log::time(
-          "Decomposition throughput: " +
-          std::to_string((double)(hierarchy->total_num_elems() * sizeof(T)) /
-                         timer.get() / 1e9) +
-          " GB/s");
+      timer.print("Decomposition", hierarchy->total_num_elems() * sizeof(T));
       timer.clear();
     }
   }
@@ -126,12 +121,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Recomposition");
-      log::time(
-          "Recomposition throughput: " +
-          std::to_string((double)(hierarchy->total_num_elems() * sizeof(T)) /
-                         timer.get() / 1e9) +
-          " GB/s");
+      timer.print("Recomposition", hierarchy->total_num_elems() * sizeof(T));
       timer.clear();
     }
   }
