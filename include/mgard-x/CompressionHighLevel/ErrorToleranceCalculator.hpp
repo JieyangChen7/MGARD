@@ -3,10 +3,7 @@ template <DIM D, typename T, typename DeviceType, typename CompressorType>
 T calc_subdomain_norm_series_w_prefetch(
     DomainDecomposer<D, T, CompressorType, DeviceType> &domain_decomposer,
     T s) {
-  Timer timer_series;
-  if (log::level & log::TIME)
-    timer_series.start();
-
+      
   DeviceRuntime<DeviceType>::SyncQueue(0);
   Array<1, T, DeviceType> norm_array({1});
   SubArray<1, T, DeviceType> norm_subarray(norm_array);
@@ -55,11 +52,6 @@ T calc_subdomain_norm_series_w_prefetch(
     }
     current_buffer = next_buffer;
     DeviceRuntime<DeviceType>::SyncQueue(1);
-  }
-  if (log::level & log::TIME) {
-    timer_series.end();
-    timer_series.print("Calculate subdomains norm series");
-    timer_series.clear();
   }
 
   DeviceRuntime<DeviceType>::SyncDevice();

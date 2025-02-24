@@ -90,20 +90,20 @@ Compressor<D, T, DeviceType>::EstimateMemoryFootprint(std::vector<SIZE> shape,
   hierarchy.EstimateMemoryFootprint(shape);
   size_t size = 0;
   size += DataRefactorType::EstimateMemoryFootprint(shape);
-  log::info(
+  log::dbg(
       "Data refactor space: " +
       std::to_string(
           (double)(DataRefactorType::EstimateMemoryFootprint(shape)) / 1e9) +
       " GB");
   size += LinearQuantizerType::EstimateMemoryFootprint(shape);
-  log::info(
+  log::dbg(
       "Quantizer space: " +
       std::to_string(
           (double)(LinearQuantizerType::EstimateMemoryFootprint(shape)) / 1e9) +
       " GB");
   size += LosslessCompressorType::EstimateMemoryFootprint(
       hierarchy.total_num_elems(), config);
-  log::info(
+  log::dbg(
       "Lossless space: " +
       std::to_string((double)(LosslessCompressorType::EstimateMemoryFootprint(
                          hierarchy.total_num_elems(), config)) /
@@ -226,12 +226,7 @@ void Compressor<D, T, DeviceType>::Compress(
   if (log::level & log::TIME) {
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     timer_total.end();
-    timer_total.print("Low-level compression");
-    log::time(
-        "Low-level compression throughput: " +
-        std::to_string((double)(hierarchy->total_num_elems() * sizeof(T)) /
-                       timer_total.get() / 1e9) +
-        " GB/s");
+    timer_total.print("Low-level compression", hierarchy->total_num_elems() * sizeof(T));
     timer_total.clear();
   }
 }
@@ -261,12 +256,7 @@ void Compressor<D, T, DeviceType>::Decompress(
   if (log::level & log::TIME) {
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     timer_total.end();
-    timer_total.print("Low-level decompression");
-    log::time(
-        "Low-level decompression throughput: " +
-        std::to_string((double)(hierarchy->total_num_elems() * sizeof(T)) /
-                       timer_total.get() / 1e9) +
-        " GB/s");
+    timer_total.print("Low-level decompression", hierarchy->total_num_elems() * sizeof(T));
     timer_total.clear();
   }
 }

@@ -42,14 +42,14 @@ public:
 
     estimate_memory_usgae = input_space + output_space;
 
-    log::info("Input output space: " +
+    log::dbg("Input output space: " +
               std::to_string((double)(input_space + output_space) / 1e9) +
               " GB");
 
     using HierarchyType = typename OperatorType::HierarchyType;
     HierarchyType hierarchy;
     estimate_memory_usgae += hierarchy.EstimateMemoryFootprint(shape);
-    log::info(
+    log::dbg(
         "Hierarchy space: " +
         std::to_string((double)hierarchy.EstimateMemoryFootprint(shape) / 1e9) +
         " GB");
@@ -60,7 +60,7 @@ public:
     }
     estimate_memory_usgae +=
         OperatorType::EstimateMemoryFootprint(shape, config);
-    log::info("Compressor space: " +
+    log::dbg("Operation space: " +
               std::to_string(
                   (double)OperatorType::EstimateMemoryFootprint(shape, config) /
                   1e9) +
@@ -76,13 +76,13 @@ public:
     size_t aval =
         std::min((SIZE)DeviceRuntime<DeviceType>::GetAvailableMemory(),
                  config.max_memory_footprint);
-    log::info("Estimated memory usage: " + std::to_string((double)estm / 1e9) +
+    log::dbg("Estimated memory usage: " + std::to_string((double)estm / 1e9) +
               "GB, Available: " + std::to_string((double)aval / 1e9) + "GB");
     bool need = estm >= aval;
     if (need) {
       // Fast copy for domain decomposition need we disable pitched memory
       // allocation
-      log::info("ReduceMemoryFootprint set to 1");
+      log::dbg("ReduceMemoryFootprint set to 1");
       MemoryManager<DeviceType>::ReduceMemoryFootprint = true;
     }
     return need;
