@@ -196,7 +196,11 @@ public:
 
     mdr_data.VerifyLoadedBitplans(mdr_metadata);
 
-    Timer timer;
+    Timer timer, timer_all;
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer_all.start();
+    }
     // Decompress and decode bitplanes of each level
     int prev_final_level = mdr_metadata.PrevFinalLevel();
     int curr_final_level = mdr_metadata.CurrFinalLevel();
@@ -207,8 +211,11 @@ public:
       curr_final_level = hierarchy->l_target();
     }
 
-    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.start();
+    }
+    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       // Number of bitplanes need to be retrieved in addition to previously
       // already retrieved bitplanes
       SIZE num_bitplanes =
@@ -222,12 +229,20 @@ public:
           encoded_bitplanes_array[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
           queue_idx);
+      
+    }
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Lossless");
+      timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
       timer.start();
-
+    }
+    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       int level_exp = 0;
       frexp(mdr_metadata.level_error_bounds[level_idx], &level_exp);
+      SIZE num_bitplanes =
+          mdr_metadata.loaded_level_num_bitplanes[level_idx] -
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx];
       encoder.progressive_decode(
           hierarchy->level_num_elems(level_idx),
           mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
@@ -241,29 +256,28 @@ public:
       }
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       compressor.decompress_release();
+    }
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Decoding");
+      timer.print("Decoding", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.start();
     }
 
     partial_reconsctructed_data.resize(
         hierarchy->level_shape(curr_final_level));
 
-    timer.start();
     // Put decoded coefficients back to reordered layout
     interleaver.reposition(
         levels_data,
         SubArray<D, T_data, DeviceType>(partial_reconsctructed_data),
         curr_final_level, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    timer.end();
-    timer.print("Reposition");
+    
 
-    timer.start();
     decomposer.recompose(partial_reconsctructed_data, 0, curr_final_level,
                          queue_idx);
-    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    timer.end();
-    timer.print("Recomposing");
+
     if (adaptive_resolution) {
       // Interpolate previous reconstructed data to the same resolution
       InterpolateToLevel(reconstructed_data, prev_final_level, curr_final_level,
@@ -274,7 +288,19 @@ public:
     SubArray reconstructed_subarray(reconstructed_data);
     data_refactoring::multi_dimension::AddND(partial_reconstructed_subarray,
                                              reconstructed_subarray, queue_idx);
+
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);                                          
+      timer.end();
+      timer.print("Reposition", hierarchy->total_num_elems() * sizeof(T_data));
+    }
     mdr_metadata.DoneReconstruct();
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer_all.end();
+      timer_all.print("Low-level recontruct", hierarchy->total_num_elems() * sizeof(T_data));
+      timer_all.clear();
+    }
   }
 
   const std::vector<SIZE> &get_dimensions() { return dimensions; }
