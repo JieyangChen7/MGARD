@@ -2,7 +2,7 @@ namespace mgard_x {
 
 template <DIM D, typename T, typename DeviceType, typename CompressorType>
 enum compress_status_type compress_pipeline_cpu(
-    DomainDecomposer<D, T, CompressorType, DeviceType> &domain_decomposer,
+     <D, T, CompressorType, DeviceType> &domain_decomposer,
     T local_tol, T s, T &norm, enum error_bound_type local_ebtype,
     Config &config, Byte *compressed_subdomain_data,
     SIZE &compressed_subdomain_size) {
@@ -54,7 +54,8 @@ enum compress_status_type compress_pipeline_cpu(
   }
 
   Timer timer_profile;
-  std::vector<float> h2d, d2h, comp, size;
+  std::vector<float> h2d, d2h, comp;
+  std::vector<SIZE> size;
   bool profile = false;
   bool profile_e2e = false;
 
@@ -218,11 +219,9 @@ enum compress_status_type compress_pipeline_cpu(
         device_compressed_buffer[curr_subdomain_id].data(),
         compressed_size[curr_subdomain_id], byte_offset, 0);
 
-    if (profile) {
-      size.push_back(
-          compressor[curr_subdomain_id].hierarchy->total_num_elems() *
-          sizeof(T) / 1.0e9);
-    }
+    size.push_back(
+        compressor[curr_subdomain_id].hierarchy->total_num_elems() *
+        sizeof(T));
   }
 
   if (profile) {
@@ -252,7 +251,7 @@ enum compress_status_type compress_pipeline_cpu(
 
     std::cout << "size: "
               << "\n";
-    float total_size = 0;
+    SIZE total_size = 0;
     for (auto s : size)
       total_size += s;
     std::cout << total_size << "\n";
@@ -266,7 +265,7 @@ enum compress_status_type compress_pipeline_cpu(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
-    timer_series.print("Compress subdomains series");
+    timer_series.print("Compress pipeline", total_size);
     timer_series.clear();
   }
   return compress_status_type::Success;
@@ -326,7 +325,8 @@ enum compress_status_type decompress_pipeline_cpu(
   }
 
   Timer timer_profile;
-  std::vector<float> h2d, d2h, comp, size;
+  std::vector<float> h2d, d2h, comp;
+  std::vector<SIZE> size;
   bool profile = false;
   bool profile_e2e = false;
 
@@ -358,11 +358,9 @@ enum compress_status_type decompress_pipeline_cpu(
     MemoryManager<DeviceType>::Copy1D(
         device_compressed_buffer[curr_subdomain_id].data(), compressed_data,
         compressed_size[curr_subdomain_id], 0);
-    if (profile || profile_e2e) {
-      size.push_back(
-          compressor[curr_subdomain_id].hierarchy->total_num_elems() *
-          sizeof(T) / 1.0e9);
-    }
+    size.push_back(
+        compressor[curr_subdomain_id].hierarchy->total_num_elems() *
+        sizeof(T));
   }
 
   if (profile) {
@@ -520,7 +518,7 @@ enum compress_status_type decompress_pipeline_cpu(
 
     std::cout << "size: "
               << "\n";
-    float total_size = 0;
+    SIZE total_size = 0;
     for (auto s : size)
       total_size += s;
     std::cout << total_size << "\n";
@@ -533,7 +531,7 @@ enum compress_status_type decompress_pipeline_cpu(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
-    timer_series.print("Decompress subdomains series with prefetch");
+    timer_series.print("Decompress pipeline", total_size);
     timer_series.clear();
   }
   return compress_status_type::Success;

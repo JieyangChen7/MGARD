@@ -644,15 +644,10 @@ public:
         if (log::level & log::TIME) {
           DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
           timer.end();
-          timer.print("Quantization");
-          log::time("Quantization throughput: " +
-                    std::to_string(
-                        (double)(hierarchy->total_num_elems() * sizeof(T)) /
-                        timer.get() / 1e9) +
-                    " GB/s");
+          timer.print("Quantization", hierarchy->total_num_elems() * sizeof(T));
           timer.clear();
         }
-        log::info(
+        log::dbg(
             "Outlier ratio: " + std::to_string(lossless.huffman.outlier_count) +
             "/" + std::to_string(total_elems) + " (" +
             std::to_string((double)100 * lossless.huffman.outlier_count /
@@ -763,12 +758,7 @@ public:
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     if (log::level & log::TIME) {
       timer.end();
-      timer.print("Dequantization");
-      log::time(
-          "Dequantization throughput: " +
-          std::to_string((double)(hierarchy->total_num_elems() * sizeof(T)) /
-                         timer.get() / 1e9) +
-          " GB/s");
+      timer.print("Dequantization", hierarchy->total_num_elems() * sizeof(T));
       timer.clear();
     }
 

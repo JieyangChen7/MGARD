@@ -79,6 +79,8 @@ void refactor_pipeline(
     Cache::cache.ClearHierarchyCache();
   }
 
+  SIZE total_size = 0;
+
   for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
     if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(id),
                                        domain_decomposer.uniform)) {
@@ -114,7 +116,7 @@ void refactor_pipeline(
         domain_decomposer.subdomain_shape(curr_subdomain_id));
     log::info("Adapt Refactor to hierarchy");
     refactor.Adapt(hierarchy, config, current_queue);
-
+    total_size += hierarchy.total_num_elems() * sizeof(T);
     // Prefetch the next subdomain
     if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
       next_subdomain_id = curr_subdomain_id + 1;
@@ -143,7 +145,7 @@ void refactor_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
-    timer_series.print("Refactor subdomain series with prefetch");
+    timer_series.print("Refactor pipeline", total_size);
     timer_series.clear();
   }
 }
@@ -189,6 +191,8 @@ void reconstruct_pipeline(
       refactored_metadata.metadata[0], refactored_data.level_signs[0],
       current_queue);
 
+  SIZE total_size = 0;
+
   for (SIZE curr_subdomain_id = 0;
        curr_subdomain_id < domain_decomposer.num_subdomains();
        curr_subdomain_id++) {
@@ -199,7 +203,7 @@ void reconstruct_pipeline(
         domain_decomposer.subdomain_shape(curr_subdomain_id));
     log::info("Adapt Refactor to hierarchy");
     reconstructor.Adapt(hierarchy, config, current_queue);
-
+    total_size += hierarchy.total_num_elems() * sizeof(T);
     if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
       // Prefetch the next subdomain
       next_subdomain_id = curr_subdomain_id + 1;
@@ -263,7 +267,7 @@ void reconstruct_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
-    timer_series.print("Reconstruct subdomain series with prefetch");
+    timer_series.print("Reconstruct pipeline", total_size);
     timer_series.clear();
   }
 }
@@ -359,21 +363,9 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
     timer_each.clear();
   }
 
-  if (log::level & log::TIME)
-    timer_each.start();
-
   refactor_pipeline(domain_decomposer, config, refactored_metadata,
                     refactored_data);
 
-  if (log::level & log::TIME) {
-    timer_each.end();
-    timer_each.print("Aggregated low-level refactoring");
-    log::time("Aggregated low-level refactoring throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_each.get() / 1e9) +
-              " GB/s");
-    timer_each.clear();
-  }
 
   if (log::level & log::TIME)
     timer_each.start();
@@ -421,11 +413,7 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
     timer_each.print("Serialization");
     timer_each.clear();
     timer_total.end();
-    timer_total.print("High-level refactoring");
-    log::time("High-level refactoring throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_total.get() / 1e9) +
-              " GB/s");
+    timer_total.print("High-level refactoring", total_num_elem * sizeof(T));
     timer_total.clear();
   }
 }
@@ -588,21 +576,8 @@ void MDReconstruct(std::vector<SIZE> shape,
     timer_each.clear();
   }
 
-  if (log::level & log::TIME)
-    timer_each.start();
-
   reconstruct_pipeline(domain_decomposer, config, refactored_metadata,
                        refactored_data, reconstructed_data);
-
-  if (log::level & log::TIME) {
-    timer_each.end();
-    timer_each.print("Aggregated low-level reconstruction");
-    log::time("Aggregated low-level reconstruction throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_each.get() / 1e9) +
-              " GB/s");
-    timer_each.clear();
-  }
 
   if (m.dstype == data_structure_type::Cartesian_Grid_Non_Uniform) {
     for (DIM d = 0; d < D; d++)
@@ -623,11 +598,7 @@ void MDReconstruct(std::vector<SIZE> shape,
 
   if (log::level & log::TIME) {
     timer_total.end();
-    timer_total.print("High-level reconstruction");
-    log::time("High-level reconstruction throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_total.get() / 1e9) +
-              " GB/s");
+    timer_total.print("High-level reconstruction", total_num_elem * sizeof(T));
     timer_total.clear();
   }
 }
