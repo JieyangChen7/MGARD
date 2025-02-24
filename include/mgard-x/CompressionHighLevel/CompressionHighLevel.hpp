@@ -138,7 +138,7 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
     local_ebtype = error_bound_type::ABS;
     if (log::level & log::TIME) {
       timer_each.end();
-      timer_each.print("Calculate norm of decomposed domain");
+      timer_each.print("Calculate norm of decomposed domain", total_num_elem * sizeof(T));
       timer_each.clear();
     }
   }
@@ -223,8 +223,6 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
   }
 
   enum compress_status_type compress_status;
-  if (log::level & log::TIME)
-    timer_each.start();
   DeviceRuntime<DeviceType>::SelectDevice(config.dev_id);
   if constexpr (std::is_same<DeviceType, CUDA>::value ||
                 std::is_same<DeviceType, HIP>::value ||
@@ -237,15 +235,6 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
     compress_status = compress_pipeline_cpu(
         domain_decomposer, local_tol, s, norm, local_ebtype, config,
         compressed_subdomain_data, compressed_subdomain_size);
-  }
-  if (log::level & log::TIME) {
-    timer_each.end();
-    timer_each.print("Aggregated low-level compression");
-    log::time("Aggregated low-level compression throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_each.get() / 1e9) +
-              " GB/s");
-    timer_each.clear();
   }
 
   if (log::level & log::TIME)
@@ -302,11 +291,7 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
     timer_each.print("Serialization");
     timer_each.clear();
     timer_total.end();
-    timer_total.print("High-level compression");
-    log::time("High-level compression throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_total.get() / 1e9) +
-              " GB/s");
+    timer_total.print("High-level compression", total_num_elem * sizeof(T));
     timer_total.clear();
   }
 
@@ -530,8 +515,6 @@ general_decompress(std::vector<SIZE> shape, const void *compressed_data,
     timer_each.clear();
   }
   enum compress_status_type decompress_status;
-  if (log::level & log::TIME)
-    timer_each.start();
   DeviceRuntime<DeviceType>::SelectDevice(config.dev_id);
 
   if constexpr (std::is_same<DeviceType, CUDA>::value ||
@@ -545,15 +528,6 @@ general_decompress(std::vector<SIZE> shape, const void *compressed_data,
     decompress_status = decompress_pipeline_cpu(
         domain_decomposer, local_tol, (T)m.s, (T)m.norm, local_ebtype, config,
         compressed_subdomain_data);
-  }
-  if (log::level & log::TIME) {
-    timer_each.end();
-    timer_each.print("Aggregated low-level decompression");
-    log::time("Aggregated low-level decompression throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_each.get() / 1e9) +
-              " GB/s");
-    timer_each.clear();
   }
 
   if (!input_previously_pinned && config.auto_pin_host_buffers) {
@@ -582,11 +556,7 @@ general_decompress(std::vector<SIZE> shape, const void *compressed_data,
 
   if (log::level & log::TIME) {
     timer_total.end();
-    timer_total.print("High-level decompression");
-    log::time("High-level decompression throughput: " +
-              std::to_string((double)(total_num_elem * sizeof(T)) /
-                             timer_total.get() / 1e9) +
-              " GB/s");
+    timer_total.print("High-level decompression", total_num_elem * sizeof(T));
     timer_total.clear();
   }
 

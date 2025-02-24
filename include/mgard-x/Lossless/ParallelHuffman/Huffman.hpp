@@ -118,11 +118,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman compress");
-      log::time("Huffman compression throughput: " +
-                std::to_string((double)primary_count * sizeof(Q) / timer.get() /
-                               1e9) +
-                " GB/s");
+      timer.print("Huffman compress", primary_count * sizeof(Q));
       timer.clear();
     }
   }
@@ -242,9 +238,9 @@ public:
 
     delete[] h_meta;
 
-    log::info("Huffman block size: " + std::to_string(chunk_size));
-    log::info("Huffman dictionary size: " + std::to_string(dict_size));
-    log::info("Huffman compress ratio (primary): " +
+    log::dbg("Huffman block size: " + std::to_string(chunk_size));
+    log::dbg("Huffman dictionary size: " + std::to_string(dict_size));
+    log::dbg("Huffman compress ratio (primary): " +
               std::to_string(primary_count * sizeof(Q)) + "/" +
               std::to_string(ddata_size * sizeof(H)) + " (" +
               std::to_string((double)primary_count * sizeof(Q) /
@@ -259,7 +255,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman serialize");
+      timer.print("Huffman serialize", compressed_data.shape(0));
       timer.clear();
     }
   }
@@ -319,7 +315,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman deserialize");
+      timer.print("Huffman deserialize", compressed_data.shape(0));
       timer.clear();
     }
   }
@@ -352,11 +348,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman decompress");
-      log::time("Huffman decompression throughput: " +
-                std::to_string((double)primary_count * sizeof(Q) / timer.get() /
-                               1e9) +
-                " GB/s");
+      timer.print("Huffman decompress", primary_count * sizeof(Q));
       timer.clear();
     }
   }
@@ -385,7 +377,7 @@ public:
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     if (outlier_count <= workspace.outlier_subarray.shape(0)) {
       // outlier buffer has sufficient size
-      log::info(
+      log::dbg(
           "Outlier ratio: " + std::to_string(outlier_count) + "/" +
           std::to_string(original_data.shape(0)) + " (" +
           std::to_string((double)100 * outlier_count / original_data.shape(0)) +
@@ -398,7 +390,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman outlier");
+      timer.print("Huffman outlier", outlier_count * sizeof(Q));
       timer.clear();
     }
 
@@ -438,7 +430,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman outlier");
+      timer.print("Huffman outlier", outlier_count * sizeof(Q));
       timer.clear();
     }
   }

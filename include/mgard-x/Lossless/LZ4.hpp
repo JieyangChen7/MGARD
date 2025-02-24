@@ -368,8 +368,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("LZ4 compress");
-      timer.print_throughput("LZ4 compress", input_count);
+      timer.print("LZ4 compress", input_count);
       timer.clear();
     }
 #else
@@ -405,8 +404,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("LZ4 decompress");
-      timer.print_throughput("LZ4 decompress", output_data.shape(0));
+      timer.print("LZ4 decompress", output_data.shape(0));
       timer.clear();
     }
 #else

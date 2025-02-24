@@ -24,7 +24,7 @@ T norm_calculator(Array<D, T, DeviceType> &original_array,
   T norm = 0;
   SubArray<1, T, DeviceType> temp_subarray;
   if (!original_array.isPitched()) { // zero copy
-    log::info("Use zero copy when calculating norm");
+    log::dbg("Use zero copy when calculating norm");
     temp_subarray =
         SubArray<1, T, DeviceType>({total_elems}, original_array.data());
   } else { // need to linearized
@@ -73,7 +73,7 @@ T norm_calculator(Array<D, T, DeviceType> &original_array,
   }
   if (log::level & log::TIME) {
     timer.end();
-    timer.print("Calculate norm");
+    timer.print("Calculate norm", total_elems * sizeof(T));
     timer.clear();
   }
   return norm;

@@ -104,8 +104,8 @@ void GetCodebook(int dict_size,
     double entropy =
         CalculateEntropy(workspace.huff_array.shape(0), nz_dict_size,
                          _nz_d_freq_subarray, queue_idx);
-    log::info("LC: " + std::to_string(LC));
-    log::info("Entropy: " + std::to_string(entropy));
+    log::dbg("LC: " + std::to_string(LC));
+    log::dbg("Entropy: " + std::to_string(entropy));
   }
 
   // DumpSubArray("cl_"+std::to_string(workspace.huff_array.shape(0))+".dat",
