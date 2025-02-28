@@ -2,10 +2,9 @@ namespace mgard_x {
 
 template <DIM D, typename T, typename DeviceType, typename CompressorType>
 enum compress_status_type compress_pipeline_cpu(
-     <D, T, CompressorType, DeviceType> &domain_decomposer,
-    T local_tol, T s, T &norm, enum error_bound_type local_ebtype,
-    Config &config, Byte *compressed_subdomain_data,
-    SIZE &compressed_subdomain_size) {
+    <D, T, CompressorType, DeviceType> &domain_decomposer, T local_tol, T s,
+    T &norm, enum error_bound_type local_ebtype, Config &config,
+    Byte *compressed_subdomain_data, SIZE &compressed_subdomain_size) {
   Timer timer_series;
   if (log::level & log::TIME)
     timer_series.start();
@@ -219,9 +218,8 @@ enum compress_status_type compress_pipeline_cpu(
         device_compressed_buffer[curr_subdomain_id].data(),
         compressed_size[curr_subdomain_id], byte_offset, 0);
 
-    size.push_back(
-        compressor[curr_subdomain_id].hierarchy->total_num_elems() *
-        sizeof(T));
+    size.push_back(compressor[curr_subdomain_id].hierarchy->total_num_elems() *
+                   sizeof(T));
   }
 
   if (profile) {
@@ -358,9 +356,8 @@ enum compress_status_type decompress_pipeline_cpu(
     MemoryManager<DeviceType>::Copy1D(
         device_compressed_buffer[curr_subdomain_id].data(), compressed_data,
         compressed_size[curr_subdomain_id], 0);
-    size.push_back(
-        compressor[curr_subdomain_id].hierarchy->total_num_elems() *
-        sizeof(T));
+    size.push_back(compressor[curr_subdomain_id].hierarchy->total_num_elems() *
+                   sizeof(T));
   }
 
   if (profile) {

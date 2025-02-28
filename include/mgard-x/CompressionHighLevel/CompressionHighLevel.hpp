@@ -138,7 +138,8 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
     local_ebtype = error_bound_type::ABS;
     if (log::level & log::TIME) {
       timer_each.end();
-      timer_each.print("Calculate norm of decomposed domain", total_num_elem * sizeof(T));
+      timer_each.print("Calculate norm of decomposed domain",
+                       total_num_elem * sizeof(T));
       timer_each.clear();
     }
   }

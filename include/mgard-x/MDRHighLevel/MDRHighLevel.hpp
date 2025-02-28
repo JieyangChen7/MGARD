@@ -366,7 +366,6 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
   refactor_pipeline(domain_decomposer, config, refactored_metadata,
                     refactored_data);
 
-
   if (log::level & log::TIME)
     timer_each.start();
   Metadata<DeviceType> m;
