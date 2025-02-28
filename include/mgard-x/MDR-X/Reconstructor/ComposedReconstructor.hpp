@@ -30,6 +30,8 @@ public:
   using Decomposer = MGARDOrthoganalDecomposer<D, T_data, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
+  using BatchedEncoder =
+      BatchedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
   using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
@@ -40,10 +42,7 @@ public:
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
 
-  ~ComposedReconstructor() {
-    delete[] levels_array;
-    delete[] levels_data;
-  }
+  ~ComposedReconstructor() {}
 
   void Adapt(Hierarchy<D, T_data, DeviceType> &hierarchy, Config config,
              int queue_idx) {
@@ -52,6 +51,7 @@ public:
     decomposer.Adapt(hierarchy, config, queue_idx);
     interleaver.Adapt(hierarchy, queue_idx);
     encoder.Adapt(hierarchy, queue_idx);
+    batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(
         Encoder::buffer_size(hierarchy.level_num_elems(hierarchy.l_target())),
         config, queue_idx);
@@ -63,22 +63,29 @@ public:
     interpolation_workspace.resize(hierarchy.level_shape(hierarchy.l_target()),
                                    queue_idx);
 
-    delete[] levels_array;
-    delete[] levels_data;
-    levels_array = new Array<1, T_data, DeviceType>[hierarchy.l_target() + 1];
-    levels_data = new SubArray<1, T_data, DeviceType>[hierarchy.l_target() + 1];
+    level_data_array.resize(hierarchy.l_target() + 1);
+    level_data_subarray.resize(hierarchy.l_target() + 1);
+    level_num_elems.resize(hierarchy.l_target() + 1);
+    exp.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      levels_array[level_idx].resize({hierarchy.level_num_elems(level_idx)},
-                                     queue_idx);
-      levels_data[level_idx] =
-          SubArray<1, T_data, DeviceType>(levels_array[level_idx]);
+      level_data_array[level_idx].resize({hierarchy.level_num_elems(level_idx)},
+                                         queue_idx);
+      level_data_subarray[level_idx] =
+          SubArray<1, T_data, DeviceType>(level_data_array[level_idx]);
+      level_num_elems[level_idx] = hierarchy.level_num_elems(level_idx);
     }
     encoded_bitplanes_array.resize(hierarchy.l_target() + 1);
+    encoded_bitplanes_subarray.resize(hierarchy.l_target() + 1);
+    level_num_bitplanes.resize(hierarchy.l_target() + 1);
+    level_signs_subarray.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
       encoded_bitplanes_array[level_idx].resize(
           {(SIZE)total_num_bitplanes,
            encoder.buffer_size(hierarchy.level_num_elems(level_idx))},
           queue_idx);
+      encoded_bitplanes_subarray[level_idx] =
+          SubArray<2, T_bitplane, DeviceType>(
+              encoded_bitplanes_array[level_idx]);
     }
   }
 
@@ -116,6 +123,7 @@ public:
     size += Decomposer::EstimateMemoryFootprint(shape);
     size += Interleaver::EstimateMemoryFootprint(shape);
     size += Encoder::EstimateMemoryFootprint(shape);
+    size += BatchedEncoder::EstimateMemoryFootprint(shape);
     size += Compressor::EstimateMemoryFootprint(max_n, config);
     return size;
   }
@@ -229,7 +237,6 @@ public:
           encoded_bitplanes_array[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
           queue_idx);
-      
     }
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -237,26 +244,39 @@ public:
       timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
       timer.start();
     }
+
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       int level_exp = 0;
       frexp(mdr_metadata.level_error_bounds[level_idx], &level_exp);
-      SIZE num_bitplanes =
+      exp[level_idx] = level_exp;
+      level_num_bitplanes[level_idx] =
           mdr_metadata.loaded_level_num_bitplanes[level_idx] -
           mdr_metadata.prev_used_level_num_bitplanes[level_idx];
-      encoder.progressive_decode(
-          hierarchy->level_num_elems(level_idx),
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
-          level_exp,
-          SubArray<2, T_bitplane, DeviceType>(
-              encoded_bitplanes_array[level_idx]),
-          SubArray(mdr_data.level_signs[level_idx]), level_idx,
-          levels_data[level_idx], queue_idx);
-      if (num_bitplanes == 0) {
-        levels_array[level_idx].memset(0);
-      }
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      compressor.decompress_release();
+      level_signs_subarray[level_idx] =
+          SubArray<1, bool, DeviceType>(mdr_data.level_signs[level_idx]);
     }
+
+    // for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
+    //   encoder.progressive_decode(
+    //       level_num_elems[level_idx],
+    //       mdr_metadata.prev_used_level_num_bitplanes[level_idx],
+    //       level_num_bitplanes[level_idx], exp[level_idx],
+    //       encoded_bitplanes_subarray[level_idx],
+    //       level_signs_subarray[level_idx], level_idx,
+    //       level_data_subarray[level_idx], queue_idx);
+    // }
+
+    batched_encoder.progressive_decode(
+        level_num_elems, mdr_metadata.prev_used_level_num_bitplanes,
+        level_num_bitplanes, exp, encoded_bitplanes_subarray,
+        level_signs_subarray, level_data_subarray, queue_idx);
+
+    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
+      if (level_num_bitplanes[level_idx] == 0) {
+        level_data_array[level_idx].memset(0);
+      }
+    }
+
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
@@ -264,16 +284,18 @@ public:
       timer.start();
     }
 
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    compressor.decompress_release();
+
     partial_reconsctructed_data.resize(
         hierarchy->level_shape(curr_final_level));
 
     // Put decoded coefficients back to reordered layout
     interleaver.reposition(
-        levels_data,
+        level_data_subarray,
         SubArray<D, T_data, DeviceType>(partial_reconsctructed_data),
         curr_final_level, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    
 
     decomposer.recompose(partial_reconsctructed_data, 0, curr_final_level,
                          queue_idx);
@@ -290,7 +312,7 @@ public:
                                              reconstructed_subarray, queue_idx);
 
     if (log::level & log::TIME) {
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);                                          
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
       timer.print("Reposition", hierarchy->total_num_elems() * sizeof(T_data));
     }
@@ -298,7 +320,8 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer_all.end();
-      timer_all.print("Low-level recontruct", hierarchy->total_num_elems() * sizeof(T_data));
+      timer_all.print("Low-level recontruct",
+                      hierarchy->total_num_elems() * sizeof(T_data));
       timer_all.clear();
     }
   }
@@ -323,16 +346,22 @@ private:
   Decomposer decomposer;
   Interleaver interleaver;
   Encoder encoder;
+  BatchedEncoder batched_encoder;
   Compressor compressor;
 
   Array<D, T_data, DeviceType> partial_reconsctructed_data;
   Array<D, T_data, DeviceType> interpolation_workspace;
-  Array<1, T_data, DeviceType> *levels_array = nullptr;
-  SubArray<1, T_data, DeviceType> *levels_data = nullptr;
+  std::vector<Array<1, T_data, DeviceType>> level_data_array;
+  std::vector<SubArray<1, T_data, DeviceType>> level_data_subarray;
   std::vector<Array<2, T_bitplane, DeviceType>> encoded_bitplanes_array;
+  std::vector<SubArray<2, T_bitplane, DeviceType>> encoded_bitplanes_subarray;
+  std::vector<SubArray<1, bool, DeviceType>> level_signs_subarray;
   SIZE total_num_bitplanes;
 
   bool prev_reconstructed;
+
+  std::vector<SIZE> level_num_elems;
+  std::vector<int32_t> exp;
 
   std::vector<T_data> data;
   std::vector<SIZE> dimensions;
