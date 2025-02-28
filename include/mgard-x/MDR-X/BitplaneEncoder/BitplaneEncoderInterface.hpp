@@ -52,9 +52,37 @@ public:
                      int32_t exp,
                      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                      SubArray<1, bool, DeviceType> level_signs, int level,
-                     SubArray<1, T_data, DeviceType> v,
+                     SubArray<1, T_data, DeviceType> v, int queue_idx) = 0;
 
-                     int queue_idx) = 0;
+  virtual void print() const = 0;
+};
+
+// concept of encoder which encodes T type data into bitstreams
+template <DIM D, typename T_data, typename T_bitplane, typename T_error,
+          typename DeviceType>
+class BatchedBitplaneEncoderInterface {
+public:
+  virtual ~BatchedBitplaneEncoderInterface() = default;
+
+  virtual void
+  encode(std::vector<SIZE> n, SIZE num_bitplanes, std::vector<int32_t> exp,
+         std::vector<SubArray<1, T_data, DeviceType>> v,
+         std::vector<SubArray<2, T_bitplane, DeviceType>> encoded_bitplanes,
+         std::vector<SubArray<1, T_error, DeviceType>> level_errors,
+         std::vector<std::vector<SIZE>> &streams_sizes, int queue_idx) = 0;
+
+  virtual void
+  decode(std::vector<SIZE> n, std::vector<uint8_t> num_bitplanes,
+         std::vector<int32_t> exp,
+         std::vector<SubArray<2, T_bitplane, DeviceType>> encoded_bitplanes,
+         std::vector<SubArray<1, T_data, DeviceType>> v, int queue_idx) = 0;
+
+  virtual void progressive_decode(
+      std::vector<SIZE> n, std::vector<uint8_t> starting_bitplanes,
+      std::vector<uint8_t> num_bitplanes, std::vector<int32_t> exp,
+      std::vector<SubArray<2, T_bitplane, DeviceType>> encoded_bitplanes,
+      std::vector<SubArray<1, bool, DeviceType>> level_signs,
+      std::vector<SubArray<1, T_data, DeviceType>> v, int queue_idx) = 0;
 
   virtual void print() const = 0;
 };
