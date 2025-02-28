@@ -25,14 +25,17 @@ public:
     return total_time;
   }
 
-  double get_throughput(SIZE num_bytes) { return (double)num_bytes / get() / 1e9; }
+  double get_throughput(SIZE num_bytes) {
+    return (double)num_bytes / get() / 1e9;
+  }
 
   void clear() { total_time = 0; }
   void print(std::string s, SIZE num_bytes = 0) {
     if (num_bytes == 0) {
       log::time(s + ": " + std::to_string(total_time) + " s");
     } else {
-      log::time(s + ": " + std::to_string(total_time) + " s (" + std::to_string(get_throughput(num_bytes)) + " GB/s)");
+      log::time(s + ": " + std::to_string(total_time) + " s (" +
+                std::to_string(get_throughput(num_bytes)) + " GB/s)");
     }
   }
 

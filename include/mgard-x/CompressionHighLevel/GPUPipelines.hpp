@@ -212,11 +212,9 @@ enum compress_status_type compress_pipeline_gpu(
     DeviceRuntime<DeviceType>::SyncDevice();
     timer_profile.end();
     timer_profile.print("end to end");
-    
+
     timer_profile.print_throughput("end to end", total_size * 1e9);
   }
-
-  
 
   if (profile) {
     std::cout << "comp: "
@@ -518,8 +516,6 @@ enum compress_status_type decompress_pipeline_gpu(
     timer_profile.print("end to end");
     timer_profile.print_throughput("end to end", total_size * 1e9);
   }
-
-  
 
   if (profile) {
     // double total_size = domain_decomposer.shape[0] *
