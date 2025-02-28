@@ -86,8 +86,8 @@ public:
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     log::dbg("Zstd compression level: " + std::to_string(compressionLevel));
     log::dbg("Zstd compress ratio: " +
-              std::to_string((double)(input_count) /
-                             (actual_out_size + sizeof(size_t))));
+             std::to_string((double)(input_count) /
+                            (actual_out_size + sizeof(size_t))));
     if (log::level & log::TIME) {
       timer.end();
       timer.print("Zstd compress", input_count);

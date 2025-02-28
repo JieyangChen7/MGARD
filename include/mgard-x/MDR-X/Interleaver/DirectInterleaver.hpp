@@ -98,12 +98,13 @@ public:
     return size;
   }
 
-  void interleave(SubArray<D, T, DeviceType> decomposed_data,
-                  SubArray<1, T, DeviceType> *levels_decomposed_data,
-                  SIZE target_level, int queue_idx) {
+  void
+  interleave(SubArray<D, T, DeviceType> decomposed_data,
+             std::vector<SubArray<1, T, DeviceType>> levels_decomposed_data,
+             SIZE target_level, int queue_idx) {
     MemoryManager<DeviceType>::Copy1D(levels_decomposed_data_device,
-                                      levels_decomposed_data, target_level + 1,
-                                      queue_idx);
+                                      levels_decomposed_data.data(),
+                                      target_level + 1, queue_idx);
     DeviceLauncher<DeviceType>::Execute(
         DirectInterleaverKernel<D, T, Interleave, DeviceType>(
             SubArray(hierarchy->level_ranges()),
@@ -111,12 +112,13 @@ public:
             levels_decomposed_data_device),
         queue_idx);
   }
-  void reposition(SubArray<1, T, DeviceType> *levels_decomposed_data,
-                  SubArray<D, T, DeviceType> decomposed_data, SIZE target_level,
-                  int queue_idx) {
+  void
+  reposition(std::vector<SubArray<1, T, DeviceType>> levels_decomposed_data,
+             SubArray<D, T, DeviceType> decomposed_data, SIZE target_level,
+             int queue_idx) {
     MemoryManager<DeviceType>::Copy1D(levels_decomposed_data_device,
-                                      levels_decomposed_data, target_level + 1,
-                                      queue_idx);
+                                      levels_decomposed_data.data(),
+                                      target_level + 1, queue_idx);
     DeviceLauncher<DeviceType>::Execute(
         DirectInterleaverKernel<D, T, Reposition, DeviceType>(
             SubArray(hierarchy->level_ranges()),

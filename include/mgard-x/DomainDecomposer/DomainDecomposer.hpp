@@ -43,8 +43,8 @@ public:
     estimate_memory_usgae = input_space + output_space;
 
     log::dbg("Input output space: " +
-              std::to_string((double)(input_space + output_space) / 1e9) +
-              " GB");
+             std::to_string((double)(input_space + output_space) / 1e9) +
+             " GB");
 
     using HierarchyType = typename OperatorType::HierarchyType;
     HierarchyType hierarchy;
@@ -61,10 +61,10 @@ public:
     estimate_memory_usgae +=
         OperatorType::EstimateMemoryFootprint(shape, config);
     log::dbg("Operation space: " +
-              std::to_string(
-                  (double)OperatorType::EstimateMemoryFootprint(shape, config) /
-                  1e9) +
-              " GB");
+             std::to_string(
+                 (double)OperatorType::EstimateMemoryFootprint(shape, config) /
+                 1e9) +
+             " GB");
 
     return estimate_memory_usgae;
   }
@@ -77,7 +77,7 @@ public:
         std::min((SIZE)DeviceRuntime<DeviceType>::GetAvailableMemory(),
                  config.max_memory_footprint);
     log::dbg("Estimated memory usage: " + std::to_string((double)estm / 1e9) +
-              "GB, Available: " + std::to_string((double)aval / 1e9) + "GB");
+             "GB, Available: " + std::to_string((double)aval / 1e9) + "GB");
     bool need = estm >= aval;
     if (need) {
       // Fast copy for domain decomposition need we disable pitched memory

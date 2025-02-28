@@ -34,13 +34,15 @@ template <DIM D, typename T, typename DeviceType> class InterleaverInterface {
 public:
   virtual ~InterleaverInterface() = default;
 
-  virtual void interleave(SubArray<D, T, DeviceType> decomposed_data,
-                          SubArray<1, T, DeviceType> *levels_decomposed_data,
-                          SIZE num_levels, int queue_idx) = 0;
+  virtual void
+  interleave(SubArray<D, T, DeviceType> decomposed_data,
+             std::vector<SubArray<1, T, DeviceType>> levels_decomposed_data,
+             SIZE num_levels, int queue_idx) = 0;
 
-  virtual void reposition(SubArray<1, T, DeviceType> *levels_decomposed_data,
-                          SubArray<D, T, DeviceType> decomposed_data,
-                          SIZE num_levels, int queue_idx) = 0;
+  virtual void
+  reposition(std::vector<SubArray<1, T, DeviceType>> levels_decomposed_data,
+             SubArray<D, T, DeviceType> decomposed_data, SIZE num_levels,
+             int queue_idx) = 0;
 
   virtual void print() const = 0;
 };

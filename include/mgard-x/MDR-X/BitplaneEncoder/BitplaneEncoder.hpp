@@ -4,6 +4,7 @@
 // #include "GroupedBPEncoder.hpp"
 // #include "NegaBinaryBPEncoder.hpp"
 // #include "PerBitBPEncoder.hpp"
+#include "BatchedBPEncoder.hpp"
 #include "GroupedBPEncoderGPU.hpp"
 #include "GroupedWarpBPEncoderGPU.hpp"
 // #include "PerBitBPEncoderGPU.hpp"

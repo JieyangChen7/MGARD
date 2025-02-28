@@ -226,7 +226,8 @@ void Compressor<D, T, DeviceType>::Compress(
   if (log::level & log::TIME) {
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     timer_total.end();
-    timer_total.print("Low-level compression", hierarchy->total_num_elems() * sizeof(T));
+    timer_total.print("Low-level compression",
+                      hierarchy->total_num_elems() * sizeof(T));
     timer_total.clear();
   }
 }
@@ -256,7 +257,8 @@ void Compressor<D, T, DeviceType>::Decompress(
   if (log::level & log::TIME) {
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     timer_total.end();
-    timer_total.print("Low-level decompression", hierarchy->total_num_elems() * sizeof(T));
+    timer_total.print("Low-level decompression",
+                      hierarchy->total_num_elems() * sizeof(T));
     timer_total.clear();
   }
 }
