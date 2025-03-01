@@ -24,9 +24,9 @@ namespace mgard_x {
 namespace MDR {
 
 // interface for lossless compressor
-template <typename T, typename DeviceType>
+template <typename T_bitplane, typename DeviceType>
 class NullLevelCompressor
-    : public concepts::LevelCompressorInterface<T, DeviceType> {
+    : public concepts::LevelCompressorInterface<T_bitplane, DeviceType> {
 public:
   NullLevelCompressor() : initialized(false) {}
   NullLevelCompressor(SIZE max_n, Config config) {
@@ -42,22 +42,24 @@ public:
 
   static size_t EstimateMemoryFootprint(SIZE max_n, Config config) {
     size_t size = 0;
-    size += Huffman<T, T, HUFFMAN_CODE, DeviceType>::EstimateMemoryFootprint(
-        max_n, config.huff_dict_size, config.huff_block_size,
-        config.estimate_outlier_ratio);
+    size += Huffman<T_bitplane, T_bitplane, HUFFMAN_CODE, DeviceType>::
+        EstimateMemoryFootprint(max_n, config.huff_dict_size,
+                                config.huff_block_size,
+                                config.estimate_outlier_ratio);
     return size;
   }
   // compress level, overwrite and free original streams; rewrite streams sizes
   void
   compress_level(std::vector<SIZE> &bitplane_sizes,
-                 Array<2, T, DeviceType> &encoded_bitplanes,
+                 Array<2, T_bitplane, DeviceType> &encoded_bitplanes,
                  std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
                  int queue_idx) {
 
-    SubArray<2, T, DeviceType> encoded_bitplanes_subarray(encoded_bitplanes);
+    SubArray<2, T_bitplane, DeviceType> encoded_bitplanes_subarray(
+        encoded_bitplanes);
     for (SIZE bitplane_idx = 0;
          bitplane_idx < encoded_bitplanes_subarray.shape(0); bitplane_idx++) {
-      T *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
+      T_bitplane *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
 
       Array<1, Byte, DeviceType> compressed_bitplane(
           {bitplane_sizes[bitplane_idx]});
@@ -75,16 +77,17 @@ public:
   void decompress_level(
       std::vector<SIZE> &bitplane_sizes,
       std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
-      Array<2, T, DeviceType> &encoded_bitplanes, uint8_t starting_bitplane,
-      uint8_t num_bitplanes, int queue_idx) {
+      Array<2, T_bitplane, DeviceType> &encoded_bitplanes,
+      uint8_t starting_bitplane, uint8_t num_bitplanes, int queue_idx) {
 
-    SubArray<2, T, DeviceType> encoded_bitplanes_subarray(encoded_bitplanes);
+    SubArray<2, T_bitplane, DeviceType> encoded_bitplanes_subarray(
+        encoded_bitplanes);
 
     for (SIZE bitplane_idx = starting_bitplane;
          bitplane_idx < starting_bitplane + num_bitplanes; bitplane_idx++) {
       // std::cout << "decompress level: " << bitplane_idx << " " <<
       // (int)num_bitplanes << "\n";
-      T *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
+      T_bitplane *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
       // MDR::Zstd
       // SIZE compressed_size = bitplane_sizes[starting_bitplane +
       // bitplane_idx]; Byte *compressed_host = new Byte[compressed_size];
@@ -98,12 +101,14 @@ public:
       // SIZE decompressed_size = ::MDR::ZSTD::decompress(
       //     compressed_host, compressed_size, &bitplane_host);
 
-      // MemoryManager<DeviceType>::Copy1D(bitplane, (T *)bitplane_host,
-      //                                   decompressed_size / sizeof(T), 0);
+      // MemoryManager<DeviceType>::Copy1D(bitplane, (T_bitplane
+      // *)bitplane_host,
+      //                                   decompressed_size /
+      //                                   sizeof(T_bitplane), 0);
       // DeviceRuntime<DeviceType>::SyncQueue(0);
 
       // Huffman
-      // Array<1, T, DeviceType>
+      // Array<1, T_bitplane, DeviceType>
       // encoded_bitplane({encoded_bitplanes_subarray.shape(1)}, bitplane);
       // huffman.Decompress(compressed_bitplanes[bitplane_idx],
       // encoded_bitplane, queue_idx);
