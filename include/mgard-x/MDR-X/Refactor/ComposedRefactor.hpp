@@ -28,8 +28,8 @@ public:
   using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
   using BatchedEncoder =
       BatchedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
-  // using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
-  using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
+  using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
+  // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
   ComposedRefactor() : initialized(false) {}
 

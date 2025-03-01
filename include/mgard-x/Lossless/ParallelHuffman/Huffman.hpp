@@ -219,7 +219,7 @@ public:
         CondenseKernel<H, DeviceType>(
             workspace.huff_subarray, workspace.condense_write_offsets_subarray,
             workspace.condense_actual_lengths_subarray,
-            compressed_data_cast_subarray, chunk_size),
+            compressed_data_cast_subarray, chunk_size, nchunk),
         queue_idx);
 
     advance_with_align<H>(byte_offset, ddata_size);
@@ -362,6 +362,10 @@ public:
       timer.start();
     }
 
+    ATOMIC_IDX zero = 0;
+    MemoryManager<DeviceType>::Copy1D(workspace.outlier_count_subarray.data(),
+                                      &zero, 1, queue_idx);
+
     DeviceLauncher<DeviceType>::Execute(
         DictionaryShiftKernel<S, MGARDX_SHIFT_DICT, DeviceType>(
             SubArray(original_data), dict_size),
@@ -404,9 +408,9 @@ public:
                   Array<1, S, DeviceType> &decompressed_data, int queue_idx) {
 
     // Cast to unsigned type.
-    // We use temporarily use size 1 as it we be resized to the correct size.
-    Array<1, Q, DeviceType> primary_data({1}, (Q *)decompressed_data.data());
-
+    // We must use the correct size to avoid resize to new allocation
+    Array<1, Q, DeviceType> primary_data({decompressed_data.shape(0)},
+                                         (Q *)decompressed_data.data());
     DecompressPrimary(compressed_data, primary_data, queue_idx);
 
     Timer timer;
@@ -424,7 +428,6 @@ public:
         DictionaryShiftKernel<S, MGARDX_RESTORE_DICT, DeviceType>(
             decompressed_data, dict_size),
         queue_idx);
-
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
     if (log::level & log::TIME) {

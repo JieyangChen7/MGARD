@@ -56,9 +56,10 @@ public:
   CondenseKernel(SubArray<1, H, DeviceType> v,
                  SubArray<1, size_t, DeviceType> write_offsets,
                  SubArray<1, size_t, DeviceType> actual_lengths,
-                 SubArray<1, H, DeviceType> condensed_v, SIZE chunck_size)
+                 SubArray<1, H, DeviceType> condensed_v, SIZE chunck_size,
+                 SIZE nchunk)
       : v(v), write_offsets(write_offsets), actual_lengths(actual_lengths),
-        condensed_v(condensed_v), chunck_size(chunck_size) {}
+        condensed_v(condensed_v), chunck_size(chunck_size), nchunk(nchunk) {}
 
   MGARDX_CONT
   Task<CondenseFunctor<H, DeviceType>> GenTask(int queue_idx) {
@@ -72,7 +73,7 @@ public:
     tbx = 256;
     gridz = 1;
     gridy = 1;
-    gridx = write_offsets.shape(0);
+    gridx = nchunk;
     return Task(functor, gridz, gridy, gridx, tbz, tby, tbx, sm_size, queue_idx,
                 std::string(Name));
   }
@@ -83,6 +84,7 @@ private:
   SubArray<1, size_t, DeviceType> actual_lengths;
   SubArray<1, H, DeviceType> condensed_v;
   SIZE chunck_size;
+  SIZE nchunk;
 };
 
 } // namespace mgard_x
