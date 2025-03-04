@@ -25,12 +25,10 @@ template <typename T, typename H, typename DeviceType>
 class GenerateCWFunctor : public HuffmanCWCustomizedFunctor<DeviceType> {
 public:
   MGARDX_CONT GenerateCWFunctor() {}
-  MGARDX_CONT GenerateCWFunctor(SubArray<1, T, DeviceType> CL,
-                                SubArray<1, H, DeviceType> CW,
-                                SubArray<1, H, DeviceType> first,
-                                SubArray<1, H, DeviceType> entry,
-                                SIZE dict_size,
-                                SubArray<1, int, DeviceType> status)
+  MGARDX_CONT GenerateCWFunctor(
+      SubArray<1, T, DeviceType> CL, SubArray<1, H, DeviceType> CW,
+      SubArray<1, H, DeviceType> first, SubArray<1, H, DeviceType> entry,
+      SIZE dict_size, SubArray<1, int, DeviceType, false, true> status)
       : CL(CL), CW(CW), first(first), entry(entry), dict_size(dict_size),
         status(status) {
     HuffmanCWCustomizedFunctor<DeviceType>();
@@ -243,7 +241,7 @@ private:
   SubArray<1, H, DeviceType> CW;
   SubArray<1, H, DeviceType> first;
   SubArray<1, H, DeviceType> entry;
-  SubArray<1, int, DeviceType> status;
+  SubArray<1, int, DeviceType, false, true> status;
   SIZE dict_size;
 
   // unsigned int thread;
@@ -264,7 +262,7 @@ public:
   GenerateCWKernel(SubArray<1, T, DeviceType> CL, SubArray<1, H, DeviceType> CW,
                    SubArray<1, H, DeviceType> first,
                    SubArray<1, H, DeviceType> entry, SIZE dict_size,
-                   SubArray<1, int, DeviceType> status)
+                   SubArray<1, int, DeviceType, false, true> status)
       : CL(CL), CW(CW), first(first), entry(entry), dict_size(dict_size),
         status(status) {}
 
@@ -312,7 +310,7 @@ private:
   SubArray<1, H, DeviceType> CW;
   SubArray<1, H, DeviceType> first;
   SubArray<1, H, DeviceType> entry;
-  SubArray<1, int, DeviceType> status;
+  SubArray<1, int, DeviceType, false, true> status;
   SIZE dict_size;
 };
 
