@@ -15,10 +15,11 @@ template <typename T, typename Q, bool CACHE_HISTOGRAM, typename DeviceType>
 class HistogramFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT HistogramFunctor() {}
-  MGARDX_CONT HistogramFunctor(SubArray<1, T, DeviceType> input_data,
-                               SubArray<1, int, DeviceType> local_histogram,
-                               SubArray<1, Q, DeviceType> output, SIZE N,
-                               int bins, int RPerBlock)
+  MGARDX_CONT
+  HistogramFunctor(SubArray<1, T, DeviceType> input_data,
+                   SubArray<1, int, DeviceType, false, true> local_histogram,
+                   SubArray<1, Q, DeviceType> output, SIZE N, int bins,
+                   int RPerBlock)
       : input_data(input_data), local_histogram(local_histogram),
         output(output), N(N), bins(bins), RPerBlock(RPerBlock) {
     Functor<DeviceType>();
@@ -97,7 +98,7 @@ public:
 
 private:
   SubArray<1, T, DeviceType> input_data;
-  SubArray<1, int, DeviceType> local_histogram;
+  SubArray<1, int, DeviceType, false, true> local_histogram;
   SubArray<1, Q, DeviceType> output;
   SIZE N;
   int bins;
@@ -124,7 +125,7 @@ public:
 
   MGARDX_CONT
   HistogramKernel(SubArray<1, T, DeviceType> input_data,
-                  SubArray<1, int, DeviceType> local_histogram,
+                  SubArray<1, int, DeviceType, false, true> local_histogram,
                   SubArray<1, Q, DeviceType> output, SIZE N, int bins,
                   int RPerBlock, int threadsPerBlock, int numBlocks)
       : input_data(input_data), local_histogram(local_histogram),
@@ -153,7 +154,7 @@ public:
 
 private:
   SubArray<1, T, DeviceType> input_data;
-  SubArray<1, int, DeviceType> local_histogram;
+  SubArray<1, int, DeviceType, false, true> local_histogram;
   SubArray<1, Q, DeviceType> output;
   SIZE N;
   int bins;
@@ -190,7 +191,7 @@ MGARDX_CONT void Histogram(SubArray<1, T, DeviceType> input_data,
                            SubArray<1, Q, DeviceType> output, SIZE N, int bins,
                            int queue_idx) {
   int maxbytes = DeviceRuntime<DeviceType>::GetMaxSharedMemorySize();
-  SubArray<1, int, DeviceType> local_histogram;
+  SubArray<1, int, DeviceType, false, true> local_histogram;
   if (bins * sizeof(int) < maxbytes) {
     if (DeviceRuntime<DeviceType>::PrintKernelConfig) {
       std::cout << log::log_info
@@ -220,8 +221,8 @@ MGARDX_CONT void Histogram(SubArray<1, T, DeviceType> input_data,
     int RPerBlock = 2;
     int threadsPerBlock, numBlocks;
     ExecutionConfig<DeviceType>(N, bins, RPerBlock, threadsPerBlock, numBlocks);
-    Array<1, int, DeviceType> local_histogram_array(
-        {(SIZE)RPerBlock * bins * numBlocks}, false, true);
+    Array<1, int, DeviceType, false, true> local_histogram_array(
+        {(SIZE)RPerBlock * bins * numBlocks});
     local_histogram_array.memset(0);
     // TODO: can we not sync all queues?
     DeviceRuntime<DeviceType>::SyncAllQueues();

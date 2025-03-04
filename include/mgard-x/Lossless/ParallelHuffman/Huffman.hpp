@@ -89,7 +89,6 @@ public:
       PrintSubarray("GetCodebook::decodebook_subarray",
                     workspace.decodebook_subarray);
     }
-
     DeviceLauncher<DeviceType>::Execute(
         EncodeFixedLenKernel<Q, H, DeviceType>(primary_subarray,
                                                workspace.huff_subarray,
@@ -99,14 +98,12 @@ public:
     if (debug_print_huffman) {
       PrintSubarray("EncodeFixedLen::huff_subarray", workspace.huff_subarray);
     }
-
     // deflate
     DeviceLauncher<DeviceType>::Execute(
         DeflateKernel<H, DeviceType>(workspace.huff_subarray,
                                      workspace.huff_bitwidths_subarray,
                                      chunk_size),
         queue_idx);
-
     if (debug_print_huffman) {
       PrintSubarray("Deflate::huff_subarray", workspace.huff_subarray);
       PrintSubarray("Deflate::huff_bitwidths_subarray",
@@ -381,7 +378,7 @@ public:
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     if (outlier_count <= workspace.outlier_subarray.shape(0)) {
       // outlier buffer has sufficient size
-      log::dbg(
+      log::info(
           "Outlier ratio: " + std::to_string(outlier_count) + "/" +
           std::to_string(original_data.shape(0)) + " (" +
           std::to_string((double)100 * outlier_count / original_data.shape(0)) +
