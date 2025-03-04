@@ -13,13 +13,15 @@
 
 namespace mgard_x {
 
-template <DIM D, typename T, typename DeviceType> class SubArray {
+template <DIM D, typename T, typename DeviceType, bool Pitched = false,
+          bool Managed = false>
+class SubArray {
 public:
   MGARDX_CONT_EXEC
   SubArray();
 
   MGARDX_CONT
-  SubArray(Array<D, T, DeviceType> &array);
+  SubArray(Array<D, T, DeviceType, Pitched, Managed> &array);
 
   MGARDX_CONT
   SubArray(std::vector<SIZE> shape, T *dv);
@@ -77,10 +79,10 @@ public:
   void setLd(DIM d, SIZE ld) { __ldvs[d] = ld; }
 
   MGARDX_CONT_EXEC
-  bool isPitched() { return this->pitched; }
+  bool isPitched() { return Pitched; }
 
-  MGARDX_CONT_EXEC
-  void setPitched(bool pitched) { this->pitched = pitched; }
+  // MGARDX_CONT_EXEC
+  // void setPitched(bool pitched) { this->pitched = pitched; }
 
   MGARDX_CONT_EXEC
   SIZE lddv1() const { return __lddv1; }
@@ -178,9 +180,6 @@ private:
   SIZE __lddv1;
   SIZE __lddv2;
 
-  bool pitched;
-  bool managed;
-
   SIZE ptr_offset;
 
   MGARDX_CONT_EXEC
@@ -195,8 +194,9 @@ private:
   }
 };
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT_EXEC void SubArray<D, T, DeviceType>::initialize() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT_EXEC void
+SubArray<D, T, DeviceType, Pitched, Managed>::initialize() {
   dv = nullptr;
   v = nullptr;
   has_host_pointer = false;
@@ -211,20 +211,17 @@ MGARDX_CONT_EXEC void SubArray<D, T, DeviceType>::initialize() {
   __lddv1 = 1;
   __lddv2 = 1;
 
-  pitched = false;
-  managed = false;
-
   ptr_offset = 0;
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT_EXEC SubArray<D, T, DeviceType>::SubArray() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT_EXEC SubArray<D, T, DeviceType, Pitched, Managed>::SubArray() {
   initialize();
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT
-SubArray<D, T, DeviceType>::SubArray(Array<D, T, DeviceType> &array) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT SubArray<D, T, DeviceType, Pitched, Managed>::SubArray(
+    Array<D, T, DeviceType, Pitched, Managed> &array) {
   initialize();
   dv = array.data();
   for (DIM d = 0; d < D; d++) {
@@ -238,14 +235,13 @@ SubArray<D, T, DeviceType>::SubArray(Array<D, T, DeviceType> &array) {
     v = array.dataHost();
     has_host_pointer = true;
   }
-  pitched = array.isPitched();
-  managed = array.isManaged();
 }
 
 // TODO: update shape
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT SubArray<D, T, DeviceType>::SubArray(std::vector<SIZE> shape,
-                                                 T *dv) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT
+SubArray<D, T, DeviceType, Pitched, Managed>::SubArray(std::vector<SIZE> shape,
+                                                       T *dv) {
   initialize();
   this->dv = dv;
   for (DIM d = 0; d < D; d++) {
@@ -257,10 +253,11 @@ MGARDX_CONT SubArray<D, T, DeviceType>::SubArray(std::vector<SIZE> shape,
     __lddv2 = __ldvs[D - 2];
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT SubArray<1, T, DeviceType> SubArray<D, T, DeviceType>::Linearize() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT SubArray<1, T, DeviceType>
+SubArray<D, T, DeviceType, Pitched, Managed>::Linearize() {
   SubArray<1, T, DeviceType> subArray;
-  if (!pitched) {
+  if (!Pitched) {
     SIZE linearized_shape = 1;
     for (DIM d = 0; d < D; d++)
       linearized_shape *= this->__shape[d];
@@ -272,7 +269,6 @@ MGARDX_CONT SubArray<1, T, DeviceType> SubArray<D, T, DeviceType>::Linearize() {
     if (has_host_pointer) {
       subArray.setDataHost(dataHost());
     }
-    subArray.setPitched(isPitched());
   } else {
     std::cout << log::log_err
               << "Linearized pitched SubArray not implemented!\n";
@@ -281,9 +277,9 @@ MGARDX_CONT SubArray<1, T, DeviceType> SubArray<D, T, DeviceType>::Linearize() {
   return subArray;
 }
 
-template <DIM D, typename T, typename DeviceType>
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 MGARDX_CONT SubArray<3, T, DeviceType>
-SubArray<D, T, DeviceType>::Slice3D(DIM d2, DIM d1, DIM d0) {
+SubArray<D, T, DeviceType, Pitched, Managed>::Slice3D(DIM d2, DIM d1, DIM d0) {
   // d2 is slowest dim.
   // d0 is fastest dim.
   if (D < 3) {
@@ -304,12 +300,12 @@ SubArray<D, T, DeviceType>::Slice3D(DIM d2, DIM d1, DIM d0) {
   if (has_host_pointer) {
     subArray.setDataHost(v);
   }
-  subArray.setPitched(pitched);
   return subArray;
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT void SubArray<D, T, DeviceType>::offset(std::vector<SIZE> idx) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT void
+SubArray<D, T, DeviceType, Pitched, Managed>::offset(std::vector<SIZE> idx) {
   if (idx.size() < D) {
     std::cerr << log::log_err << "SubArray::resize insufficient idx length.\n";
   }
@@ -321,8 +317,9 @@ MGARDX_CONT void SubArray<D, T, DeviceType>::offset(std::vector<SIZE> idx) {
   dv += calc_offset(_idx);
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT void SubArray<D, T, DeviceType>::resize(std::vector<SIZE> shape) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT void
+SubArray<D, T, DeviceType, Pitched, Managed>::resize(std::vector<SIZE> shape) {
   if (shape.size() < D) {
     std::cerr << log::log_err
               << "SubArray::resize insufficient shape length.\n";
@@ -334,9 +331,10 @@ MGARDX_CONT void SubArray<D, T, DeviceType>::resize(std::vector<SIZE> shape) {
   }
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT void SubArray<D, T, DeviceType>::offset_dim(DIM dim,
-                                                        SIZE offset_value) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT void
+SubArray<D, T, DeviceType, Pitched, Managed>::offset_dim(DIM dim,
+                                                         SIZE offset_value) {
   if (dim >= D)
     return;
   SIZE idx[D];
@@ -347,17 +345,17 @@ MGARDX_CONT void SubArray<D, T, DeviceType>::offset_dim(DIM dim,
   dv += calc_offset(idx);
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT void SubArray<D, T, DeviceType>::resize(DIM dim, SIZE new_size) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT void
+SubArray<D, T, DeviceType, Pitched, Managed>::resize(DIM dim, SIZE new_size) {
   if (dim >= D)
     return;
   __shape[dim] = new_size;
 }
 
-template <DIM D, typename T, typename DeviceType>
-MGARDX_CONT void SubArray<D, T, DeviceType>::project(DIM dim_slowest,
-                                                     DIM dim_medium,
-                                                     DIM dim_fastest) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+MGARDX_CONT void SubArray<D, T, DeviceType, Pitched, Managed>::project(
+    DIM dim_slowest, DIM dim_medium, DIM dim_fastest) {
   projected_dim_slowest = dim_slowest;
   projected_dim_medium = dim_medium;
   projected_dim_fastest = dim_fastest;

@@ -51,7 +51,7 @@ Compressor<D, T, DeviceType>::Compressor(Hierarchy<D, T, DeviceType> &hierarchy,
   } else {
     // norm_tmp_array = Array<1, T, DeviceType>({hierarchy.total_num_elems()});
     quantized_array = Array<D, QUANTIZED_INT, DeviceType>(
-        hierarchy.level_shape(hierarchy.l_target()), false, false);
+        hierarchy.level_shape(hierarchy.l_target()));
   }
 }
 
