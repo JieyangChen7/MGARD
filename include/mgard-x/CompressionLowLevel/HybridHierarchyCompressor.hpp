@@ -50,7 +50,7 @@ HybridHierarchyCompressor<D, T, DeviceType>::HybridHierarchyCompressor(
   } else {
     norm_tmp_array = Array<1, T, DeviceType>({hierarchy.total_num_elems()});
     quantized_array = Array<D, QUANTIZED_INT, DeviceType>(
-        hierarchy.level_shape(hierarchy.l_target()), false, false);
+        hierarchy.level_shape(hierarchy.l_target()));
   }
   std::vector<SIZE> shape = hierarchy.level_shape(hierarchy.l_target());
   SIZE decomposed_size = hybrid_refactor.DecomposedDataSize();

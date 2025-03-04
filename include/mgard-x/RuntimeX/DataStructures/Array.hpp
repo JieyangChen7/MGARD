@@ -19,20 +19,21 @@
 
 namespace mgard_x {
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType>::Array() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed>::Array() {
   initialize(std::vector<SIZE>(D, 1));
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType>::Array(std::vector<SIZE> shape, bool pitched,
-                               bool managed, int queue_idx) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed>::Array(std::vector<SIZE> shape,
+                                                 int queue_idx) {
   initialize(shape);
-  allocate(pitched, managed, queue_idx);
+  allocate(queue_idx);
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType>::Array(std::vector<SIZE> shape, T *dv) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed>::Array(std::vector<SIZE> shape,
+                                                 T *dv) {
   initialize(shape);
   __shape_allocation = shape;
   __ldvs_allocation = shape;
@@ -41,8 +42,9 @@ Array<D, T, DeviceType>::Array(std::vector<SIZE> shape, T *dv) {
   this->dv = dv;
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::initialize(std::vector<SIZE> shape) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::initialize(
+    std::vector<SIZE> shape) {
   if (shape.size() != D) {
     std::cerr << log::log_err << "Number of dimensions mismatch ("
               << shape.size() << "!=" << D
@@ -60,17 +62,12 @@ void Array<D, T, DeviceType>::initialize(std::vector<SIZE> shape) {
   host_allocated = false;
   device_allocated = false;
   external_allocation = false;
-  pitched = false;
-  managed = false;
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::allocate(bool pitched, bool managed,
-                                       int queue_idx) {
-  this->pitched = pitched && !MemoryManager<DeviceType>::ReduceMemoryFootprint;
-  this->managed = managed;
-  if (this->pitched) {
-    if (!this->managed) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::allocate(int queue_idx) {
+  if (Pitched) {
+    if (!Managed) {
       SIZE ld = 0;
       MemoryManager<DeviceType>::MallocND(dv, __shape[D - 1], linearized_width,
                                           ld, queue_idx);
@@ -80,7 +77,7 @@ void Array<D, T, DeviceType>::allocate(bool pitched, bool managed,
                 << "Does not support managed memory in pitched mode.\n";
     }
   } else {
-    if (!this->managed) {
+    if (!Managed) {
       MemoryManager<DeviceType>::Malloc1D(dv, __shape[D - 1] * linearized_width,
                                           queue_idx);
     } else {
@@ -94,12 +91,12 @@ void Array<D, T, DeviceType>::allocate(bool pitched, bool managed,
   external_allocation = false;
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::copy(const Array<D, T, DeviceType> &array,
-                                   int queue_idx) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::copy(
+    const Array<D, T, DeviceType, Pitched, Managed> &array, int queue_idx) {
   initialize(array.__shape);
   if (array.device_allocated) {
-    allocate(array.pitched, array.managed, queue_idx);
+    allocate(queue_idx);
     MemoryManager<DeviceType>::CopyND(dv, __ldvs[D - 1], array.dv,
                                       array.__ldvs[D - 1], array.__shape[D - 1],
                                       array.linearized_width, queue_idx);
@@ -109,12 +106,11 @@ void Array<D, T, DeviceType>::copy(const Array<D, T, DeviceType> &array,
   }
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::move(Array<D, T, DeviceType> &&array) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::move(
+    Array<D, T, DeviceType, Pitched, Managed> &&array) {
   initialize(array.__shape);
   this->dev_id = array.dev_id;
-  this->pitched = array.pitched;
-  this->managed = array.managed;
   if (array.device_allocated) {
     this->dv = array.dv;
     this->__ldvs = array.__ldvs;
@@ -132,9 +128,10 @@ void Array<D, T, DeviceType>::move(Array<D, T, DeviceType> &&array) {
   }
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::memset(int value, int queue_idx) {
-  if (this->pitched) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::memset(int value,
+                                                       int queue_idx) {
+  if (Pitched) {
     MemoryManager<DeviceType>::MemsetND(dv, __ldvs[D - 1], __shape[D - 1],
                                         linearized_width, value, queue_idx);
   } else {
@@ -143,8 +140,8 @@ void Array<D, T, DeviceType>::memset(int value, int queue_idx) {
   }
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::free(int queue_idx) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::free(int queue_idx) {
   if (device_allocated && !external_allocation) {
     MemoryManager<DeviceType>::Free(dv, queue_idx);
     device_allocated = false;
@@ -157,40 +154,45 @@ void Array<D, T, DeviceType>::free(int queue_idx) {
   }
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType>::Array(const Array<D, T, DeviceType> &array) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed>::Array(
+    const Array<D, T, DeviceType, Pitched, Managed> &array) {
   this->copy(array);
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType> &
-Array<D, T, DeviceType>::operator=(const Array<D, T, DeviceType> &array) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed> &
+Array<D, T, DeviceType, Pitched, Managed>::operator=(
+    const Array<D, T, DeviceType, Pitched, Managed> &array) {
   // printf("Array operator =\n");
   this->copy(array);
   return *this;
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType> &
-Array<D, T, DeviceType>::operator=(Array<D, T, DeviceType> &&array) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed> &
+Array<D, T, DeviceType, Pitched, Managed>::operator=(
+    Array<D, T, DeviceType, Pitched, Managed> &&array) {
   // printf("Array move = \n");
   this->move(std::move(array));
   return *this;
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType>::Array(Array<D, T, DeviceType> &&array) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed>::Array(
+    Array<D, T, DeviceType, Pitched, Managed> &&array) {
   // printf("Array move\n");
   this->move(std::move(array));
 }
 
-template <DIM D, typename T, typename DeviceType>
-Array<D, T, DeviceType>::~Array() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+Array<D, T, DeviceType, Pitched, Managed>::~Array() {
   this->free();
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::load(const T *data, SIZE ld, int queue_idx) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::load(const T *data, SIZE ld,
+                                                     int queue_idx) {
   log::dbg("Calling Array::load");
   if (ld == 0) {
     ld = __shape[D - 1];
@@ -199,8 +201,9 @@ void Array<D, T, DeviceType>::load(const T *data, SIZE ld, int queue_idx) {
                                     linearized_width, queue_idx);
 }
 
-template <DIM D, typename T, typename DeviceType>
-T *Array<D, T, DeviceType>::hostCopy(bool keep, int queue_idx) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+T *Array<D, T, DeviceType, Pitched, Managed>::hostCopy(bool keep,
+                                                       int queue_idx) {
   log::dbg("Calling Array::hostCopy");
   if (!device_allocated) {
     std::cout << log::log_err << "device buffer not initialized.\n";
@@ -218,8 +221,8 @@ T *Array<D, T, DeviceType>::hostCopy(bool keep, int queue_idx) {
   return hv;
 }
 
-template <DIM D, typename T, typename DeviceType>
-T *Array<D, T, DeviceType>::data(SIZE &ld) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+T *Array<D, T, DeviceType, Pitched, Managed>::data(SIZE &ld) {
   if (!device_allocated) {
     std::cout << log::log_err << "device buffer not initialized.\n";
     exit(-1);
@@ -228,18 +231,18 @@ T *Array<D, T, DeviceType>::data(SIZE &ld) {
   return dv;
 }
 
-template <DIM D, typename T, typename DeviceType>
-SIZE &Array<D, T, DeviceType>::shape(DIM d) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+SIZE &Array<D, T, DeviceType, Pitched, Managed>::shape(DIM d) {
   return __shape[d];
 }
 
-template <DIM D, typename T, typename DeviceType>
-std::vector<SIZE> &Array<D, T, DeviceType>::shape() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+std::vector<SIZE> &Array<D, T, DeviceType, Pitched, Managed>::shape() {
   return __shape;
 }
 
-template <DIM D, typename T, typename DeviceType>
-SIZE Array<D, T, DeviceType>::totalNumElems() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+SIZE Array<D, T, DeviceType, Pitched, Managed>::totalNumElems() {
   SIZE total_num_elems = 1;
   for (DIM d = 0; d < D; d++) {
     total_num_elems *= __shape[d];
@@ -247,8 +250,8 @@ SIZE Array<D, T, DeviceType>::totalNumElems() {
   return total_num_elems;
 }
 
-template <DIM D, typename T, typename DeviceType>
-T *Array<D, T, DeviceType>::data() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+T *Array<D, T, DeviceType, Pitched, Managed>::data() {
   if (!device_allocated) {
     std::cout << log::log_err << "device buffer not initialized.\n";
     exit(-1);
@@ -256,8 +259,8 @@ T *Array<D, T, DeviceType>::data() {
   return dv;
 }
 
-template <DIM D, typename T, typename DeviceType>
-T *Array<D, T, DeviceType>::dataHost() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+T *Array<D, T, DeviceType, Pitched, Managed>::dataHost() {
   if (!host_allocated) {
     std::cout << log::log_err << "host buffer not initialized.\n";
     exit(-1);
@@ -265,41 +268,45 @@ T *Array<D, T, DeviceType>::dataHost() {
   return hv;
 }
 
-template <DIM D, typename T, typename DeviceType>
-SIZE Array<D, T, DeviceType>::ld(DIM d) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+SIZE Array<D, T, DeviceType, Pitched, Managed>::ld(DIM d) {
   return __ldvs[d];
 }
 
-template <DIM D, typename T, typename DeviceType>
-bool Array<D, T, DeviceType>::isPitched() {
-  return pitched;
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+bool Array<D, T, DeviceType, Pitched, Managed>::isPitched() {
+  return Pitched;
 }
 
-template <DIM D, typename T, typename DeviceType>
-bool Array<D, T, DeviceType>::isManaged() {
-  return managed;
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+bool Array<D, T, DeviceType, Pitched, Managed>::isManaged() {
+  return Managed;
 }
 
-template <DIM D, typename T, typename DeviceType>
-int Array<D, T, DeviceType>::resideDevice() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+int Array<D, T, DeviceType, Pitched, Managed>::resideDevice() {
   return dev_id;
 }
 
-template <DIM D, typename T, typename DeviceType>
-bool Array<D, T, DeviceType>::hasDeviceAllocation() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+bool Array<D, T, DeviceType, Pitched, Managed>::hasDeviceAllocation() {
   return device_allocated;
 }
 
-template <DIM D, typename T, typename DeviceType>
-bool Array<D, T, DeviceType>::hasHostAllocation() {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+bool Array<D, T, DeviceType, Pitched, Managed>::hasHostAllocation() {
   return host_allocated;
 }
 
-template <DIM D, typename T, typename DeviceType>
-void Array<D, T, DeviceType>::resize(std::vector<SIZE> shape, int queue_idx) {
-  bool inplace_resizable = false;
-  if (device_allocated) {
-    if (!isPitched()) {
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::resize(std::vector<SIZE> shape,
+                                                       int queue_idx) {
+  if (!device_allocated) {
+    initialize(shape);
+    allocate(queue_idx);
+  } else {
+    bool inplace_resizable = false;
+    if (Pitched) {
       // check total number of elements
       SIZE original_num_elems = 1;
       SIZE new_num_elems = 1;
@@ -335,11 +342,11 @@ void Array<D, T, DeviceType>::resize(std::vector<SIZE> shape, int queue_idx) {
         }
       }
     }
-  }
-  // If cannot reuse existing allocation or there is no existing allocation
-  if (!inplace_resizable) {
-    initialize(shape);
-    allocate(isPitched(), isManaged(), queue_idx);
+    // If cannot reuse existing allocation or there is no existing allocation
+    if (!inplace_resizable) {
+      initialize(shape);
+      allocate(queue_idx);
+    }
   }
 }
 

@@ -15,9 +15,19 @@ template <typename T_bitplane, typename DeviceType>
 class DefaultLevelCompressor
     : public concepts::LevelCompressorInterface<T_bitplane, DeviceType> {
 public:
+  using T_compress = u_int8_t;
+  // using T_compress = u_int16_t;
+
+  static constexpr int byte_ratio = sizeof(T_bitplane) / sizeof(T_compress);
+  static constexpr int _huff_dict_size = 256;
+
   DefaultLevelCompressor() : initialized(false) {}
-  DefaultLevelCompressor(SIZE max_n, Config config) {
-    Adapt(max_n, config, 0);
+  DefaultLevelCompressor(SIZE max_n, Config config)
+      : huffman(max_n * byte_ratio, _huff_dict_size, config.huff_block_size,
+                config.estimate_outlier_ratio) {
+    this->initialized = true;
+    // Adapt(max_n * byte_ratio, config, 0);
+    zstd.Resize(max_n * sizeof(T_bitplane), config.zstd_compress_level, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
   ~DefaultLevelCompressor(){};
@@ -25,7 +35,7 @@ public:
   void Adapt(SIZE max_n, Config config, int queue_idx) {
     this->initialized = true;
     this->config = config;
-    huffman.Resize(max_n, config.huff_dict_size, config.huff_block_size,
+    huffman.Resize(max_n * byte_ratio, _huff_dict_size, config.huff_block_size,
                    config.estimate_outlier_ratio, queue_idx);
     zstd.Resize(max_n * sizeof(T_bitplane), config.zstd_compress_level,
                 queue_idx);
@@ -33,7 +43,7 @@ public:
   static size_t EstimateMemoryFootprint(SIZE max_n, Config config) {
     size_t size = 0;
     size += Huffman<T_bitplane, T_bitplane, HUFFMAN_CODE, DeviceType>::
-        EstimateMemoryFootprint(max_n, config.huff_dict_size,
+        EstimateMemoryFootprint(max_n * byte_ratio, _huff_dict_size,
                                 config.huff_block_size,
                                 config.estimate_outlier_ratio);
     size +=
@@ -49,14 +59,15 @@ public:
 
     SubArray<2, T_bitplane, DeviceType> encoded_bitplanes_subarray(
         encoded_bitplanes);
-
     for (SIZE bitplane_idx = 0;
          bitplane_idx < encoded_bitplanes_subarray.shape(0); bitplane_idx++) {
-      T_bitplane *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
+      T_compress *bitplane =
+          (T_compress *)encoded_bitplanes_subarray(bitplane_idx, 0);
       // Huffman
-      Adapt(encoded_bitplanes_subarray.shape(1), config, queue_idx);
-      Array<1, T_bitplane, DeviceType> encoded_bitplane(
-          {encoded_bitplanes_subarray.shape(1)}, bitplane);
+      Adapt(encoded_bitplanes_subarray.shape(1) * byte_ratio, config,
+            queue_idx);
+      Array<1, T_compress, DeviceType> encoded_bitplane(
+          {encoded_bitplanes_subarray.shape(1) * byte_ratio}, bitplane);
       huffman.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
                        queue_idx);
       huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
@@ -92,12 +103,14 @@ public:
 
     for (SIZE bitplane_idx = starting_bitplane; bitplane_idx < num_bitplanes;
          bitplane_idx++) {
-      T_bitplane *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
+      T_compress *bitplane =
+          (T_compress *)encoded_bitplanes_subarray(bitplane_idx, 0);
 
       // Huffman
-      Adapt(encoded_bitplanes_subarray.shape(1), config, queue_idx);
-      Array<1, T_bitplane, DeviceType> encoded_bitplane(
-          {encoded_bitplanes_subarray.shape(1)}, bitplane);
+      Adapt(encoded_bitplanes_subarray.shape(1) * byte_ratio, config,
+            queue_idx);
+      Array<1, T_compress, DeviceType> encoded_bitplane(
+          {encoded_bitplanes_subarray.shape(1) * byte_ratio}, bitplane);
       huffman.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
       huffman.Decompress(compressed_bitplanes[bitplane_idx], encoded_bitplane,
                          queue_idx);
@@ -119,7 +132,7 @@ public:
 
   void print() const {}
   bool initialized;
-  Huffman<T_bitplane, T_bitplane, HUFFMAN_CODE, DeviceType> huffman;
+  Huffman<T_compress, T_compress, HUFFMAN_CODE, DeviceType> huffman;
   Zstd<DeviceType> zstd;
   Config config;
 };

@@ -97,7 +97,7 @@ public:
   void allocate(SIZE primary_count, SIZE dict_size, SIZE chunk_size,
                 double estimated_outlier_ratio) {
 
-    outlier_count_array = Array<1, ATOMIC_IDX, DeviceType>({1}, false, false);
+    outlier_count_array = Array<1, ATOMIC_IDX, DeviceType>({1});
     outlier_idx_array = Array<1, ATOMIC_IDX, DeviceType>(
         {(SIZE)(primary_count * estimated_outlier_ratio)});
     outlier_array = Array<1, S, DeviceType>(
@@ -135,7 +135,7 @@ public:
     copyIsLeaf_array = Array<1, int, DeviceType>({dict_size});
     copyIndex_array = Array<1, int, DeviceType>({dict_size});
     _d_codebook_array_org = Array<1, H, DeviceType>({dict_size});
-    status_array = Array<1, int, DeviceType>({(SIZE)16}, false, true);
+    status_array = Array<1, int, DeviceType, false, true>({(SIZE)16});
     SIZE mblocks = (DeviceRuntime<DeviceType>::GetMaxNumThreadsPerTB() /
                     DeviceRuntime<DeviceType>::GetWarpSize()) *
                    DeviceRuntime<DeviceType>::GetNumSMs();
@@ -250,7 +250,7 @@ public:
   Array<1, int, DeviceType> copyIsLeaf_array;
   Array<1, int, DeviceType> copyIndex_array;
   Array<1, H, DeviceType> _d_codebook_array_org;
-  Array<1, int, DeviceType> status_array;
+  Array<1, int, DeviceType, false, true> status_array;
   Array<1, uint32_t, DeviceType> diagonal_path_intersections_array;
 
   SubArray<1, ATOMIC_IDX, DeviceType> outlier_count_subarray;
@@ -281,7 +281,7 @@ public:
   SubArray<1, int, DeviceType> copyIsLeaf_subarray;
   SubArray<1, int, DeviceType> copyIndex_subarray;
   SubArray<1, H, DeviceType> _d_codebook_subarray_org;
-  SubArray<1, int, DeviceType> status_subarray;
+  SubArray<1, int, DeviceType, false, true> status_subarray;
   SubArray<1, uint32_t, DeviceType> diagonal_path_intersections_subarray;
 };
 
