@@ -51,15 +51,13 @@ public:
   // compress level, overwrite and free original streams; rewrite streams sizes
   void
   compress_level(std::vector<SIZE> &bitplane_sizes,
-                 Array<2, T_bitplane, DeviceType> &encoded_bitplanes,
+                 SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
                  std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
                  int queue_idx) {
 
-    SubArray<2, T_bitplane, DeviceType> encoded_bitplanes_subarray(
-        encoded_bitplanes);
-    for (SIZE bitplane_idx = 0;
-         bitplane_idx < encoded_bitplanes_subarray.shape(0); bitplane_idx++) {
-      T_bitplane *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
+    for (SIZE bitplane_idx = 0; bitplane_idx < encoded_bitplanes.shape(0);
+         bitplane_idx++) {
+      T_bitplane *bitplane = encoded_bitplanes(bitplane_idx, 0);
 
       Array<1, Byte, DeviceType> compressed_bitplane(
           {bitplane_sizes[bitplane_idx]});
@@ -77,17 +75,14 @@ public:
   void decompress_level(
       std::vector<SIZE> &bitplane_sizes,
       std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
-      Array<2, T_bitplane, DeviceType> &encoded_bitplanes,
+      SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
       uint8_t starting_bitplane, uint8_t num_bitplanes, int queue_idx) {
-
-    SubArray<2, T_bitplane, DeviceType> encoded_bitplanes_subarray(
-        encoded_bitplanes);
 
     for (SIZE bitplane_idx = starting_bitplane;
          bitplane_idx < starting_bitplane + num_bitplanes; bitplane_idx++) {
       // std::cout << "decompress level: " << bitplane_idx << " " <<
       // (int)num_bitplanes << "\n";
-      T_bitplane *bitplane = encoded_bitplanes_subarray(bitplane_idx, 0);
+      T_bitplane *bitplane = encoded_bitplanes(bitplane_idx, 0);
       // MDR::Zstd
       // SIZE compressed_size = bitplane_sizes[starting_bitplane +
       // bitplane_idx]; Byte *compressed_host = new Byte[compressed_size];

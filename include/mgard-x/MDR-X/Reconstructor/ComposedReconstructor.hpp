@@ -29,9 +29,11 @@ public:
   using T_error = double;
   using Decomposer = MGARDOrthoganalDecomposer<D, T_data, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
-  using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
-  using BatchedEncoder =
-      BatchedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
+  // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
+  // DeviceType>;
+  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, DeviceType>;
+  // using BatchedEncoder =
+  //     BatchedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
   using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
@@ -51,7 +53,7 @@ public:
     decomposer.Adapt(hierarchy, config, queue_idx);
     interleaver.Adapt(hierarchy, queue_idx);
     encoder.Adapt(hierarchy, queue_idx);
-    batched_encoder.Adapt(hierarchy, queue_idx);
+    // batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(
         Encoder::buffer_size(hierarchy.level_num_elems(hierarchy.l_target())),
         config, queue_idx);
@@ -123,7 +125,7 @@ public:
     size += Decomposer::EstimateMemoryFootprint(shape);
     size += Interleaver::EstimateMemoryFootprint(shape);
     size += Encoder::EstimateMemoryFootprint(shape);
-    size += BatchedEncoder::EstimateMemoryFootprint(shape);
+    // size += BatchedEncoder::EstimateMemoryFootprint(shape);
     size += Compressor::EstimateMemoryFootprint(max_n, config);
     return size;
   }
@@ -234,7 +236,7 @@ public:
       compressor.decompress_level(
           mdr_metadata.level_sizes[level_idx],
           mdr_data.compressed_bitplanes[level_idx],
-          encoded_bitplanes_array[level_idx],
+          encoded_bitplanes_subarray[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
           queue_idx);
     }
@@ -242,6 +244,7 @@ public:
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
       timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.clear();
       timer.start();
     }
 
@@ -256,20 +259,20 @@ public:
           SubArray<1, bool, DeviceType>(mdr_data.level_signs[level_idx]);
     }
 
-    // for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
-    //   encoder.progressive_decode(
-    //       level_num_elems[level_idx],
-    //       mdr_metadata.prev_used_level_num_bitplanes[level_idx],
-    //       level_num_bitplanes[level_idx], exp[level_idx],
-    //       encoded_bitplanes_subarray[level_idx],
-    //       level_signs_subarray[level_idx], level_idx,
-    //       level_data_subarray[level_idx], queue_idx);
-    // }
+    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
+      encoder.progressive_decode(
+          level_num_elems[level_idx],
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx],
+          level_num_bitplanes[level_idx], exp[level_idx],
+          encoded_bitplanes_subarray[level_idx],
+          level_signs_subarray[level_idx], level_idx,
+          level_data_subarray[level_idx], queue_idx);
+    }
 
-    batched_encoder.progressive_decode(
-        level_num_elems, mdr_metadata.prev_used_level_num_bitplanes,
-        level_num_bitplanes, exp, encoded_bitplanes_subarray,
-        level_signs_subarray, level_data_subarray, queue_idx);
+    // batched_encoder.progressive_decode(
+    //     level_num_elems, mdr_metadata.prev_used_level_num_bitplanes,
+    //     level_num_bitplanes, exp, encoded_bitplanes_subarray,
+    //     level_signs_subarray, level_data_subarray, queue_idx);
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       if (level_num_bitplanes[level_idx] == 0) {
@@ -281,6 +284,7 @@ public:
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
       timer.print("Decoding", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.clear();
       timer.start();
     }
 
@@ -295,7 +299,13 @@ public:
         level_data_subarray,
         SubArray<D, T_data, DeviceType>(partial_reconsctructed_data),
         curr_final_level, queue_idx);
-    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.end();
+      timer.print("Reposition", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.clear();
+    }
 
     decomposer.recompose(partial_reconsctructed_data, 0, curr_final_level,
                          queue_idx);
@@ -306,6 +316,10 @@ public:
                          queue_idx);
     }
 
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.start();
+    }
     SubArray partial_reconstructed_subarray(partial_reconsctructed_data);
     SubArray reconstructed_subarray(reconstructed_data);
     data_refactoring::multi_dimension::AddND(partial_reconstructed_subarray,
@@ -314,7 +328,8 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Reposition", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.print("AddND", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.clear();
     }
     mdr_metadata.DoneReconstruct();
     if (log::level & log::TIME) {
@@ -346,7 +361,7 @@ private:
   Decomposer decomposer;
   Interleaver interleaver;
   Encoder encoder;
-  BatchedEncoder batched_encoder;
+  // BatchedEncoder batched_encoder;
   Compressor compressor;
 
   Array<D, T_data, DeviceType> partial_reconsctructed_data;
