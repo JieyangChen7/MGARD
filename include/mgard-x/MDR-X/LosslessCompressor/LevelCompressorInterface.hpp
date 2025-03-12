@@ -40,7 +40,7 @@ public:
   // compress level, overwrite and free original streams; rewrite streams sizes
   virtual void
   compress_level(std::vector<SIZE> &bitplane_sizes,
-                 Array<2, T, DeviceType> &encoded_bitplanes,
+                 SubArray<2, T, DeviceType> &encoded_bitplanes,
                  std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
                  int queue_idx) = 0;
 
@@ -49,7 +49,7 @@ public:
   virtual void decompress_level(
       std::vector<SIZE> &bitplane_sizes,
       std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
-      Array<2, T, DeviceType> &encoded_bitplanes, uint8_t starting_bitplane,
+      SubArray<2, T, DeviceType> &encoded_bitplanes, uint8_t starting_bitplane,
       uint8_t num_bitplanes, int queue_idx) = 0;
 
   // release the buffer created
