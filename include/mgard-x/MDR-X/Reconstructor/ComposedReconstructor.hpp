@@ -29,11 +29,10 @@ public:
   using T_error = double;
   using Decomposer = MGARDOrthoganalDecomposer<D, T_data, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
-  // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
+  // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // DeviceType>;
-  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, DeviceType>;
-  // using BatchedEncoder =
-  //     BatchedBPEncoder<D, T_data, T_bitplane, T_error, DeviceType>;
+  using Encoder =
+      BPEncoderOptV1<D, T_data, T_bitplane, T_error, false, DeviceType>;
   using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
@@ -54,10 +53,9 @@ public:
     interleaver.Adapt(hierarchy, queue_idx);
     encoder.Adapt(hierarchy, queue_idx);
     // batched_encoder.Adapt(hierarchy, queue_idx);
-    compressor.Adapt(
-        Encoder::buffer_size(hierarchy.level_num_elems(hierarchy.l_target())),
-        config, queue_idx);
-    total_num_bitplanes = config.total_num_bitplanes;
+    compressor.Adapt(Encoder::bitplane_length(
+                         hierarchy.level_num_elems(hierarchy.l_target())),
+                     config, queue_idx);
 
     prev_reconstructed = false;
     partial_reconsctructed_data.resize(
@@ -82,8 +80,8 @@ public:
     level_signs_subarray.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
       encoded_bitplanes_array[level_idx].resize(
-          {(SIZE)total_num_bitplanes,
-           encoder.buffer_size(hierarchy.level_num_elems(level_idx))},
+          {(SIZE)Encoder::MAX_BITPLANES,
+           encoder.bitplane_length(hierarchy.level_num_elems(level_idx))},
           queue_idx);
       encoded_bitplanes_subarray[level_idx] =
           SubArray<2, T_bitplane, DeviceType>(
@@ -113,19 +111,18 @@ public:
     }
 
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      size += config.total_num_bitplanes *
-              Encoder::buffer_size(hierarchy.level_num_elems(level_idx)) *
+      size += Encoder::MAX_BITPLANES *
+              Encoder::bitplane_length(hierarchy.level_num_elems(level_idx)) *
               sizeof(T_bitplane);
     }
 
-    SIZE max_n =
-        Encoder::buffer_size(hierarchy.level_num_elems(hierarchy.l_target()));
+    SIZE max_n = Encoder::bitplane_length(
+        hierarchy.level_num_elems(hierarchy.l_target()));
 
-    size += (config.total_num_bitplanes + 1) * sizeof(T_error);
+    size += (Encoder::MAX_BITPLANES + 1) * sizeof(T_error);
     size += Decomposer::EstimateMemoryFootprint(shape);
     size += Interleaver::EstimateMemoryFootprint(shape);
     size += Encoder::EstimateMemoryFootprint(shape);
-    // size += BatchedEncoder::EstimateMemoryFootprint(shape);
     size += Compressor::EstimateMemoryFootprint(max_n, config);
     return size;
   }
@@ -234,7 +231,6 @@ public:
       // Decompress bitplanes: compressed_bitplanes[level_idx] -->
       // encoded_bitplanes
       compressor.decompress_level(
-          mdr_metadata.level_sizes[level_idx],
           mdr_data.compressed_bitplanes[level_idx],
           encoded_bitplanes_subarray[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
@@ -361,7 +357,6 @@ private:
   Decomposer decomposer;
   Interleaver interleaver;
   Encoder encoder;
-  // BatchedEncoder batched_encoder;
   Compressor compressor;
 
   Array<D, T_data, DeviceType> partial_reconsctructed_data;
@@ -371,7 +366,6 @@ private:
   std::vector<Array<2, T_bitplane, DeviceType>> encoded_bitplanes_array;
   std::vector<SubArray<2, T_bitplane, DeviceType>> encoded_bitplanes_subarray;
   std::vector<SubArray<1, bool, DeviceType>> level_signs_subarray;
-  SIZE total_num_bitplanes;
 
   bool prev_reconstructed;
 
@@ -382,8 +376,6 @@ private:
   std::vector<SIZE> dimensions;
   std::vector<T_data> level_error_bounds;
   std::vector<uint8_t> level_num_bitplanes;
-  std::vector<std::vector<const uint8_t *>> level_components;
-  std::vector<std::vector<SIZE>> level_sizes;
   std::vector<SIZE> level_num;
   std::vector<std::vector<double>> level_squared_errors;
 };

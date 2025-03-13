@@ -42,20 +42,25 @@ public:
                         : hcoded.shape(0) - gid * PART_SIZE;
     //    if ((gid + 1) * PART_SIZE > hcoded.shape(0)) printf("\n\ngid
     //    %lu\tending %lu\n\n", gid, ending);
-    H msb_bw_word_lsb, _1, _2;
+    H msb_bw_word_lsb, _1, _2, buffer;
     H *current = hcoded(gid * PART_SIZE);
     for (size_t i = 0; i < ending; i++) {
+
       msb_bw_word_lsb = *hcoded(gid * PART_SIZE + i);
       bitwidth = *((uint8_t *)&msb_bw_word_lsb + (sizeof(H) - 1));
 
       *((uint8_t *)&msb_bw_word_lsb + sizeof(H) - 1) = 0x0;
-      if (densely_coded_lsb_pos == sizeof(H) * 8)
-        *current = 0x0; // a new unit of data type
+      if (densely_coded_lsb_pos == sizeof(H) * 8) {
+        // *current = 0x0; // a new unit of data type
+        buffer = 0x0;
+      }
       if (bitwidth <= densely_coded_lsb_pos) {
         densely_coded_lsb_pos -= bitwidth;
-        *current |= msb_bw_word_lsb << densely_coded_lsb_pos;
+        // *current |= msb_bw_word_lsb << densely_coded_lsb_pos;
+        buffer |= msb_bw_word_lsb << densely_coded_lsb_pos;
         if (densely_coded_lsb_pos == 0) {
           densely_coded_lsb_pos = sizeof(H) * 8;
+          *current = buffer;
           ++current;
         }
       } else {
@@ -66,14 +71,23 @@ public:
         _1 = msb_bw_word_lsb >> (bitwidth - densely_coded_lsb_pos);
         _2 = msb_bw_word_lsb
              << (sizeof(H) * 8 - (bitwidth - densely_coded_lsb_pos));
-        *current |= _1;
-        *(++current) = 0x0;
-        *current |= _2;
+        buffer |= _1;
+        *current = buffer;
+        // *current |= _1;
+        // *(++current) = 0x0;
+        current++;
+        // *current |= _2;
+        buffer = 0x0;
+        buffer = _2;
         densely_coded_lsb_pos =
             sizeof(H) * 8 - (bitwidth - densely_coded_lsb_pos);
       }
       total_bitwidth += bitwidth;
     }
+    // if (densely_coded_lsb_pos != sizeof(H) * 8) {
+    *current = buffer;
+    // ++current;
+    // }
     *densely_meta(gid) = total_bitwidth;
   }
 
