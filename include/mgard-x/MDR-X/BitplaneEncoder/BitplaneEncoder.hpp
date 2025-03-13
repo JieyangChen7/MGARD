@@ -6,7 +6,7 @@
 // #include "PerBitBPEncoder.hpp"
 #include "BPEncoderOptV1.hpp"
 #include "GroupedBPEncoderGPU.hpp"
-#include "GroupedWarpBPEncoderGPU.hpp"
+// #include "GroupedWarpBPEncoderGPU.hpp"
 // #include "PerBitBPEncoderGPU.hpp"
 
 #endif

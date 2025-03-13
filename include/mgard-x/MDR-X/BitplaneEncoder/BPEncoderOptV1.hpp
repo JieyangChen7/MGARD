@@ -13,7 +13,8 @@ namespace mgard_x {
 namespace MDR {
 
 template <typename T, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, OPTION BinaryType, typename DeviceType>
+          typename T_error, OPTION BinaryType, bool CollectError,
+          typename DeviceType>
 class BPEncoderOptV1Functor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
@@ -96,17 +97,19 @@ public:
       // encode sign
       encode_batch(signs, encoded_sign, BATCH_SIZE, 1);
 
-      error_collect(shifted_data, errors, BATCH_SIZE, num_bitplanes, exp);
-
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        *encoded_bitplanes(bp_idx, batch_idx * 2) = encoded_data[bp_idx];
+        *encoded_bitplanes(bp_idx, batch_idx) = encoded_data[bp_idx];
         // print_bits(encoded_bitplanes[bp_idx * b + batch_idx * 2],
         // batch_size);
       }
-      *encoded_bitplanes(0, batch_idx * 2 + 1) = encoded_sign[0];
+      *encoded_bitplanes(0, num_batches + batch_idx) = encoded_sign[0];
       // print_bits(encoded_bitplanes[0 * b + batch_idx * 2 + 1], batch_size);
-      for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
-        *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
+
+      if constexpr (CollectError) {
+        error_collect(shifted_data, errors, BATCH_SIZE, num_bitplanes, exp);
+        for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
+          *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
+        }
       }
     }
   }
@@ -129,7 +132,7 @@ private:
 };
 
 template <typename T, typename T_bitplane, typename T_error, OPTION BinaryType,
-          typename DeviceType>
+          bool CollectError, typename DeviceType>
 class BPEncoderOptV1Kernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
@@ -147,8 +150,9 @@ public:
                                           int64_t, int32_t>::type;
   using T_fp = typename std::conditional<std::is_same<T, double>::value,
                                          uint64_t, uint32_t>::type;
-  using FunctorType = BPEncoderOptV1Functor<T, T_fp, T_sfp, T_bitplane, T_error,
-                                            BinaryType, DeviceType>;
+  using FunctorType =
+      BPEncoderOptV1Functor<T, T_fp, T_sfp, T_bitplane, T_error, BinaryType,
+                            CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -225,10 +229,10 @@ public:
     if (batch_idx < num_batches) {
 
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        encoded_data[bp_idx] = *encoded_bitplanes(bp_idx, batch_idx * 2);
+        encoded_data[bp_idx] = *encoded_bitplanes(bp_idx, batch_idx);
         // print_bits(encoded_data[bp_idx], batch_size);
       }
-      encoded_sign[0] = *encoded_bitplanes(0, batch_idx * 2 + 1);
+      encoded_sign[0] = *encoded_bitplanes(0, num_batches + batch_idx);
       // print_bits(encoded_sign[0], batch_size);
 
       // encode data
@@ -315,11 +319,13 @@ private:
 // general bitplane encoder that encodes data by block using T_stream type
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
-          typename DeviceType>
+          bool CollectError, typename DeviceType>
 class BPEncoderOptV1
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
-                                                DeviceType> {
+                                                CollectError, DeviceType> {
 public:
+  static constexpr int BATCH_SIZE = sizeof(T_bitplane) * 8;
+  static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
   BPEncoderOptV1() : initialized(false) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
@@ -343,9 +349,7 @@ public:
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
 
-  static SIZE buffer_size(SIZE n) {
-    return num_blocks(n) * sizeof(T_bitplane) * 2;
-  }
+  static SIZE bitplane_length(SIZE n) { return num_blocks(n) * 2; }
 
   static SIZE num_blocks(SIZE n) {
     const SIZE batch_size = sizeof(T_bitplane) * 8;
@@ -358,9 +362,8 @@ public:
     this->hierarchy = &hierarchy;
     SIZE max_level_num_elems = hierarchy.level_num_elems(hierarchy.l_target());
 
-    SIZE max_bitplane = 64;
     level_errors_work_array.resize(
-        {max_bitplane + 1, num_blocks(max_level_num_elems)}, queue_idx);
+        {MAX_BITPLANES + 1, num_blocks(max_level_num_elems)}, queue_idx);
     DeviceCollective<DeviceType>::Sum(
         num_blocks(max_level_num_elems), SubArray<1, T_error, DeviceType>(),
         SubArray<1, T_error, DeviceType>(), level_error_sum_work_array, false,
@@ -370,11 +373,10 @@ public:
   static size_t EstimateMemoryFootprint(std::vector<SIZE> shape) {
     Hierarchy<D, T_data, DeviceType> hierarchy(shape, Config());
     SIZE max_level_num_elems = hierarchy.level_num_elems(hierarchy.l_target());
-    SIZE max_bitplane = 64;
     size_t size = 0;
     size += hierarchy.EstimateMemoryFootprint(shape);
     size +=
-        (max_bitplane + 1) * num_blocks(max_level_num_elems) * sizeof(T_error);
+        (MAX_BITPLANES + 1) * num_blocks(max_level_num_elems) * sizeof(T_error);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
       size += hierarchy.level_num_elems(level_idx) * sizeof(bool);
     }
@@ -384,27 +386,26 @@ public:
   void encode(SIZE n, SIZE num_bitplanes, int32_t exp,
               SubArray<1, T_data, DeviceType> v,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-              SubArray<1, T_error, DeviceType> level_errors,
-              std::vector<SIZE> &streams_sizes, int queue_idx) {
+              SubArray<1, T_error, DeviceType> level_errors, int queue_idx) {
 
     SubArray<2, T_error, DeviceType> level_errors_work(level_errors_work_array);
 
     DeviceLauncher<DeviceType>::Execute(
         BPEncoderOptV1Kernel<T_data, T_bitplane, T_error, BINARY_TYPE,
-                             DeviceType>(n, num_bitplanes, exp, v,
-                                         encoded_bitplanes, level_errors_work),
+                             CollectError, DeviceType>(
+            n, num_bitplanes, exp, v, encoded_bitplanes, level_errors_work),
         queue_idx);
-    SIZE reduce_size = num_blocks(n);
-    for (int i = 0; i < num_bitplanes + 1; i++) {
-      SubArray<1, T_error, DeviceType> curr_errors({reduce_size},
-                                                   level_errors_work(i, 0));
-      SubArray<1, T_error, DeviceType> sum_error({1}, level_errors(i));
-      DeviceCollective<DeviceType>::Sum(reduce_size, curr_errors, sum_error,
-                                        level_error_sum_work_array, true,
-                                        queue_idx);
-    }
-    for (int i = 0; i < num_bitplanes; i++) {
-      streams_sizes[i] = buffer_size(n) * sizeof(T_bitplane);
+
+    if constexpr (CollectError) {
+      SIZE reduce_size = num_blocks(n);
+      for (int i = 0; i < num_bitplanes + 1; i++) {
+        SubArray<1, T_error, DeviceType> curr_errors({reduce_size},
+                                                     level_errors_work(i, 0));
+        SubArray<1, T_error, DeviceType> sum_error({1}, level_errors(i));
+        DeviceCollective<DeviceType>::Sum(reduce_size, curr_errors, sum_error,
+                                          level_error_sum_work_array, true,
+                                          queue_idx);
+      }
     }
   }
 

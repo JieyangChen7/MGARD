@@ -31,7 +31,7 @@ namespace MDR {
 namespace concepts {
 // concept of encoder which encodes T type data into bitstreams
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
-          typename DeviceType>
+          bool CollectError, typename DeviceType>
 class BitplaneEncoderInterface {
 public:
   virtual ~BitplaneEncoderInterface() = default;
@@ -40,7 +40,7 @@ public:
                       SubArray<1, T_data, DeviceType> v,
                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                       SubArray<1, T_error, DeviceType> level_errors,
-                      std::vector<SIZE> &streams_sizes, int queue_idx) = 0;
+                      int queue_idx) = 0;
 
   virtual void decode(SIZE n, SIZE num_bitplanes, int32_t exp,
                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
