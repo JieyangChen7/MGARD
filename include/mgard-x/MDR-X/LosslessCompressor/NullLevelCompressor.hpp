@@ -50,8 +50,7 @@ public:
   }
   // compress level, overwrite and free original streams; rewrite streams sizes
   void
-  compress_level(std::vector<SIZE> &bitplane_sizes,
-                 SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
+  compress_level(SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
                  std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
                  int queue_idx) {
 
@@ -59,58 +58,24 @@ public:
          bitplane_idx++) {
       T_bitplane *bitplane = encoded_bitplanes(bitplane_idx, 0);
 
-      Array<1, Byte, DeviceType> compressed_bitplane(
-          {bitplane_sizes[bitplane_idx]});
+      compressed_bitplanes[bitplane_idx].resize(
+          {encoded_bitplanes.shape(1) * sizeof(T_bitplane)});
       MemoryManager<DeviceType>::Copy1D(
-          compressed_bitplane.data(), (Byte *)bitplane,
-          bitplane_sizes[bitplane_idx], queue_idx);
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      compressed_bitplanes[bitplane_idx] = compressed_bitplane;
-      bitplane_sizes[bitplane_idx] = bitplane_sizes[bitplane_idx];
+          compressed_bitplanes[bitplane_idx].data(), (Byte *)bitplane,
+          encoded_bitplanes.shape(1) * sizeof(T_bitplane), queue_idx);
     }
   }
 
   // decompress level, create new buffer and overwrite original streams; will
   // not change stream sizes
   void decompress_level(
-      std::vector<SIZE> &bitplane_sizes,
       std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
       SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
       uint8_t starting_bitplane, uint8_t num_bitplanes, int queue_idx) {
 
     for (SIZE bitplane_idx = starting_bitplane;
          bitplane_idx < starting_bitplane + num_bitplanes; bitplane_idx++) {
-      // std::cout << "decompress level: " << bitplane_idx << " " <<
-      // (int)num_bitplanes << "\n";
       T_bitplane *bitplane = encoded_bitplanes(bitplane_idx, 0);
-      // MDR::Zstd
-      // SIZE compressed_size = bitplane_sizes[starting_bitplane +
-      // bitplane_idx]; Byte *compressed_host = new Byte[compressed_size];
-      // MemoryManager<DeviceType>::Copy1D(
-      //     compressed_host,
-      //     compressed_bitplanes[starting_bitplane + bitplane_idx].data(),
-      //     compressed_size, 0);
-      // DeviceRuntime<DeviceType>::SyncQueue(0);
-
-      // Byte *bitplane_host = NULL;
-      // SIZE decompressed_size = ::MDR::ZSTD::decompress(
-      //     compressed_host, compressed_size, &bitplane_host);
-
-      // MemoryManager<DeviceType>::Copy1D(bitplane, (T_bitplane
-      // *)bitplane_host,
-      //                                   decompressed_size /
-      //                                   sizeof(T_bitplane), 0);
-      // DeviceRuntime<DeviceType>::SyncQueue(0);
-
-      // Huffman
-      // Array<1, T_bitplane, DeviceType>
-      // encoded_bitplane({encoded_bitplanes_subarray.shape(1)}, bitplane);
-      // huffman.Decompress(compressed_bitplanes[bitplane_idx],
-      // encoded_bitplane, queue_idx);
-      // int old_log_level = log::level;
-      // log::level = log::ERR;
-      // ZstdDecompress(compressed_bitplanes[bitplane_idx]);
-      // log::level = old_log_level;
       MemoryManager<DeviceType>::Copy1D(
           (uint8_t *)bitplane, compressed_bitplanes[bitplane_idx].data(),
           compressed_bitplanes[bitplane_idx].shape(0), queue_idx);
