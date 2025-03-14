@@ -405,7 +405,7 @@ enum compress_status_type decompress_pipeline_gpu(
     }
 
     double CR = (double)compressor.hierarchy->total_num_elems() * sizeof(T) /
-                compressed_size;
+                device_compressed_buffer[current_buffer].shape(0);
     log::info("Subdomain CR: " + std::to_string(CR));
     if (CR > 1.0) {
       std::stringstream ss;
