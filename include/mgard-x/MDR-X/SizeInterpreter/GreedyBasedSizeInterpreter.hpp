@@ -260,12 +260,12 @@ public:
         heap.push(estimated_efficiency(accumulated_error, index[i], i,
                                        level_errors[i], level_sizes[i]));
       }
-      for (int k = 0; k < num; k++)
-        std::cout << i;
+      // for (int k = 0; k < num; k++)
+      //   std::cout << i;
     }
-    std::cout << std::endl;
-    std::cout << "Requested tolerance = " << tolerance
-              << ", estimated error = " << accumulated_error << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Requested tolerance = " << tolerance
+    //           << ", estimated error = " << accumulated_error << std::endl;
     return retrieve_sizes;
   }
   void print() const {
