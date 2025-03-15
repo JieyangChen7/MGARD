@@ -22,7 +22,7 @@ public:
   static constexpr int _huff_dict_size = 256;
   static constexpr int _huff_block_size = 1024;
 
-  static constexpr int num_merged_bitplanes = 4;
+  static constexpr int num_merged_bitplanes = 1;
 
   DefaultLevelCompressor() : initialized(false) {}
   DefaultLevelCompressor(SIZE max_n, Config config)
@@ -120,8 +120,8 @@ public:
       SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
       uint8_t starting_bitplane, uint8_t num_bitplanes, int queue_idx) {
 
-    for (SIZE bitplane_idx = starting_bitplane; bitplane_idx < num_bitplanes;
-         bitplane_idx++) {
+    for (SIZE bitplane_idx = starting_bitplane;
+         bitplane_idx < starting_bitplane + num_bitplanes; bitplane_idx++) {
 
       if (bitplane_idx % num_merged_bitplanes == 0) {
         // Timer timer;
