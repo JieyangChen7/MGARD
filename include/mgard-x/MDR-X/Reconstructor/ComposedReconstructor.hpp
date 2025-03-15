@@ -24,6 +24,8 @@ template <DIM D, typename T_data, typename DeviceType>
 class ComposedReconstructor
     : public concepts::ReconstructorInterface<D, T_data, DeviceType> {
 public:
+  constexpr static bool CONTROL_L2 = true;
+  constexpr static bool NegaBinary = false;
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
@@ -31,8 +33,8 @@ public:
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // DeviceType>;
-  using Encoder =
-      BPEncoderOptV1<D, T_data, T_bitplane, T_error, false, DeviceType>;
+  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
+                                 CONTROL_L2, DeviceType>;
   using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
@@ -159,10 +161,17 @@ public:
     } else {
       log::info("ErrorEstimator is base of SquaredErrorEstimator, using level "
                 "squared error directly");
-      SNormErrorEstimator<T_data> estimator(D, hierarchy->l_target(),
-                                            mdr_metadata.requested_s);
-      // InorderSizeInterpreter interpreter(estimator);
-      GreedyBasedSizeInterpreter interpreter(estimator);
+      using Estimator = SNormErrorEstimator<T_data>;
+      // using BinaryInterpreter = InorderSizeInterpreter<Estimator>;
+      using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
+      using NegaBinaryInterp = NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
+      Estimator estimator(D, hierarchy->l_target(), mdr_metadata.requested_s);
+
+      using Interpreter =
+          typename std::conditional<NegaBinary, NegaBinaryInterp,
+                                    BinaryInterp>::type;
+
+      Interpreter interpreter(estimator);
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // NegaBinaryGreedyBasedSizeInterpreter interpreter(estimator);
       retrieve_sizes = interpreter.interpret_retrieve_size(
