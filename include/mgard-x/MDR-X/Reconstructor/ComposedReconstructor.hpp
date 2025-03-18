@@ -24,7 +24,7 @@ template <DIM D, typename T_data, typename DeviceType>
 class ComposedReconstructor
     : public concepts::ReconstructorInterface<D, T_data, DeviceType> {
 public:
-  constexpr static bool CONTROL_L2 = true;
+  constexpr static bool CONTROL_L2 = false;
   constexpr static bool NegaBinary = false;
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
@@ -35,7 +35,8 @@ public:
   // DeviceType>;
   using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
                                  CONTROL_L2, DeviceType>;
-  using Compressor = DefaultLevelCompressor<T_bitplane, DeviceType>;
+  // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
+  using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
   ComposedReconstructor() : initialized(false) {}
