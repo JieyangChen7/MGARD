@@ -109,11 +109,14 @@ public:
   }
 
   MGARDX_EXEC void EncodeBinary() {
-    int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
-                        FunctorBase<DeviceType>::GetBlockDimX() +
-                    FunctorBase<DeviceType>::GetThreadIdX();
+    SIZE gid = FunctorBase<DeviceType>::GetBlockIdX() *
+                   FunctorBase<DeviceType>::GetBlockDimX() +
+               FunctorBase<DeviceType>::GetThreadIdX();
 
-    int num_batches = (n - 1) / BATCH_SIZE + 1;
+    SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
+                     FunctorBase<DeviceType>::GetBlockDimX();
+
+    SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
     T_data shifted_data[BATCH_SIZE];
     T_fp fp_data[BATCH_SIZE];
     T_fp fp_sign[BATCH_SIZE];
@@ -121,7 +124,10 @@ public:
     T_bitplane encoded_sign[MAX_BITPLANES];
     T_error errors[MAX_BITPLANES + 1];
 
-    if (batch_idx < num_batches) {
+    for (SIZE batch_idx = gid; batch_idx < num_batches;
+         batch_idx += grid_size) {
+      // SIZE batch_idx = gid;
+      // if (batch_idx < num_batches) {
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_data data = 0;
         if (batch_idx * BATCH_SIZE + data_idx < n) {
@@ -162,11 +168,14 @@ public:
   }
 
   MGARDX_EXEC void EncodeNegaBinary() {
-    int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
-                        FunctorBase<DeviceType>::GetBlockDimX() +
-                    FunctorBase<DeviceType>::GetThreadIdX();
+    SIZE gid = FunctorBase<DeviceType>::GetBlockIdX() *
+                   FunctorBase<DeviceType>::GetBlockDimX() +
+               FunctorBase<DeviceType>::GetThreadIdX();
 
-    int num_batches = (n - 1) / BATCH_SIZE + 1;
+    SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
+                     FunctorBase<DeviceType>::GetBlockDimX();
+
+    SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
     T_data shifted_data[BATCH_SIZE];
     T_fp fp_data[BATCH_SIZE];
     T_bitplane encoded_data[MAX_BITPLANES];
@@ -174,7 +183,8 @@ public:
 
     exp += 2;
 
-    if (batch_idx < num_batches) {
+    for (SIZE batch_idx = gid; batch_idx < num_batches;
+         batch_idx += grid_size) {
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_data data = 0;
         if (batch_idx * BATCH_SIZE + data_idx < n) {
@@ -256,12 +266,15 @@ public:
                         level_errors_workspace);
     SIZE tbx, tby, tbz, gridx, gridy, gridz;
     size_t sm_size = functor.shared_memory_size();
+    SIZE repeat_factor = 16;
     tbz = 1;
     tby = 1;
     tbx = 256;
     gridz = 1;
     gridy = 1;
     gridx = (n - 1) / tbx + 1;
+    gridx = std::max((SIZE)DeviceRuntime<DeviceType>::GetNumSMs(),
+                     gridx / repeat_factor);
     return Task(functor, gridz, gridy, gridx, tbz, tby, tbx, sm_size, queue_idx,
                 std::string(Name));
   }
@@ -306,11 +319,12 @@ public:
   }
 
   MGARDX_EXEC void DecodeBinary() {
-    int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
-                        FunctorBase<DeviceType>::GetBlockDimX() +
-                    FunctorBase<DeviceType>::GetThreadIdX();
-
-    int num_batches = (n - 1) / BATCH_SIZE + 1;
+    SIZE gid = FunctorBase<DeviceType>::GetBlockIdX() *
+                   FunctorBase<DeviceType>::GetBlockDimX() +
+               FunctorBase<DeviceType>::GetThreadIdX();
+    SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
+                     FunctorBase<DeviceType>::GetBlockDimX();
+    SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
 
     T_data shifted_data[BATCH_SIZE];
     T_fp fp_data[BATCH_SIZE];
@@ -320,8 +334,8 @@ public:
 
     int ending_bitplane = starting_bitplane + num_bitplanes;
 
-    // for (int batch_idx = 0; batch_idx < num_batches; batch_idx++) {
-    if (batch_idx < num_batches) {
+    for (SIZE batch_idx = gid; batch_idx < num_batches;
+         batch_idx += grid_size) {
 
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         encoded_data[bp_idx] =
@@ -358,11 +372,12 @@ public:
   }
 
   MGARDX_EXEC void DecodeNegaBinary() {
-    int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
-                        FunctorBase<DeviceType>::GetBlockDimX() +
-                    FunctorBase<DeviceType>::GetThreadIdX();
-
-    int num_batches = (n - 1) / BATCH_SIZE + 1;
+    SIZE gid = FunctorBase<DeviceType>::GetBlockIdX() *
+                   FunctorBase<DeviceType>::GetBlockDimX() +
+               FunctorBase<DeviceType>::GetThreadIdX();
+    SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
+                     FunctorBase<DeviceType>::GetBlockDimX();
+    SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
 
     T_data shifted_data[BATCH_SIZE];
     T_fp fp_data[BATCH_SIZE];
@@ -372,8 +387,8 @@ public:
 
     int ending_bitplane = starting_bitplane + num_bitplanes;
 
-    // for (int batch_idx = 0; batch_idx < num_batches; batch_idx++) {
-    if (batch_idx < num_batches) {
+    for (SIZE batch_idx = gid; batch_idx < num_batches;
+         batch_idx += grid_size) {
 
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         encoded_data[bp_idx] =
@@ -448,12 +463,15 @@ public:
                         encoded_bitplanes, signs, v);
     SIZE tbx, tby, tbz, gridx, gridy, gridz;
     size_t sm_size = functor.shared_memory_size();
+    SIZE repeat_factor = 8;
     tbz = 1;
     tby = 1;
     tbx = 256;
     gridz = 1;
     gridy = 1;
     gridx = (n - 1) / tbx + 1;
+    gridx = std::max((SIZE)DeviceRuntime<DeviceType>::GetNumSMs(),
+                     gridx / repeat_factor);
     return Task(functor, gridz, gridy, gridx, tbz, tby, tbx, sm_size, queue_idx,
                 std::string(Name));
   }
