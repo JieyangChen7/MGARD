@@ -69,41 +69,19 @@ public:
                  std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes,
                  int queue_idx) {
 
-    if (0) {
-
-      parallel_rle::RunLengthEncoding<T_compress, u_int32_t, u_int32_t,
-                                      DeviceType>
-          rle;
-
-      std::vector<T_compress> data = {1,  2,  3,  6,  6,  6, 5, 5, 10, 10,
-                                      10, 23, 23, 23, 23, 1, 2, 3, 4,  6};
-      rle.Resize(data.size(), queue_idx);
-      Array<1, T_compress, DeviceType> original_data({data.size()});
-      Array<1, T_compress, DeviceType> decompressed_data({data.size()});
-      MemoryManager<DeviceType>::Copy1D(original_data.data(), data.data(),
-                                        data.size(), queue_idx);
-      Array<1, Byte, DeviceType> compressed_data(
-          {data.size() * sizeof(T_compress)});
-      rle.Compress(original_data, compressed_data, queue_idx);
-
-      rle.Deserialize(compressed_data, queue_idx);
-      rle.Decompress(compressed_data, decompressed_data, queue_idx);
-
-      exit(0);
-    }
-    std::vector<float> cr;
+    std::vector<float> cr, time;
     for (SIZE bitplane_idx = 0; bitplane_idx < encoded_bitplanes.shape(0);
          bitplane_idx++) {
       if (bitplane_idx % num_merged_bitplanes == 0) {
         SIZE merged_bitplane_size =
             encoded_bitplanes.shape(1) * byte_ratio * num_merged_bitplanes;
-        // Timer timer;
-        // timer.start();
+        Timer timer; timer.start();
         T_compress *bitplane = (T_compress *)encoded_bitplanes(bitplane_idx, 0);
 
         Array<1, T_compress, DeviceType> encoded_bitplane(
             {merged_bitplane_size}, bitplane);
-
+        int old_log_level = log::level;
+        // log::level = 0;
         if constexpr (std::is_same<CompressorType, HUFFMAN>::value) {
           ATOMIC_IDX zero = 0;
           MemoryManager<DeviceType>::Copy1D(
@@ -112,36 +90,38 @@ public:
           MemoryManager<DeviceType>::Copy1D(
               &huffman.outlier_count,
               huffman.workspace.outlier_count_subarray.data(), 1, queue_idx);
-          int old_log_level = log::level;
-          log::level = 0;
-
           huffman.CompressPrimary(
               encoded_bitplane, compressed_bitplanes[bitplane_idx], queue_idx);
-          huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
-          log::level = old_log_level;
+          huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx); 
         }
-
         if constexpr (std::is_same<CompressorType, RLE>::value) {
           rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
                        queue_idx);
           rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
         }
+        log::level = old_log_level;
+        cr.push_back((float)merged_bitplane_size /
+                      compressed_bitplanes[bitplane_idx].shape(0));
 
-        // cr.push_back((float)merged_bitplane_size /
-        //               compressed_bitplanes[bitplane_idx].shape(0));
-
-        // timer.end();
+        timer.end(); time.push_back(timer.get()); timer.clear();
         // timer.print("Compressing bitplane", merged_bitplane_size);
         // timer.clear();
       } else {
         compressed_bitplanes[bitplane_idx].resize({1}, queue_idx);
       }
     }
-    // std::string cr_string = "";
-    // for (auto x : cr) {
-    //   cr_string += std::to_string(x) + " ";
-    // }
-    // log::info("CR: " + cr_string);
+    std::string cr_string = "";
+    for (auto x : cr) {
+      cr_string += std::to_string(x) + ", ";
+    }
+    log::info("CR: " + cr_string);
+
+    std::string time_string = "";
+    for (auto x : time) {
+      time_string += std::to_string(x) + " ";
+    }
+    log::info("Time: " + time_string);
+
   }
 
   // decompress level, create new buffer and overwrite original streams; will
@@ -151,33 +131,38 @@ public:
       SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
       uint8_t starting_bitplane, uint8_t num_bitplanes, int queue_idx) {
 
+    std::vector<float> time;
     for (SIZE bitplane_idx = starting_bitplane;
          bitplane_idx < starting_bitplane + num_bitplanes; bitplane_idx++) {
-
       if (bitplane_idx % num_merged_bitplanes == 0) {
+        Timer timer; timer.start();
         T_compress *bitplane = (T_compress *)encoded_bitplanes(bitplane_idx, 0);
         SIZE merged_bitplane_size =
             encoded_bitplanes.shape(1) * byte_ratio * num_merged_bitplanes;
 
         Array<1, T_compress, DeviceType> encoded_bitplane(
             {merged_bitplane_size}, bitplane);
-
+        int old_log_level = log::level;
+        // log::level = 0;
         if constexpr (std::is_same<CompressorType, HUFFMAN>::value) {
-          int old_log_level = log::level;
-          log::level = 0;
           huffman.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
           huffman.DecompressPrimary(compressed_bitplanes[bitplane_idx],
                                     encoded_bitplane, queue_idx);
-          log::level = old_log_level;
         }
-
         if constexpr (std::is_same<CompressorType, RLE>::value) {
           rle.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
           rle.Decompress(compressed_bitplanes[bitplane_idx], encoded_bitplane,
                          queue_idx);
         }
+        log::level = old_log_level;
+        timer.end(); time.push_back(timer.get()); timer.clear();
       }
     }
+    std::string time_string = "";
+    for (auto x : time) {
+      time_string += std::to_string(x) + " ";
+    }
+    log::info("Time: " + time_string);
   }
 
   // release the buffer created
