@@ -32,8 +32,8 @@ public:
   using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
                                  CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
-  using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
-
+  // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
+  using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
   static constexpr int BATCH_SIZE = sizeof(T_bitplane) * 8;
@@ -70,6 +70,7 @@ public:
     // batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(encoder.bitplane_length(
                          hierarchy.level_num_elems(hierarchy.l_target())),
+                         hierarchy.l_target()+1, Encoder::MAX_BITPLANES,
                      config, queue_idx);
 
     level_data_array.resize(hierarchy.l_target() + 1);
@@ -243,7 +244,7 @@ public:
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
       compressor.compress_level(encoded_bitplanes_subarray[level_idx],
-                                mdr_data.compressed_bitplanes[level_idx],
+                                mdr_data.compressed_bitplanes[level_idx], level_idx,
                                 queue_idx);
       for (int bitplane_idx = 0; bitplane_idx < Encoder::MAX_BITPLANES;
            bitplane_idx++) {

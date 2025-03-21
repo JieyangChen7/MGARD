@@ -36,7 +36,8 @@ public:
   using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
                                  CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
-  using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
+  // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
+  using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
   ComposedReconstructor() : initialized(false) {}
@@ -58,6 +59,7 @@ public:
     // batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(Encoder::bitplane_length(
                          hierarchy.level_num_elems(hierarchy.l_target())),
+                         hierarchy.l_target()+1, Encoder::MAX_BITPLANES,
                      config, queue_idx);
 
     prev_reconstructed = false;
@@ -243,7 +245,7 @@ public:
       compressor.decompress_level(
           mdr_data.compressed_bitplanes[level_idx],
           encoded_bitplanes_subarray[level_idx],
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes, level_idx,
           queue_idx);
     }
     if (log::level & log::TIME) {
