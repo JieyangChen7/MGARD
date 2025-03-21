@@ -647,7 +647,7 @@ public:
           timer.print("Quantization", hierarchy->total_num_elems() * sizeof(T));
           timer.clear();
         }
-        log::dbg(
+        log::info(
             "Outlier ratio: " + std::to_string(lossless.huffman.outlier_count) +
             "/" + std::to_string(total_elems) + " (" +
             std::to_string((double)100 * lossless.huffman.outlier_count /

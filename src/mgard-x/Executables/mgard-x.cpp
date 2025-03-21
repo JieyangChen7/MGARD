@@ -171,7 +171,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
                     std::vector<mgard_x::SIZE> shape, double tol, double s,
                     enum mgard_x::error_bound_type mode, std::string lossless,
                     std::string domain_decomposition, mgard_x::SIZE block_size,
-                    enum mgard_x::device_type dev_type, int verbose,
+                    enum mgard_x::device_type dev_type, int verbose, int dl, int ds,
                     mgard_x::SIZE max_memory_footprint) {
 
   mgard_x::Config config;
@@ -180,7 +180,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   // config.decomposition = mgard_x::decomposition_type::Hybrid;
   // config.num_local_refactoring_level = 1;
 
-  // config.max_larget_level = 1;
+  config.max_larget_level = dl;
 
   // config.compressor = mgard_x::compressor_type::ZFP;
 
@@ -199,6 +199,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   // config.domain_d  ecomposition_sizes = {512, 512};
 
   // config.domain_decomposition_sizes = {512, 512, 512, 512};
+  // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(50, 512);
   // config.domain_decomposition_sizes = {2048};
   // config.domain_decomposition_sizes = {128, 248, 315, 348, 384, 424, 201};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(128, 16);
@@ -215,13 +216,13 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   // config.domain_decomposition_sizes = {180, 368, 463, 529, 605, 692, 43};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(192, 15);
 
-  config.estimate_outlier_ratio = 0.3;
+  config.estimate_outlier_ratio = 1.0;
 
   config.dev_type = dev_type;
   config.reorder = 0;
   config.auto_pin_host_buffers = true;
   config.max_memory_footprint = max_memory_footprint;
-  config.huff_dict_size = 8192;
+  config.huff_dict_size = ds;
   config.adjust_shape = false;
   config.auto_cache_release = false;
 
@@ -355,6 +356,18 @@ bool try_compression(int argc, char *argv[]) {
   if (has_arg(argc, argv, "-v", "--verbose")) {
     verbose = get_arg<int>(argc, argv, "Verbose", "-v", "--verbose");
   }
+
+  int dl = 0;
+  if (has_arg(argc, argv, "-dl", "--dl")) {
+    dl = get_arg<int>(argc, argv, "dl", "-dl", "--dl");
+  }
+
+  int ds = 0;
+  if (has_arg(argc, argv, "-ds", "--ds")) {
+    ds = get_arg<int>(argc, argv, "ds", "-ds", "--ds");
+  }
+
+
   mgard_x::SIZE max_memory_footprint =
       std::numeric_limits<mgard_x::SIZE>::max();
   if (has_arg(argc, argv, "-m", "--max-memory")) {
@@ -375,12 +388,12 @@ bool try_compression(int argc, char *argv[]) {
   if (dtype == mgard_x::data_type::Double) {
     launch_compress<double>(shape.size(), dtype, input_file.c_str(),
                             output_file.c_str(), shape, tol, s, mode, lossless,
-                            domain_decomposition, block_size, dev_type, verbose,
+                            domain_decomposition, block_size, dev_type, verbose, dl, ds,
                             max_memory_footprint);
   } else if (dtype == mgard_x::data_type::Float) {
     launch_compress<float>(shape.size(), dtype, input_file.c_str(),
                            output_file.c_str(), shape, tol, s, mode, lossless,
-                           domain_decomposition, block_size, dev_type, verbose,
+                           domain_decomposition, block_size, dev_type, verbose,  dl, ds,
                            max_memory_footprint);
   }
   mgard_x::release_cache(mgard_x::Config());
