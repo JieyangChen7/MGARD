@@ -1,5 +1,5 @@
-#ifndef _MDR_DEFAULT_LEVEL_COMPRESSOR_HPP
-#define _MDR_DEFAULT_LEVEL_COMPRESSOR_HPP
+#ifndef _MDR_HYBRID_LEVEL_COMPRESSOR_HPP
+#define _MDR_HYBRID_LEVEL_COMPRESSOR_HPP
 
 #include "../../Lossless/ParallelHuffman/Huffman.hpp"
 #include "../../Lossless/ParallelRLE/RunLengthEncoding.hpp"
@@ -11,12 +11,9 @@
 namespace mgard_x {
 namespace MDR {
 
-struct HUFFMAN {};
-struct RLE {};
-
 // interface for lossless compressor
-template <typename T_bitplane, typename CompressorType, typename DeviceType>
-class DefaultLevelCompressor
+template <typename T_bitplane, typename DeviceType>
+class HybridLevelCompressor
     : public concepts::LevelCompressorInterface<T_bitplane, DeviceType> {
 public:
   using T_compress = u_int8_t;
@@ -26,44 +23,66 @@ public:
   static constexpr int _huff_dict_size = 256;
   static constexpr int _huff_block_size = 1024;
   static constexpr int num_merged_bitplanes = 4;
+  
 
-  DefaultLevelCompressor() : initialized(false) {}
-  DefaultLevelCompressor(SIZE max_n, Config config) {
+  static constexpr int C = 0; // direct copy
+  static constexpr int H = 1; // Huffman
+  static constexpr int R = 2; // RLE
+  static constexpr int Z = 3; // Zstd
+  
+  std::vector<std::vector<int>> recipe;
+
+  HybridLevelCompressor() : initialized(false) {}
+  HybridLevelCompressor(SIZE max_n, Config config) {
     this->initialized = true;
     Adapt(max_n * byte_ratio, config, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
-  ~DefaultLevelCompressor(){};
+  ~HybridLevelCompressor(){};
 
   void Adapt(SIZE max_n, SIZE max_level, SIZE max_bitplanes, Config config, int queue_idx) {
     this->initialized = true;
     this->config = config;
-    if constexpr (std::is_same<CompressorType, HUFFMAN>::value) {
-      huffman.Resize(max_n * byte_ratio * num_merged_bitplanes, _huff_dict_size,
-                     _huff_block_size, config.estimate_outlier_ratio,
-                     queue_idx);
-    }
-    if constexpr (std::is_same<CompressorType, RLE>::value) {
-      rle.Resize(max_n * byte_ratio * num_merged_bitplanes, queue_idx);
-    }
-  }
+    huffman.Resize(max_n * byte_ratio * num_merged_bitplanes, _huff_dict_size,
+                    _huff_block_size, config.estimate_outlier_ratio,
+                    queue_idx);
+    rle.Resize(max_n * byte_ratio * num_merged_bitplanes, queue_idx);
+    zstd.Resize(max_n * sizeof(T_bitplane), config.zstd_compress_level, queue_idx);
+    recipe.resize(max_level);
+    // All copy
+    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, C);
+    // All Huffman
+    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, H);
+    // All RLE
+    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, R);
+    // All Zstd
+    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, Z);
+    // Hybrid
+    recipe = {{C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
+              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
+              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
+              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
+              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
+              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
+              {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
+              {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
+              {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
+              {H, H, H, H, R, R, R, R, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H}};
+}
   static size_t EstimateMemoryFootprint(SIZE max_n, Config config) {
     size_t size = 0;
-    if constexpr (std::is_same<CompressorType, HUFFMAN>::value) {
-      size += Huffman<T_bitplane, T_bitplane, HUFFMAN_CODE, DeviceType>::
-          EstimateMemoryFootprint(max_n * byte_ratio * num_merged_bitplanes,
-                                  _huff_dict_size, _huff_block_size,
-                                  config.estimate_outlier_ratio);
-    }
-    if constexpr (std::is_same<CompressorType, RLE>::value) {
-      size += parallel_rle::RunLengthEncoding<
-          T_compress, u_int32_t, u_int32_t,
-          DeviceType>::EstimateMemoryFootprint(max_n * byte_ratio *
-                                               num_merged_bitplanes);
-    }
+    size += Huffman<T_bitplane, T_bitplane, HUFFMAN_CODE, DeviceType>::
+        EstimateMemoryFootprint(max_n * byte_ratio * num_merged_bitplanes,
+                                _huff_dict_size, _huff_block_size,
+                                config.estimate_outlier_ratio);
+    size += parallel_rle::RunLengthEncoding<
+        T_compress, u_int32_t, u_int32_t,
+        DeviceType>::EstimateMemoryFootprint(max_n * byte_ratio *
+                                            num_merged_bitplanes);
+    size += Zstd<DeviceType>::EstimateMemoryFootprint(max_n * sizeof(T_bitplane));
     return size;
   }
-  // compress level, overwrite and free original streams; rewrite streams sizes
+
   void
   compress_level(SubArray<2, T_bitplane, DeviceType> &encoded_bitplanes,
                  std::vector<Array<1, Byte, DeviceType>> &compressed_bitplanes, int level_idx,
@@ -81,8 +100,16 @@ public:
         Array<1, T_compress, DeviceType> encoded_bitplane(
             {merged_bitplane_size}, bitplane);
         int old_log_level = log::level;
-        // log::level = 0;
-        if constexpr (std::is_same<CompressorType, HUFFMAN>::value) {
+        log::level = 0;
+        // Direct copy
+        if (recipe[level_idx][bitplane_idx] == C) {
+          compressed_bitplanes[bitplane_idx].resize(
+            {merged_bitplane_size});
+          MemoryManager<DeviceType>::Copy1D(
+              compressed_bitplanes[bitplane_idx].data(), (Byte *)bitplane,
+              merged_bitplane_size, queue_idx);
+        // Huffman
+        } else if (recipe[level_idx][bitplane_idx] == H) {
           ATOMIC_IDX zero = 0;
           MemoryManager<DeviceType>::Copy1D(
               huffman.workspace.outlier_count_subarray.data(), &zero, 1,
@@ -93,11 +120,19 @@ public:
           huffman.CompressPrimary(
               encoded_bitplane, compressed_bitplanes[bitplane_idx], queue_idx);
           huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx); 
-        }
-        if constexpr (std::is_same<CompressorType, RLE>::value) {
+        // RLE
+        } else if (recipe[level_idx][bitplane_idx] == R) {
           rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
                        queue_idx);
           rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
+        // Zstd
+        } else if (recipe[level_idx][bitplane_idx] == Z) {
+          compressed_bitplanes[bitplane_idx].resize(
+            {merged_bitplane_size});
+          MemoryManager<DeviceType>::Copy1D(
+              compressed_bitplanes[bitplane_idx].data(), (Byte *)bitplane,
+              merged_bitplane_size, queue_idx);
+          zstd.Compress(compressed_bitplanes[bitplane_idx], queue_idx);
         }
         log::level = old_log_level;
         cr.push_back((float)merged_bitplane_size /
@@ -143,16 +178,28 @@ public:
         Array<1, T_compress, DeviceType> encoded_bitplane(
             {merged_bitplane_size}, bitplane);
         int old_log_level = log::level;
-        // log::level = 0;
-        if constexpr (std::is_same<CompressorType, HUFFMAN>::value) {
+        log::level = 0;
+        // Direct copy
+        if (recipe[level_idx][bitplane_idx] == C) {
+          MemoryManager<DeviceType>::Copy1D(
+            (uint8_t *)bitplane, compressed_bitplanes[bitplane_idx].data(),
+            merged_bitplane_size, queue_idx);
+        // Huffman
+        } else if (recipe[level_idx][bitplane_idx] == H) {
           huffman.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
           huffman.DecompressPrimary(compressed_bitplanes[bitplane_idx],
                                     encoded_bitplane, queue_idx);
-        }
-        if constexpr (std::is_same<CompressorType, RLE>::value) {
+        // RLE
+        } else if (recipe[level_idx][bitplane_idx] == R) {
           rle.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
           rle.Decompress(compressed_bitplanes[bitplane_idx], encoded_bitplane,
                          queue_idx);
+        // Zstd
+        } else if (recipe[level_idx][bitplane_idx] == Z) {
+          zstd.Decompress(compressed_bitplanes[bitplane_idx], queue_idx);
+          MemoryManager<DeviceType>::Copy1D(
+            (uint8_t *)bitplane, compressed_bitplanes[bitplane_idx].data(),
+            merged_bitplane_size, queue_idx);
         }
         log::level = old_log_level;
         timer.end(); time.push_back(timer.get()); timer.clear();
@@ -173,6 +220,7 @@ public:
   Huffman<T_compress, T_compress, uint64_t, DeviceType> huffman;
   parallel_rle::RunLengthEncoding<T_compress, u_int32_t, u_int32_t, DeviceType>
       rle;
+  Zstd<DeviceType> zstd;
   Config config;
 };
 
