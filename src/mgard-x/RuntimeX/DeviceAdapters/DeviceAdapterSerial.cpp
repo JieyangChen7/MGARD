@@ -14,7 +14,6 @@ DeviceQueues<SERIAL> DeviceRuntime<SERIAL>::queues;
 DeviceSpecification<SERIAL> DeviceRuntime<SERIAL>::DeviceSpecs;
 
 bool DeviceRuntime<SERIAL>::SyncAllKernelsAndCheckErrors = false;
-bool MemoryManager<SERIAL>::ReduceMemoryFootprint = false;
 bool DeviceRuntime<SERIAL>::TimingAllKernels = false;
 bool DeviceRuntime<SERIAL>::PrintKernelConfig = false;
 

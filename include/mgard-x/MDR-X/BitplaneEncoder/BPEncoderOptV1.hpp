@@ -27,28 +27,67 @@ public:
     Functor<DeviceType>();
   }
 
-  MGARDX_EXEC void encode_batch(T_fp *v, T_bitplane *encoded, int batch_size,
+  MGARDX_EXEC void encode_batch(T_fp *v, T_bitplane *encoded,
                                 int num_bitplanes) {
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
       T_bitplane buffer = 0;
-      for (int data_idx = 0; data_idx < batch_size; data_idx++) {
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
-        buffer += bit << batch_size - 1 - data_idx;
+        buffer += bit << BATCH_SIZE - 1 - data_idx;
+      }
+      encoded[bp_idx] = buffer;
+    }
+  }
+
+  MGARDX_EXEC void encode_batch_with_prediction(T_fp *v, T_bitplane *encoded,
+                                                int num_bitplanes) {
+    T_fp data_values[BATCH_SIZE];
+    for (int i = 0; i < BATCH_SIZE; i++) {
+      data_values[i] = 0;
+    }
+    for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
+      T_bitplane buffer = 0;
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
+        T_bitplane cur_bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
+        if (bp_idx == 0) {
+          buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
+        } else {
+          if constexpr (NegaBinary) {
+            data_values[data_idx] = data_values[data_idx] * (-2);
+          } else {
+            data_values[data_idx] = data_values[data_idx] * 2;
+          }
+          if (data_idx) {
+            T_bitplane pred_bit = 0;
+            T_fp d0 = abs((T_sfp)data_values[data_idx - 1] -
+                          (T_sfp)data_values[data_idx]);
+            T_fp d1 = abs((T_sfp)data_values[data_idx - 1] -
+                          (T_sfp)data_values[data_idx] - 1);
+            if (d0 > d1) {
+              pred_bit = 1;
+            }
+            if (pred_bit != cur_bit) {
+              buffer += 1u << BATCH_SIZE - 1 - data_idx;
+            }
+          } else {
+            buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
+          }
+          data_values[data_idx] += cur_bit;
+        }
       }
       encoded[bp_idx] = buffer;
     }
   }
 
   MGARDX_EXEC void error_collect_binary(T_data *shifted_data, T_error *errors,
-                                        int batch_size, SIZE num_bitplanes,
-                                        SIZE exp) {
+                                        SIZE num_bitplanes, SIZE exp) {
 
     int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
                         FunctorBase<DeviceType>::GetBlockDimX() +
                     FunctorBase<DeviceType>::GetThreadIdX();
 
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-      for (int data_idx = 0; data_idx < batch_size; data_idx++) {
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_data data = shifted_data[data_idx];
         T_fp fp_data = (T_fp)fabs(data);
         T_error mantissa = fabs(data) - fp_data;
@@ -62,7 +101,7 @@ public:
         errors[num_bitplanes - bp_idx] += diff * diff;
       }
     }
-    for (int data_idx = 0; data_idx < batch_size; data_idx++) {
+    for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_data data = shifted_data[data_idx];
       errors[0] += data * data;
     }
@@ -73,15 +112,15 @@ public:
   }
 
   MGARDX_EXEC void error_collect_negabinary(T_data *shifted_data,
-                                            T_error *errors, int batch_size,
-                                            SIZE num_bitplanes, SIZE exp) {
+                                            T_error *errors, SIZE num_bitplanes,
+                                            SIZE exp) {
 
     int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
                         FunctorBase<DeviceType>::GetBlockDimX() +
                     FunctorBase<DeviceType>::GetThreadIdX();
 
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-      for (int data_idx = 0; data_idx < batch_size; data_idx++) {
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_data data = shifted_data[data_idx];
         T_fp fp_data = (T_fp)fabs(data);
         T_error mantissa = fabs(data) - fp_data;
@@ -98,7 +137,7 @@ public:
         errors[num_bitplanes - bp_idx] += diff * diff;
       }
     }
-    for (int data_idx = 0; data_idx < batch_size; data_idx++) {
+    for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_data data = shifted_data[data_idx];
       errors[0] += data * data;
     }
@@ -144,22 +183,21 @@ public:
         // fp_sign[data_idx]);
       }
       // encode data
-      encode_batch(fp_data, encoded_data, BATCH_SIZE, num_bitplanes);
+      encode_batch(fp_data, encoded_data, num_bitplanes);
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         *encoded_bitplanes(bp_idx, batch_idx) = encoded_data[bp_idx];
         // print_bits(encoded_bitplanes[bp_idx * b + batch_idx * 2],
         // batch_size);
       }
       // encode sign
-      encode_batch(fp_sign, encoded_sign, BATCH_SIZE, 1);
+      encode_batch(fp_sign, encoded_sign, 1);
       *encoded_bitplanes(0, num_batches + batch_idx) = encoded_sign[0];
       // // encode sign
       // encode_batch(signs, encoded_sign, BATCH_SIZE, 1);
       // print_bits(encoded_bitplanes[0 * b + batch_idx * 2 + 1], batch_size);
 
       if constexpr (CollectError) {
-        error_collect_binary(shifted_data, errors, BATCH_SIZE, num_bitplanes,
-                             exp);
+        error_collect_binary(shifted_data, errors, num_bitplanes, exp);
         for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
           *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
         }
@@ -198,7 +236,7 @@ public:
         // printf("%f: ", data); print_bits(fp_data[data_idx], b);
       }
       // encode data
-      encode_batch(fp_data, encoded_data, BATCH_SIZE, num_bitplanes);
+      encode_batch(fp_data, encoded_data, num_bitplanes);
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         *encoded_bitplanes(bp_idx, batch_idx) = encoded_data[bp_idx];
         // print_bits(encoded_bitplanes[bp_idx * b + batch_idx * 2],
@@ -206,8 +244,7 @@ public:
       }
 
       if constexpr (CollectError) {
-        error_collect_negabinary(shifted_data, errors, BATCH_SIZE,
-                                 num_bitplanes, exp);
+        error_collect_negabinary(shifted_data, errors, num_bitplanes, exp);
         for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
           *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
         }
@@ -306,12 +343,12 @@ public:
     Functor<DeviceType>();
   }
 
-  MGARDX_EXEC void decode_batch(T_fp *v, T_bitplane *encoded, int batch_size,
+  MGARDX_EXEC void decode_batch(T_fp *v, T_bitplane *encoded,
                                 int num_bitplanes) {
-    for (int data_idx = 0; data_idx < batch_size; data_idx++) {
+    for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_fp buffer = 0;
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        T_fp bit = (encoded[bp_idx] >> (batch_size - 1 - data_idx)) & 1u;
+        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & 1u;
         buffer += bit << (num_bitplanes - 1 - bp_idx);
       }
       v[data_idx] = buffer;
@@ -343,12 +380,12 @@ public:
         // print_bits(encoded_data[bp_idx], batch_size);
       }
       // encode data
-      decode_batch(fp_data, encoded_data, BATCH_SIZE, num_bitplanes);
+      decode_batch(fp_data, encoded_data, num_bitplanes);
 
       if (starting_bitplane == 0) {
         // decode sign
         encoded_sign[0] = *encoded_bitplanes(0, num_batches + batch_idx);
-        decode_batch(fp_sign, encoded_sign, BATCH_SIZE, 1);
+        decode_batch(fp_sign, encoded_sign, 1);
         for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
           *signs(batch_idx * BATCH_SIZE + data_idx) = fp_sign[data_idx];
         }
@@ -396,7 +433,7 @@ public:
         // print_bits(encoded_data[bp_idx], batch_size);
       }
       // encode data
-      decode_batch(fp_data, encoded_data, BATCH_SIZE, num_bitplanes);
+      decode_batch(fp_data, encoded_data, num_bitplanes);
 
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_data data = ldexp(
