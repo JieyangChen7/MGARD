@@ -131,7 +131,7 @@ void Compressor<D, T, DeviceType>::CalculateNorm(
 template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::Decompose(
     Array<D, T, DeviceType> &original_data, int queue_idx) {
-  refactor.Decompose(SubArray(original_data), queue_idx);
+  refactor.Decompose(SubArray(original_data), true, queue_idx);
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -167,7 +167,7 @@ void Compressor<D, T, DeviceType>::Deserialize(
 template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::Recompose(
     Array<D, T, DeviceType> &decompressed_data, int queue_idx) {
-  refactor.Recompose(SubArray(decompressed_data), queue_idx);
+  refactor.Recompose(SubArray(decompressed_data), true, queue_idx);
 }
 
 template <DIM D, typename T, typename DeviceType>

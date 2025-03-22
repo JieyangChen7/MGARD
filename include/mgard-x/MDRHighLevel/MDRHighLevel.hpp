@@ -21,8 +21,6 @@
 #include "../MDR-X/Reconstructor/ReconstructorCache.hpp"
 #include "../MDR-X/Refactor/RefactorCache.hpp"
 
-#define BINSIZE 10
-
 namespace mgard_x {
 namespace MDR {
 
@@ -315,14 +313,6 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
   using Cache = RefactorCache<D, T, DeviceType, RefactorType>;
   Cache::cache.SafeInitialize();
 
-  bool reduce_memory_footprint_original =
-      MemoryManager<DeviceType>::ReduceMemoryFootprint;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("Original ReduceMemoryFootprint: 1");
-  } else {
-    log::info("Original ReduceMemoryFootprint: 0");
-  }
-
   DomainDecomposer<D, T, ComposedRefactor<D, T, DeviceType>, DeviceType>
       domain_decomposer;
   if (uniform) {
@@ -335,10 +325,6 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
             shape, config, coords);
   }
   domain_decomposer.set_original_data((T *)original_data);
-
-  if (domain_decomposer.domain_decomposed()) {
-    MemoryManager<DeviceType>::ReduceMemoryFootprint = true;
-  }
 
   if (log::level & log::TIME)
     timer_each.start();
@@ -398,14 +384,6 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
   if (config.auto_cache_release)
     Cache::cache.SafeRelease();
   DeviceRuntime<DeviceType>::Finalize();
-
-  MemoryManager<DeviceType>::ReduceMemoryFootprint =
-      reduce_memory_footprint_original;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("ReduceMemoryFootprint restored to 1");
-  } else {
-    log::info("ReduceMemoryFootprint restored to 0");
-  }
 
   if (log::level & log::TIME) {
     timer_each.end();
@@ -501,22 +479,8 @@ void MDReconstruct(std::vector<SIZE> shape,
   if (log::level & log::TIME)
     timer_each.start();
 
-  if (m.domain_decomposed) {
-    // Fast copy for domain decomposition need we disable pitched memory
-    // allocation
-    MemoryManager<DeviceType>::ReduceMemoryFootprint = true;
-  }
-
   using Cache = ReconstructorCache<D, T, DeviceType, ReconstructorType>;
   Cache::cache.SafeInitialize();
-
-  bool reduce_memory_footprint_original =
-      MemoryManager<DeviceType>::ReduceMemoryFootprint;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("Original ReduceMemoryFootprint: 1");
-  } else {
-    log::info("Original ReduceMemoryFootprint: 0");
-  }
 
   // Initialize DomainDecomposer
   DomainDecomposer<D, T, ComposedReconstructor<D, T, DeviceType>, DeviceType>
@@ -586,14 +550,6 @@ void MDReconstruct(std::vector<SIZE> shape,
   if (config.auto_cache_release)
     Cache::cache.SafeRelease();
   DeviceRuntime<DeviceType>::Finalize();
-
-  MemoryManager<DeviceType>::ReduceMemoryFootprint =
-      reduce_memory_footprint_original;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("ReduceMemoryFootprint restored to 1");
-  } else {
-    log::info("ReduceMemoryFootprint restored to 0");
-  }
 
   if (log::level & log::TIME) {
     timer_total.end();

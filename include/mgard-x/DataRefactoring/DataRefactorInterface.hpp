@@ -13,11 +13,15 @@ namespace data_refactoring {
 
 template <DIM D, typename T, typename DeviceType> class DataRefactorInterface {
   virtual void Decompose(SubArray<D, T, DeviceType> data, int start_level,
-                         int stop_level, int queue_idx) = 0;
+                         int stop_level, bool orthogonal_projection,
+                         int queue_idx) = 0;
   virtual void Recompose(SubArray<D, T, DeviceType> data, int start_level,
-                         int stop_level, int queue_idx) = 0;
-  virtual void Decompose(SubArray<D, T, DeviceType> data, int queue_idx) = 0;
-  virtual void Recompose(SubArray<D, T, DeviceType> data, int queue_idx) = 0;
+                         int stop_level, bool orthogonal_projection,
+                         int queue_idx) = 0;
+  virtual void Decompose(SubArray<D, T, DeviceType> data,
+                         bool orthogonal_projection, int queue_idx) = 0;
+  virtual void Recompose(SubArray<D, T, DeviceType> data,
+                         bool orthogonal_projection, int queue_idx) = 0;
 };
 
 } // namespace data_refactoring

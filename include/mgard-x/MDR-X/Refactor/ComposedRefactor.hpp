@@ -25,7 +25,9 @@ public:
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
-  using Decomposer = MGARDOrthoganalDecomposer<D, T_data, DeviceType>;
+  using Basis = Orthogonal;
+  // using Basis = Hierarchical;
+  using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
   // CONTROL_L2, DeviceType>;
@@ -70,8 +72,8 @@ public:
     // batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(encoder.bitplane_length(
                          hierarchy.level_num_elems(hierarchy.l_target())),
-                         hierarchy.l_target()+1, Encoder::MAX_BITPLANES,
-                     config, queue_idx);
+                     hierarchy.l_target() + 1, Encoder::MAX_BITPLANES, config,
+                     queue_idx);
 
     level_data_array.resize(hierarchy.l_target() + 1);
     level_data_subarray.resize(hierarchy.l_target() + 1);
@@ -244,8 +246,8 @@ public:
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
       compressor.compress_level(encoded_bitplanes_subarray[level_idx],
-                                mdr_data.compressed_bitplanes[level_idx], level_idx,
-                                queue_idx);
+                                mdr_data.compressed_bitplanes[level_idx],
+                                level_idx, queue_idx);
       for (int bitplane_idx = 0; bitplane_idx < Encoder::MAX_BITPLANES;
            bitplane_idx++) {
         mdr_metadata.level_sizes[level_idx][bitplane_idx] +=

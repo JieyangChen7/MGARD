@@ -468,8 +468,6 @@ public:
   template <typename T> MGARDX_CONT static void HostUnregister(T *ptr) {
     log::dbg("Calling MemoryManager<OPENMP>::HostUnregister");
   }
-
-  static bool ReduceMemoryFootprint;
 };
 
 #define ALIGN_LEFT 0  // for encoding

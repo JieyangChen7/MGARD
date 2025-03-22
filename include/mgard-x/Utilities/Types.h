@@ -18,6 +18,8 @@ namespace mgard_x {
 
 enum class decomposition_type : uint8_t { MultiDim, SingleDim, Hybrid };
 
+enum class decomposition_basis_type : uint8_t { Orthoganal, Hierarchical };
+
 enum class processor_type : uint8_t {
   CPU,
   GPU_CUDA,

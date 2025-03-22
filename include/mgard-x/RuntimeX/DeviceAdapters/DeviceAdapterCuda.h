@@ -824,14 +824,9 @@ public:
     if (queue_idx == MGARDX_SYNCHRONIZED_QUEUE) {
       DeviceRuntime<CUDA>::SyncQueue(queue_idx);
     }
-    if (ReduceMemoryFootprint) {
-      gpuErrchk(cudaMalloc(&ptr, n1 * n2 * sizeof(T)));
-      ld = n1;
-    } else {
-      size_t pitch = 0;
-      gpuErrchk(cudaMallocPitch(&ptr, &pitch, n1 * sizeof(T), (size_t)n2));
-      ld = pitch / sizeof(T);
-    }
+    size_t pitch = 0;
+    gpuErrchk(cudaMallocPitch(&ptr, &pitch, n1 * sizeof(T), (size_t)n2));
+    ld = pitch / sizeof(T);
     if (queue_idx == MGARDX_SYNCHRONIZED_QUEUE) {
       DeviceRuntime<CUDA>::SyncQueue(queue_idx);
     }
@@ -1016,8 +1011,6 @@ public:
       gpuErrchk(cudaHostUnregister((void *)ptr));
     }
   }
-
-  static bool ReduceMemoryFootprint;
 };
 
 #define ALIGN_LEFT 0  // for encoding

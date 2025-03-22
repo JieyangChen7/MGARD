@@ -15,7 +15,6 @@ DeviceSpecification<SYCL> DeviceRuntime<SYCL>::DeviceSpecs;
 
 // SyncAllKernelsAndCheckErrors needs to be always ON for SYCL
 bool DeviceRuntime<SYCL>::SyncAllKernelsAndCheckErrors = true;
-bool MemoryManager<SYCL>::ReduceMemoryFootprint = false;
 bool DeviceRuntime<SYCL>::TimingAllKernels = false;
 bool DeviceRuntime<SYCL>::PrintKernelConfig = false;
 

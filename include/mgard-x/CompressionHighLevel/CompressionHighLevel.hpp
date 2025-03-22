@@ -68,14 +68,6 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
   if (log::level & log::TIME)
     timer_total.start();
 
-  bool reduce_memory_footprint_original =
-      MemoryManager<DeviceType>::ReduceMemoryFootprint;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("Original ReduceMemoryFootprint: 1");
-  } else {
-    log::info("Original ReduceMemoryFootprint: 0");
-  }
-
   DomainDecomposer<D, T, CompressorType, DeviceType> domain_decomposer;
   if (uniform) {
     domain_decomposer =
@@ -279,14 +271,6 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
     Cache::cache.SafeRelease();
   DeviceRuntime<DeviceType>::Finalize();
 
-  MemoryManager<DeviceType>::ReduceMemoryFootprint =
-      reduce_memory_footprint_original;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("ReduceMemoryFootprint restored to 1");
-  } else {
-    log::info("ReduceMemoryFootprint restored to 0");
-  }
-
   if (log::level & log::TIME) {
     timer_each.end();
     timer_each.print("Serialization");
@@ -377,14 +361,6 @@ general_decompress(std::vector<SIZE> shape, const void *compressed_data,
     timer_total.start();
   if (log::level & log::TIME)
     timer_each.start();
-
-  bool reduce_memory_footprint_original =
-      MemoryManager<DeviceType>::ReduceMemoryFootprint;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("Original ReduceMemoryFootprint: 1");
-  } else {
-    log::info("Original ReduceMemoryFootprint: 0");
-  }
 
   // Use consistance memory space between input and output data
   if (!output_pre_allocated) {
@@ -546,14 +522,6 @@ general_decompress(std::vector<SIZE> shape, const void *compressed_data,
   if (config.auto_cache_release)
     Cache::cache.SafeRelease();
   DeviceRuntime<DeviceType>::Finalize();
-
-  MemoryManager<DeviceType>::ReduceMemoryFootprint =
-      reduce_memory_footprint_original;
-  if (MemoryManager<DeviceType>::ReduceMemoryFootprint) {
-    log::info("ReduceMemoryFootprint restored to 1");
-  } else {
-    log::info("ReduceMemoryFootprint restored to 0");
-  }
 
   if (log::level & log::TIME) {
     timer_total.end();

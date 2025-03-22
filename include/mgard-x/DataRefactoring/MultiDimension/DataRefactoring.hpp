@@ -25,7 +25,7 @@ template <DIM D, typename T, typename DeviceType>
 void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
                SubArray<D, T, DeviceType> &v, SubArray<D, T, DeviceType> w,
                SubArray<D, T, DeviceType> b, int start_level, int stop_level,
-               int queue_idx) {
+               bool orthogonal_projection, int queue_idx) {
 
   if (start_level < 0 || start_level > hierarchy.l_target()) {
     std::cout << log::log_err << "decompose: start_level out of bound.\n";
@@ -89,16 +89,18 @@ void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
       CopyND(v_fine, w_fine, queue_idx);
 
       v_coeff.resize(hierarchy.level_shape(l));
+      v_coarse.resize(hierarchy.level_shape(l - 1));
       CalcCoefficients3D(hierarchy, w_fine, v_coeff, l, queue_idx);
 
-      w_correction.resize(hierarchy.level_shape(l));
-      CalcCorrection3D(hierarchy, v_coeff, w_correction, l, queue_idx);
+      if (orthogonal_projection) {
+        w_correction.resize(hierarchy.level_shape(l));
+        CalcCorrection3D(hierarchy, v_coeff, w_correction, l, queue_idx);
 
-      w_correction.resize(hierarchy.level_shape(l - 1));
-      v_coarse.resize(hierarchy.level_shape(l - 1));
-      AddND(w_correction, v_coarse, queue_idx);
-      if (multidim_refactoring_debug_print) {
-        PrintSubarray("after add", v);
+        w_correction.resize(hierarchy.level_shape(l - 1));
+        AddND(w_correction, v_coarse, queue_idx);
+        if (multidim_refactoring_debug_print) {
+          PrintSubarray("after add", v);
+        }
       }
       // if (log::level & log::TIME) {
       //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -180,7 +182,7 @@ template <DIM D, typename T, typename DeviceType>
 void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
                SubArray<D, T, DeviceType> &v, SubArray<D, T, DeviceType> w,
                SubArray<D, T, DeviceType> b, int start_level, int stop_level,
-               int queue_idx) {
+               bool orthogonal_projection, int queue_idx) {
 
   if (stop_level < 0 || stop_level > hierarchy.l_target()) {
     std::cout << log::log_err << "recompose: stop_level out of bound.\n";
@@ -232,13 +234,15 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
 
     for (int l = start_level; l < stop_level; l++) {
 
-      v_coeff.resize(hierarchy.level_shape(l + 1));
-      w_correction.resize(hierarchy.level_shape(l + 1));
-      CalcCorrection3D(hierarchy, v_coeff, w_correction, l + 1, queue_idx);
+      if (orthogonal_projection) {
+        v_coeff.resize(hierarchy.level_shape(l + 1));
+        w_correction.resize(hierarchy.level_shape(l + 1));
+        CalcCorrection3D(hierarchy, v_coeff, w_correction, l + 1, queue_idx);
 
-      w_correction.resize(hierarchy.level_shape(l));
-      v_coarse.resize(hierarchy.level_shape(l));
-      SubtractND(w_correction, v_coarse, queue_idx);
+        w_correction.resize(hierarchy.level_shape(l));
+        v_coarse.resize(hierarchy.level_shape(l));
+        SubtractND(w_correction, v_coarse, queue_idx);
+      }
 
       v_coeff.resize(hierarchy.level_shape(l + 1));
       w_fine.resize(hierarchy.level_shape(l + 1));

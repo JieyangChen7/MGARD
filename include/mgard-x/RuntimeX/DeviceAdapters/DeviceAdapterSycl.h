@@ -706,8 +706,6 @@ public:
   template <typename T> MGARDX_CONT static void HostUnregister(T *ptr) {
     log::dbg("Calling MemoryManager<SYCL>::HostUnregister");
   }
-
-  static bool ReduceMemoryFootprint;
 };
 
 template <typename FunctorType> class SyclKernel {
