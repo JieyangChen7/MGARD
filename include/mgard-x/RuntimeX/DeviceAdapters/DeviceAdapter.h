@@ -280,8 +280,6 @@ public:
   template <typename T> MGARDX_CONT static void HostRegister(T *ptr, SIZE n);
 
   template <typename T> MGARDX_CONT static void HostUnregister(T *ptr);
-
-  static bool ReduceMemoryFootprint;
 };
 
 template <typename DeviceType> class DeviceRuntime {

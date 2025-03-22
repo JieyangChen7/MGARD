@@ -71,7 +71,7 @@ public:
   }
 
   void Decompose(SubArray<D, T, DeviceType> data, int start_level,
-                 int stop_level, int queue_idx) {
+                 int stop_level, bool orthogonal_projection, int queue_idx) {
     Timer timer;
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -85,9 +85,9 @@ public:
 
     if (config.decomposition == decomposition_type::MultiDim ||
         config.decomposition == decomposition_type::Hybrid) {
-      multi_dimension::decompose<D, T, DeviceType>(*hierarchy, data, w_subarray,
-                                                   b_subarray, start_level,
-                                                   stop_level, queue_idx);
+      multi_dimension::decompose<D, T, DeviceType>(
+          *hierarchy, data, w_subarray, b_subarray, start_level, stop_level,
+          orthogonal_projection, queue_idx);
     } else if (config.decomposition == decomposition_type::SingleDim) {
       single_dimension::decompose<D, T, DeviceType>(
           *hierarchy, data, start_level, stop_level, queue_idx);
@@ -100,7 +100,7 @@ public:
     }
   }
   void Recompose(SubArray<D, T, DeviceType> data, int start_level,
-                 int stop_level, int queue_idx) {
+                 int stop_level, bool orthogonal_projection, int queue_idx) {
     Timer timer;
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -111,9 +111,9 @@ public:
     if (D > 3)
       b_subarray = SubArray<D, T, DeviceType>(b_array);
     if (config.decomposition == decomposition_type::MultiDim) {
-      multi_dimension::recompose<D, T, DeviceType>(*hierarchy, data, w_subarray,
-                                                   b_subarray, start_level,
-                                                   stop_level, queue_idx);
+      multi_dimension::recompose<D, T, DeviceType>(
+          *hierarchy, data, w_subarray, b_subarray, start_level, stop_level,
+          orthogonal_projection, queue_idx);
     } else if (config.decomposition == decomposition_type::SingleDim) {
       single_dimension::recompose<D, T, DeviceType>(
           *hierarchy, data, start_level, stop_level, queue_idx);
@@ -126,12 +126,14 @@ public:
     }
   }
 
-  void Decompose(SubArray<D, T, DeviceType> data, int queue_idx) {
-    Decompose(data, hierarchy->l_target(), 0, queue_idx);
+  void Decompose(SubArray<D, T, DeviceType> data, bool orthogonal_projection,
+                 int queue_idx) {
+    Decompose(data, hierarchy->l_target(), 0, orthogonal_projection, queue_idx);
   }
 
-  void Recompose(SubArray<D, T, DeviceType> data, int queue_idx) {
-    Recompose(data, 0, hierarchy->l_target(), queue_idx);
+  void Recompose(SubArray<D, T, DeviceType> data, bool orthogonal_projection,
+                 int queue_idx) {
+    Recompose(data, 0, hierarchy->l_target(), orthogonal_projection, queue_idx);
   }
 
   bool initialized;

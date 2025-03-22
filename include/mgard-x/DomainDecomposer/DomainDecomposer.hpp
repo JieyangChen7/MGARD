@@ -79,12 +79,6 @@ public:
     log::dbg("Estimated memory usage: " + std::to_string((double)estm / 1e9) +
              "GB, Available: " + std::to_string((double)aval / 1e9) + "GB");
     bool need = estm >= aval;
-    if (need) {
-      // Fast copy for domain decomposition need we disable pitched memory
-      // allocation
-      log::dbg("ReduceMemoryFootprint set to 1");
-      MemoryManager<DeviceType>::ReduceMemoryFootprint = true;
-    }
     return need;
   }
 
@@ -438,10 +432,6 @@ public:
       this->_num_subdomains = 1;
       log::info("DomainDecomposer: no decomposition used");
     } else {
-      // Fast copy for domain decomposition need we disable pitched memory
-      // allocation
-      log::info("ReduceMemoryFootprint set to 1");
-      MemoryManager<DeviceType>::ReduceMemoryFootprint = true;
       if (config.domain_decomposition == domain_decomposition_type::MaxDim) {
         this->_num_subdomains = (shape[this->_domain_decomposed_dim] - 1) /
                                     this->_domain_decomposed_size +
@@ -497,10 +487,6 @@ public:
       this->_num_subdomains = 1;
       log::info("DomainDecomposer: no decomposition used");
     } else {
-      // Fast copy for domain decomposition need we disable pitched memory
-      // allocation
-      log::info("ReduceMemoryFootprint set to 1");
-      MemoryManager<DeviceType>::ReduceMemoryFootprint = true;
       if (config.domain_decomposition == domain_decomposition_type::MaxDim) {
         this->_num_subdomains = (shape[this->_domain_decomposed_dim] - 1) /
                                     this->_domain_decomposed_size +
@@ -677,10 +663,6 @@ public:
             linearized_width, queue_idx);
       }
     } else {
-      // Pitched memory allocation has to be disable for the correctness of the
-      // following copies
-      assert(MemoryManager<DeviceType>::ReduceMemoryFootprint == true);
-      bool pitched = false;
       if (config.domain_decomposition == domain_decomposition_type::MaxDim ||
           config.domain_decomposition == domain_decomposition_type::Variable) {
         if (keep_original_data_decomposed) {

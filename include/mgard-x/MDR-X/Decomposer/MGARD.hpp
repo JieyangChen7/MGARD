@@ -8,14 +8,16 @@
 
 namespace mgard_x {
 namespace MDR {
-// MGARD decomposer with orthogonal basis
-template <DIM D, typename T, typename DeviceType>
-class MGARDOrthoganalDecomposer
-    : public concepts::DecomposerInterface<D, T, DeviceType> {
+
+struct DecompsitionBasis {};
+struct Orthogonal : DecompsitionBasis {};
+struct Hierarchical : DecompsitionBasis {};
+
+template <DIM D, typename T, typename Basis, typename DeviceType>
+class MGARDDecomposer : public concepts::DecomposerInterface<D, T, DeviceType> {
 public:
-  MGARDOrthoganalDecomposer() : initialized(false) {}
-  MGARDOrthoganalDecomposer(Hierarchy<D, T, DeviceType> &hierarchy,
-                            Config config) {
+  MGARDDecomposer() : initialized(false) {}
+  MGARDDecomposer(Hierarchy<D, T, DeviceType> &hierarchy, Config config) {
     Adapt(hierarchy, config, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
@@ -36,15 +38,21 @@ public:
   }
   void decompose(Array<D, T, DeviceType> &v, int start_level, int stop_level,
                  int queue_idx) {
-    refactor.Decompose(v, start_level, stop_level, queue_idx);
+    if constexpr (std::is_same<Basis, Orthogonal>::value) {
+      refactor.Decompose(v, start_level, stop_level, true, queue_idx);
+    } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
+      refactor.Decompose(v, start_level, stop_level, false, queue_idx);
+    }
   }
   void recompose(Array<D, T, DeviceType> &v, int start_level, int stop_level,
                  int queue_idx) {
-    refactor.Recompose(v, start_level, stop_level, queue_idx);
+    if constexpr (std::is_same<Basis, Orthogonal>::value) {
+      refactor.Recompose(v, start_level, stop_level, true, queue_idx);
+    } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
+      refactor.Recompose(v, start_level, stop_level, false, queue_idx);
+    }
   }
-  void print() const {
-    std::cout << "MGARD orthogonal decomposer" << std::endl;
-  }
+  void print() const { std::cout << "MGARD decomposer" << std::endl; }
 
 private:
   bool initialized;
