@@ -14,7 +14,6 @@ DeviceQueues<OPENMP> DeviceRuntime<OPENMP>::queues;
 DeviceSpecification<OPENMP> DeviceRuntime<OPENMP>::DeviceSpecs;
 
 bool DeviceRuntime<OPENMP>::SyncAllKernelsAndCheckErrors = false;
-bool MemoryManager<OPENMP>::ReduceMemoryFootprint = false;
 bool DeviceRuntime<OPENMP>::TimingAllKernels = false;
 bool DeviceRuntime<OPENMP>::PrintKernelConfig = false;
 

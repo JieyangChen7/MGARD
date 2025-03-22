@@ -14,7 +14,6 @@ DeviceQueues<HIP> DeviceRuntime<HIP>::queues;
 DeviceSpecification<HIP> DeviceRuntime<HIP>::DeviceSpecs;
 
 bool DeviceRuntime<HIP>::SyncAllKernelsAndCheckErrors = false;
-bool MemoryManager<HIP>::ReduceMemoryFootprint = false;
 bool DeviceRuntime<HIP>::TimingAllKernels = false;
 bool DeviceRuntime<HIP>::PrintKernelConfig = false;
 

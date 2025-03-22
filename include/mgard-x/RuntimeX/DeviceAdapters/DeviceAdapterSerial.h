@@ -960,8 +960,6 @@ public:
   template <typename T> MGARDX_CONT static void HostUnregister(T *ptr) {
     log::dbg("Calling MemoryManager<SERIAL>::HostUnregister");
   }
-
-  static bool ReduceMemoryFootprint;
 };
 
 #define ALIGN_LEFT 0  // for encoding

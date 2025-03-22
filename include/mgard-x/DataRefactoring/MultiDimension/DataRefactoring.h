@@ -87,13 +87,13 @@ template <DIM D, typename T, typename DeviceType>
 void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
                SubArray<D, T, DeviceType> &v, SubArray<D, T, DeviceType> w,
                SubArray<D, T, DeviceType> b, int start_level, int stop_level,
-               int queue_idx);
+               bool orthogonal_projection, int queue_idx);
 
 template <DIM D, typename T, typename DeviceType>
 void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
                SubArray<D, T, DeviceType> &v, SubArray<D, T, DeviceType> w,
                SubArray<D, T, DeviceType> b, int start_level, int stop_level,
-               int queue_idx);
+               bool orthogonal_projection, int queue_idx);
 
 template <DIM D, typename T, typename DeviceType>
 void decompose_adaptive_resolution(

@@ -747,15 +747,10 @@ public:
     }
     using converted_T =
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
-    if (ReduceMemoryFootprint) {
-      gpuErrchk(hipMalloc((void **)&ptr, n1 * n2 * sizeof(converted_T)));
-      ld = n1;
-    } else {
-      size_t pitch = 0;
-      gpuErrchk(hipMallocPitch((void **)&ptr, &pitch, n1 * sizeof(converted_T),
-                               (size_t)n2));
-      ld = pitch / sizeof(converted_T);
-    }
+    size_t pitch = 0;
+    gpuErrchk(hipMallocPitch((void **)&ptr, &pitch, n1 * sizeof(converted_T),
+                             (size_t)n2));
+    ld = pitch / sizeof(converted_T);
     if (queue_idx == MGARDX_SYNCHRONIZED_QUEUE) {
       DeviceRuntime<HIP>::SyncQueue(queue_idx);
     }
@@ -963,8 +958,6 @@ public:
     gpuErrchk(hipHostUnregister((void *)ptr));
     //}
   }
-
-  static bool ReduceMemoryFootprint;
 };
 
 #define ALIGN_LEFT 0  // for encoding

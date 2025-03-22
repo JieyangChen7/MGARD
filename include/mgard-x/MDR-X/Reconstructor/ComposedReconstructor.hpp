@@ -29,7 +29,9 @@ public:
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
-  using Decomposer = MGARDOrthoganalDecomposer<D, T_data, DeviceType>;
+  using Basis = Orthogonal;
+  // using Basis = Hierarchical;
+  using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // DeviceType>;
@@ -59,8 +61,8 @@ public:
     // batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(Encoder::bitplane_length(
                          hierarchy.level_num_elems(hierarchy.l_target())),
-                         hierarchy.l_target()+1, Encoder::MAX_BITPLANES,
-                     config, queue_idx);
+                     hierarchy.l_target() + 1, Encoder::MAX_BITPLANES, config,
+                     queue_idx);
 
     prev_reconstructed = false;
     partial_reconsctructed_data.resize(
@@ -153,34 +155,59 @@ public:
       }
       level_errors = level_abs_errors;
 
-      MaxErrorEstimatorOB<T_data> estimator(D);
+      if constexpr (std::is_same<Basis, Orthogonal>::value) {
+        MaxErrorEstimatorOB<T_data> estimator(D);
+        GreedyBasedSizeInterpreter interpreter(estimator);
+        retrieve_sizes = interpreter.interpret_retrieve_size(
+            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+            mdr_metadata.requested_level_num_bitplanes);
+      } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
+        MaxErrorEstimatorHB<T_data> estimator;
+        GreedyBasedSizeInterpreter interpreter(estimator);
+        retrieve_sizes = interpreter.interpret_retrieve_size(
+            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+            mdr_metadata.requested_level_num_bitplanes);
+      }
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
-      GreedyBasedSizeInterpreter interpreter(estimator);
       // RoundRobinSizeInterpreter interpreter(estimator);
       // InorderSizeInterpreter interpreter(estimator);
-      retrieve_sizes = interpreter.interpret_retrieve_size(
-          mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
-          mdr_metadata.requested_level_num_bitplanes);
+
     } else {
       log::info("ErrorEstimator is base of SquaredErrorEstimator, using level "
                 "squared error directly");
-      using Estimator = SNormErrorEstimator<T_data>;
+
+      if constexpr (std::is_same<Basis, Orthogonal>::value) {
+        using Estimator = SNormErrorEstimator<T_data>;
+        Estimator estimator(D, hierarchy->l_target(), mdr_metadata.requested_s);
+        using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
+        using NegaBinaryInterp =
+            NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
+        using Interpreter =
+            typename std::conditional<NegaBinary, NegaBinaryInterp,
+                                      BinaryInterp>::type;
+        Interpreter interpreter(estimator);
+        retrieve_sizes = interpreter.interpret_retrieve_size(
+            mdr_metadata.level_sizes, level_errors,
+            std::pow(mdr_metadata.requested_tol, 2),
+            mdr_metadata.requested_level_num_bitplanes);
+      } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
+        using Estimator = L2ErrorEstimator_HB<T_data>;
+        Estimator estimator(D, hierarchy->l_target());
+        using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
+        using NegaBinaryInterp =
+            NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
+        using Interpreter =
+            typename std::conditional<NegaBinary, NegaBinaryInterp,
+                                      BinaryInterp>::type;
+        Interpreter interpreter(estimator);
+        retrieve_sizes = interpreter.interpret_retrieve_size(
+            mdr_metadata.level_sizes, level_errors,
+            std::pow(mdr_metadata.requested_tol, 2),
+            mdr_metadata.requested_level_num_bitplanes);
+      }
       // using BinaryInterpreter = InorderSizeInterpreter<Estimator>;
-      using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
-      using NegaBinaryInterp = NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
-      Estimator estimator(D, hierarchy->l_target(), mdr_metadata.requested_s);
-
-      using Interpreter =
-          typename std::conditional<NegaBinary, NegaBinaryInterp,
-                                    BinaryInterp>::type;
-
-      Interpreter interpreter(estimator);
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // NegaBinaryGreedyBasedSizeInterpreter interpreter(estimator);
-      retrieve_sizes = interpreter.interpret_retrieve_size(
-          mdr_metadata.level_sizes, level_errors,
-          std::pow(mdr_metadata.requested_tol, 2),
-          mdr_metadata.requested_level_num_bitplanes);
     }
     timer.end();
     timer.print("Preprocessing");
@@ -245,8 +272,8 @@ public:
       compressor.decompress_level(
           mdr_data.compressed_bitplanes[level_idx],
           encoded_bitplanes_subarray[level_idx],
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes, level_idx,
-          queue_idx);
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
+          level_idx, queue_idx);
     }
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);

@@ -203,7 +203,7 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Deserialize(
 template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::Recompose(
     Array<D, T, DeviceType> &decompressed_data, int queue_idx) {
-  refactor.Recompose(decompressed_data, queue_idx);
+  refactor.Recompose(decompressed_data, true, queue_idx);
 }
 
 template <DIM D, typename T, typename DeviceType>

@@ -172,7 +172,7 @@ public:
     SubArray<D, T, DeviceType> global_coeff_subarray(
         {global_hierarchy.level_shape(global_hierarchy.l_target())},
         decomposed_data((IDX)0));
-    global_refactor.Decompose(data, queue_idx);
+    global_refactor.Decompose(data, true, queue_idx);
 
     // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     // PrintSubarray("after data", data);
