@@ -1389,16 +1389,11 @@ public:
                                            bool workspace_allocated,
                                            int queue_idx) {
 
-    // Need gcc 9 and c++17
-#if (__GNUC__ >= 9)
     if (workspace_allocated) {
       std::inclusive_scan(v((IDX)0), v((IDX)n), result((IDX)0));
     } else {
       workspace.resize({(SIZE)1}, queue_idx);
     }
-#else
-    log::err("Please recompile with GCC 9+ to use ScanSumInclusive<SERIAL>.");
-#endif
   }
 
   template <typename T>
@@ -1408,16 +1403,11 @@ public:
                                            bool workspace_allocated,
                                            int queue_idx) {
 
-    // Need gcc 9 and c++17
-#if (__GNUC__ >= 9)
     if (workspace_allocated) {
       std::exclusive_scan(v((IDX)0), v((IDX)n), result((IDX)0));
     } else {
       workspace.resize({(SIZE)1}, queue_idx);
     }
-#else
-    log::err("Please recompile with GCC 9+ to use ScanSumExclusive<SERIAL>.");
-#endif
   }
 
   template <typename T>
@@ -1426,17 +1416,13 @@ public:
                                           Array<1, Byte, SERIAL> &workspace,
                                           bool workspace_allocated,
                                           int queue_idx) {
-    // Need gcc 9 and c++17
-#if (__GNUC__ >= 9)
+
     if (workspace_allocated) {
       std::inclusive_scan(v((IDX)0), v((IDX)n), result((IDX)1));
       *result((IDX)0) = 0;
     } else {
       workspace.resize({(SIZE)1}, queue_idx);
     }
-#else
-    log::err("Please recompile with GCC 9+ to use ScanSumExtended<SERIAL>.");
-#endif
   }
 
   template <typename KeyT, typename ValueT>
