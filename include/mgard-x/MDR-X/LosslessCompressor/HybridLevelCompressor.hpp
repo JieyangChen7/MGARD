@@ -24,6 +24,9 @@ public:
   static constexpr int _huff_block_size = 1024;
   static constexpr int num_merged_bitplanes = 4;
 
+  static constexpr SIZE size_threshold = 1e6;
+  static constexpr SIZE cr_threshold = 2.0;
+
   static constexpr int C = 0; // direct copy
   static constexpr int H = 1; // Huffman
   static constexpr int R = 2; // RLE
@@ -53,9 +56,9 @@ public:
     // All copy
     // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, C); 
     // All Huffman 
-    for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, H); 
+    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, H); 
     // All RLE
-    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, R); 
+    for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, R); 
     // All Zstd 
     // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, Z); 
     
@@ -106,14 +109,11 @@ public:
             {merged_bitplane_size}, bitplane);
         int old_log_level = log::level;
         log::level = 0;
-        // Direct copy
-        if (recipe[level_idx][bitplane_idx] == C) {
-          compressed_bitplanes[bitplane_idx].resize({merged_bitplane_size});
-          MemoryManager<DeviceType>::Copy1D(
-              compressed_bitplanes[bitplane_idx].data(), (Byte *)bitplane,
-              merged_bitplane_size, queue_idx);
-          // Huffman
-        } else if (recipe[level_idx][bitplane_idx] == H) {
+        if (merged_bitplane_size > size_threshold && 
+                  huffman.EstimateCR(encoded_bitplane, queue_idx) >
+                   cr_threshold) {
+          // double est_cr = huffman.EstimateCR(encoded_bitplane, queue_idx);
+          // printf("Estimated CR: %f\n", est_cr);
           ATOMIC_IDX zero = 0;
           MemoryManager<DeviceType>::Copy1D(
               huffman.workspace.outlier_count_subarray.data(), &zero, 1,
@@ -125,18 +125,21 @@ public:
               encoded_bitplane, compressed_bitplanes[bitplane_idx], queue_idx);
           huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
           // RLE
-        } else if (recipe[level_idx][bitplane_idx] == R) {
+        } else if (merged_bitplane_size > size_threshold && 
+              rle.EstimateCR(encoded_bitplane, queue_idx) > cr_threshold) {
+          // double est_cr = rle.EstimateCR(encoded_bitplane, queue_idx);
+          // printf("Estimated CR: %f\n", est_cr);
           rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
                        queue_idx);
           rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
-          // Zstd
-        } else if (recipe[level_idx][bitplane_idx] == Z) {
+        } else {
+          // direct copy
           compressed_bitplanes[bitplane_idx].resize({merged_bitplane_size});
           MemoryManager<DeviceType>::Copy1D(
               compressed_bitplanes[bitplane_idx].data(), (Byte *)bitplane,
               merged_bitplane_size, queue_idx);
-          zstd.Compress(compressed_bitplanes[bitplane_idx], queue_idx);
         }
+
         log::level = old_log_level;
         cr.push_back((float)merged_bitplane_size /
                      compressed_bitplanes[bitplane_idx].shape(0));
@@ -185,24 +188,19 @@ public:
             {merged_bitplane_size}, bitplane);
         int old_log_level = log::level;
         log::level = 0;
-        // Direct copy
-        if (recipe[level_idx][bitplane_idx] == C) {
-          MemoryManager<DeviceType>::Copy1D(
-              (uint8_t *)bitplane, compressed_bitplanes[bitplane_idx].data(),
-              merged_bitplane_size, queue_idx);
-          // Huffman
-        } else if (recipe[level_idx][bitplane_idx] == H) {
+
+        // Huffman
+        if (huffman.Verify(compressed_bitplanes[bitplane_idx], queue_idx)) {
           huffman.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
           huffman.DecompressPrimary(compressed_bitplanes[bitplane_idx],
                                     encoded_bitplane, queue_idx);
           // RLE
-        } else if (recipe[level_idx][bitplane_idx] == R) {
+        } else if (rle.Verify(compressed_bitplanes[bitplane_idx], queue_idx)) {
           rle.Deserialize(compressed_bitplanes[bitplane_idx], queue_idx);
           rle.Decompress(compressed_bitplanes[bitplane_idx], encoded_bitplane,
                          queue_idx);
-          // Zstd
-        } else if (recipe[level_idx][bitplane_idx] == Z) {
-          zstd.Decompress(compressed_bitplanes[bitplane_idx], queue_idx);
+        } else {
+          // Direct copy
           MemoryManager<DeviceType>::Copy1D(
               (uint8_t *)bitplane, compressed_bitplanes[bitplane_idx].data(),
               merged_bitplane_size, queue_idx);

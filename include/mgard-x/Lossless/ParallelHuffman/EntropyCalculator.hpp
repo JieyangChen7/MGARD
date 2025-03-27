@@ -21,6 +21,14 @@ double CalculateLC(SIZE total_num_elems, SIZE dict_size,
   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
   double LC = 0;
   for (SIZE i = 0; i < dict_size; i++) {
+    std::cout << _freq[i] << " ";
+  }
+  std::cout << "\n";
+  for (SIZE i = 0; i < dict_size; i++) {
+    std::cout << _cl[i] << " ";
+  }
+  std::cout << "\n";
+  for (SIZE i = 0; i < dict_size; i++) {
     LC += (double)_freq[i] / total_num_elems * _cl[i];
   }
   delete[] _freq;
