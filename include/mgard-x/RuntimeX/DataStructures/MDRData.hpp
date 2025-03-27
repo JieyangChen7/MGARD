@@ -28,20 +28,26 @@ public:
     }
   }
 
-  void Resize(SIZE num_levels, SIZE num_bitplanes) {
-    if (compressed_bitplanes.size() != num_levels) {
-      compressed_bitplanes.resize(num_levels);
-    }
-    if (level_signs.size() != num_levels) {
-      level_signs.resize(num_levels);
-    }
+  // Resize before refactoring
+  template <typename RefactorType, typename HierarchyType>
+  void Resize(RefactorType &refactor, HierarchyType &hierarchy, int queue_idx) {
+    std::vector<std::vector<SIZE>> estimation =
+        RefactorType::output_size_estimation(hierarchy);
+    SIZE num_levels = estimation.size();
+    SIZE num_bitplanes = estimation[0].size();
+    std::vector<SIZE> level_num_elems = hierarchy.level_num_elems();
+    compressed_bitplanes.resize(num_levels);
+    level_signs.resize(num_levels); //no need to initialize level_signs
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
-      if (compressed_bitplanes[level_idx].size() != num_bitplanes) {
-        compressed_bitplanes[level_idx].resize(num_bitplanes);
+      compressed_bitplanes[level_idx].resize(num_bitplanes);
+      for (int bitplane_idx = 0; bitplane_idx < num_bitplanes; bitplane_idx++) {
+          compressed_bitplanes[level_idx][bitplane_idx].resize(
+              {estimation[level_idx][bitplane_idx]}, queue_idx);
       }
     }
   }
 
+  // Reside before reconstruction
   void Resize(MDRMetadata &mdr_metadata) {
     compressed_bitplanes.resize(mdr_metadata.num_levels);
     level_signs.resize(mdr_metadata.num_levels);
@@ -85,19 +91,29 @@ public:
 
   void CopyToRefactoredData(MDRMetadata &mdr_metadata,
                             std::vector<std::vector<Byte *>> &refactored_data,
+                            std::vector<std::vector<SIZE>> &allocation_size,
                             int queue_idx) {
     refactored_data.resize(mdr_metadata.num_levels);
     for (int level_idx = 0; level_idx < mdr_metadata.num_levels; level_idx++) {
       refactored_data[level_idx].resize(mdr_metadata.num_bitplanes);
       for (int bitplane_idx = 0; bitplane_idx < mdr_metadata.num_bitplanes;
            bitplane_idx++) {
-        MemoryManager<DeviceType>::MallocHost(
-            refactored_data[level_idx][bitplane_idx],
-            mdr_metadata.level_sizes[level_idx][bitplane_idx], queue_idx);
-        MemoryManager<DeviceType>::Copy1D(
-            refactored_data[level_idx][bitplane_idx],
-            compressed_bitplanes[level_idx][bitplane_idx].data(),
-            mdr_metadata.level_sizes[level_idx][bitplane_idx], queue_idx);
+        if (allocation_size[level_idx][bitplane_idx] >= mdr_metadata.level_sizes[level_idx][bitplane_idx]) {
+          MemoryManager<DeviceType>::Copy1D(
+              refactored_data[level_idx][bitplane_idx],
+              compressed_bitplanes[level_idx][bitplane_idx].data(),
+              mdr_metadata.level_sizes[level_idx][bitplane_idx], queue_idx);
+        }
+        else {
+          log::err("Bitplane copy failed. level_idx(" +
+                   std::to_string(level_idx) + ") bitplane_idx(" +
+                   std::to_string(bitplane_idx) + ") Insufficient buffer space " +
+                   std::to_string(allocation_size[level_idx][bitplane_idx]) +
+                   " vs. " +
+                   std::to_string(mdr_metadata.level_sizes[level_idx]
+                                         [bitplane_idx]));
+          exit(-1);
+        }
       }
     }
   }

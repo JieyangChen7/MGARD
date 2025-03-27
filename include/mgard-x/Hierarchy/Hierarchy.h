@@ -26,6 +26,7 @@ template <DIM D, typename T, typename DeviceType> struct Hierarchy {
 
   SIZE total_num_elems();
   SIZE level_num_elems(SIZE level);
+  std::vector<SIZE> level_num_elems();
   SIZE linearized_width();
   SIZE l_target();
   std::vector<SIZE> level_shape(SIZE level);
