@@ -177,35 +177,35 @@ void MDRequest(RefactoredMetadata &refactored_metadata, Config config) {
 
   if (dev_type == device_type::SERIAL) {
 #if MGARD_ENABLE_SERIAL
-    MDRequest<SERIAL>(refactored_metadata);
+    MDRequest<SERIAL>(refactored_metadata, config);
 #else
     log::err("MDR-X was not built with SERIAL backend.");
     exit(-1);
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
-    MDRequest<OPENMP>(refactored_metadata);
+    MDRequest<OPENMP>(refactored_metadata, config);
 #else
     log::err("MDR-X was not built with OPENMP backend.");
     exit(-1);
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
-    MDRequest<CUDA>(refactored_metadata);
+    MDRequest<CUDA>(refactored_metadata, config);
 #else
     log::err("MDR-X was not built with CUDA backend.");
     exit(-1);
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
-    MDRequest<HIP>(refactored_metadata);
+    MDRequest<HIP>(refactored_metadata, config);
 #else
     log::err("MDR-X was not built with HIP backend.");
     exit(-1);
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
-    MDRequest<SYCL>(refactored_metadata);
+    MDRequest<SYCL>(refactored_metadata, config);
 #else
     log::err("MDR-X was not built with SYCL backend.");
     exit(-1);

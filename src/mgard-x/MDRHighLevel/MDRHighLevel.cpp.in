@@ -20,7 +20,7 @@ template void MDRefactor<@DEVICE_TYPE@>(DIM D, data_type dtype, std::vector<SIZE
           RefactoredData &refactored_data,
           Config config, bool output_pre_allocated);
 
-template void MDRequest<@DEVICE_TYPE@>(RefactoredMetadata &refactored_metadata);
+template void MDRequest<@DEVICE_TYPE@>(RefactoredMetadata &refactored_metadata, Config config);
 
 template SIZE MDRMaxOutputDataSize<@DEVICE_TYPE@>(DIM D, data_type dtype, std::vector<SIZE> shape, Config config);
 
