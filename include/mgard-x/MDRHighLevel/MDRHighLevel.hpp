@@ -274,29 +274,16 @@ void MDReconstruct(std::vector<SIZE> shape,
                                      m.domain_decomposed_size, config, coords);
   }
   if (!config.mdr_adaptive_resolution) {
+    // Should not re-allocate if the data is already allocated
     if (!reconstructed_data.IsInitialized()) {
-      // First time reconstruction
-      reconstructed_data.Initialize(1);
-      reconstructed_data.data[0] = (Byte *)malloc(total_num_elem * sizeof(T));
-      memset(reconstructed_data.data[0], 0, total_num_elem * sizeof(T));
-      reconstructed_data.offset[0] = std::vector<SIZE>(D, 0);
-      reconstructed_data.shape[0] = shape;
+      reconstructed_data.template ResizeToSingleDomain<D, T, DeviceType>(shape);
     }
     domain_decomposer.set_original_data((T *)reconstructed_data.data[0]);
   } else {
+    // Should not re-allocate if the data is already allocated
     if (!reconstructed_data.IsInitialized()) {
-      // First time reconstruction
-      reconstructed_data.Initialize(domain_decomposer.num_subdomains());
-      for (int subdomain_id = 0;
-           subdomain_id < domain_decomposer.num_subdomains(); subdomain_id++) {
-        SIZE n = 1;
-        for (int i = 0;
-             i < domain_decomposer.subdomain_shape(subdomain_id).size(); i++) {
-          n *= domain_decomposer.subdomain_shape(subdomain_id)[i];
-        }
-        reconstructed_data.data[subdomain_id] = (Byte *)malloc(n * sizeof(T));
-        memset(reconstructed_data.data[subdomain_id], 0, n * sizeof(T));
-      }
+      reconstructed_data.template ResizeToMultipleSubdomains<D, T, DeviceType>(
+          domain_decomposer);
     }
     std::vector<T *> decomposed_original_data(
         domain_decomposer.num_subdomains());
