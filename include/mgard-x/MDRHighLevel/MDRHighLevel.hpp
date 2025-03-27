@@ -195,9 +195,9 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
 
 template <DIM D, typename T, typename DeviceType>
 void MDRequest(std::vector<SIZE> shape,
-               RefactoredMetadata &refactored_metadata) {
+               RefactoredMetadata &refactored_metadata,
+               Config config) {
   DeviceRuntime<DeviceType>::Initialize();
-  Config config;
   Metadata<DeviceType> m;
   m.Deserialize((SERIALIZED_TYPE *)refactored_metadata.header.data());
   load(config, m);
@@ -207,6 +207,7 @@ void MDRequest(std::vector<SIZE> shape,
       DomainDecomposer<D, T, ComposedRefactor<D, T, DeviceType>, DeviceType>(
           shape, m.domain_decomposed, m.domain_decomposed_dim,
           m.domain_decomposed_size, config);
+  std::cout << "calling generate_request" << std::endl;
   generate_request(domain_decomposer, config, refactored_metadata);
   DeviceRuntime<DeviceType>::Finalize();
 }
@@ -463,7 +464,7 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
 }
 
 template <typename DeviceType>
-void MDRequest(RefactoredMetadata &refactored_metadata) {
+void MDRequest(RefactoredMetadata &refactored_metadata, Config config) {
   Metadata<DeviceType> meta;
   meta.Deserialize((SERIALIZED_TYPE *)refactored_metadata.header.data());
 
@@ -474,30 +475,30 @@ void MDRequest(RefactoredMetadata &refactored_metadata) {
 
   if (dtype == data_type::Float) {
     if (shape.size() == 1) {
-      MDRequest<1, float, DeviceType>(shape, refactored_metadata);
+      MDRequest<1, float, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 2) {
-      MDRequest<2, float, DeviceType>(shape, refactored_metadata);
+      MDRequest<2, float, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 3) {
-      MDRequest<3, float, DeviceType>(shape, refactored_metadata);
+      MDRequest<3, float, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 4) {
-      MDRequest<4, float, DeviceType>(shape, refactored_metadata);
+      MDRequest<4, float, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 5) {
-      MDRequest<5, float, DeviceType>(shape, refactored_metadata);
+      MDRequest<5, float, DeviceType>(shape, refactored_metadata, config);
     } else {
       log::err("do not support higher than five dimentions");
       exit(-1);
     }
   } else if (dtype == data_type::Double) {
     if (shape.size() == 1) {
-      MDRequest<1, double, DeviceType>(shape, refactored_metadata);
+      MDRequest<1, double, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 2) {
-      MDRequest<2, double, DeviceType>(shape, refactored_metadata);
+      MDRequest<2, double, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 3) {
-      MDRequest<3, double, DeviceType>(shape, refactored_metadata);
+      MDRequest<3, double, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 4) {
-      MDRequest<4, double, DeviceType>(shape, refactored_metadata);
+      MDRequest<4, double, DeviceType>(shape, refactored_metadata, config);
     } else if (shape.size() == 5) {
-      MDRequest<5, double, DeviceType>(shape, refactored_metadata);
+      MDRequest<5, double, DeviceType>(shape, refactored_metadata, config);
     } else {
       log::err("do not support higher than five dimentions");
       exit(-1);
