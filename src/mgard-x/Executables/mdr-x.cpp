@@ -305,6 +305,10 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
     config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   }
 
+  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  config.domain_decomposition_dim = 0;
+  config.domain_decomposition_sizes = {512, 512, 512, 512};
+
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
   if (dtype == mgard_x::data_type::Float) {
@@ -376,13 +380,17 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.dev_type = dev_type;
   config.mdr_adaptive_resolution = adaptive_resolution;
 
+  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  config.domain_decomposition_dim = 0;
+  config.domain_decomposition_sizes = {512, 512, 512, 512};
+
   mgard_x::Byte *original_data;
   size_t in_size = 0;
   if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
+    size_t original_size = 1;
+    for (mgard_x::DIM i = 0; i < shape.size(); i++)
+      original_size *= shape[i];
     if (original_file.compare("random") == 0) {
-      size_t original_size = 1;
-      for (mgard_x::DIM i = 0; i < shape.size(); i++)
-        original_size *= shape[i];
       if (dtype == mgard_x::data_type::Float) {
         in_size = original_size * sizeof(float);
         original_data = (mgard_x::Byte *)new float[original_size];
@@ -398,9 +406,26 @@ int launch_reconstruct(std::string input_file, std::string output_file,
           ((double *)original_data)[i] = rand() % 10 + 1;
         }
       }
-
     } else {
-      in_size = readfile(original_file, original_data);
+      mgard_x::Byte *file_data;
+      in_size = readfile<mgard_x::Byte>(original_file, file_data);
+
+      if (dtype == mgard_x::data_type::Float) {
+        original_size *= sizeof(float);
+      } else if (dtype == mgard_x::data_type::Double) {
+        original_size *= sizeof(double);
+      }
+
+      original_data = (mgard_x::Byte *)malloc(original_size);
+
+      size_t loaded_size = 0;
+      while (loaded_size < original_size) {
+
+        std::memcpy(original_data + loaded_size, file_data,
+                    std::min(in_size, original_size - loaded_size));
+        loaded_size += std::min(in_size, original_size - loaded_size);
+      }
+      in_size = loaded_size;
     }
   }
 
