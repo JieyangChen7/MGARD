@@ -51,6 +51,58 @@ public:
     return 0;
   }
 
+  double EstimateCR(Array<1, T_symbol, DeviceType> &original_data,
+                      int queue_idx) {
+    Timer timer;
+    // Timer timer_each;
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.start();
+    }
+
+    SIZE original_length = original_data.shape(0);
+
+    start_marks.resize({original_length}, queue_idx);
+    scanned_start_marks.resize({original_length}, queue_idx);
+    start_positions.resize({original_length}, queue_idx);
+
+    // timer_each.start();
+
+    DeviceLauncher<DeviceType>::Execute(
+        StartMarksKernel<T_symbol, C_run, C_global, DeviceType>(
+            SubArray(original_data), SubArray(start_marks)),
+        queue_idx);
+
+    // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    // timer_each.end(); timer_each.print("StartMarksKernel", original_length *
+    // sizeof(T_symbol)); timer_each.clear(); timer_each.start();
+    // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    // PrintSubarray("StartMarksKernel", SubArray(start_marks));
+
+    DeviceCollective<DeviceType>::ScanSumInclusive(
+        original_length, SubArray(start_marks), SubArray(scanned_start_marks),
+        scan_workspace, true, queue_idx);
+
+    // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    // timer_each.end(); timer_each.print("ScanSumInclusive", original_length *
+    // sizeof(T_symbol)); timer_each.clear(); timer_each.start();
+
+    C_global _total_run_length = 0;
+    MemoryManager<DeviceType>::Copy1D(
+        &_total_run_length, scanned_start_marks.data() + original_length - 1, 1,
+        queue_idx);
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.end();
+      timer.print("RLE estimate CR", original_length * sizeof(T_symbol));
+      timer.clear();
+    }
+
+    return (double)(original_length * sizeof(T_symbol)) / (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
+  }
+
   void Compress(Array<1, T_symbol, DeviceType> &original_data,
                 Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     Timer timer;
@@ -113,6 +165,7 @@ public:
     // PrintSubarray("start_positions", SubArray(start_positions));
 
     SIZE byte_offset = 0;
+    advance_with_align<Byte>(byte_offset, 7); // signature
     advance_with_align<SIZE>(byte_offset, 1);
     advance_with_align<SIZE>(byte_offset, 1);
     advance_with_align<C_run>(byte_offset, total_run_length);
@@ -123,6 +176,8 @@ public:
     SubArray<1, Byte, DeviceType> compressed_subarray(compressed_data);
 
     byte_offset = 0;
+    SerializeArray<Byte>(compressed_subarray, signature, 7,
+                           byte_offset, queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &total_run_length, 1, byte_offset,
                          queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &original_length, 1, byte_offset,
@@ -180,11 +235,32 @@ public:
 
   void Serialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {}
 
+  bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+    SubArray compressed_subarray(compressed_data);
+    Byte * signature_ptr;
+    SIZE byte_offset = 0;
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
+                             byte_offset, true, queue_idx);
+    for (int i = 0; i < 7; i++) {
+      if (signature[i] != signature_ptr[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+    if (!Verify(compressed_data, queue_idx)) {
+      log::err("RLE signature mismatch.");
+      exit(-1);
+    }
     SubArray<1, Byte, DeviceType> compressed_subarray(compressed_data);
+    Byte * signature_ptr = nullptr;
     total_run_length_ptr = &total_run_length;
     original_length_ptr = &original_length;
     SIZE byte_offset = 0;
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
+                             byte_offset, true, queue_idx);
     DeserializeArray<SIZE>(compressed_subarray, total_run_length_ptr, 1,
                            byte_offset, false, queue_idx);
     DeserializeArray<SIZE>(compressed_subarray, original_length_ptr, 1,
@@ -256,6 +332,7 @@ public:
   SIZE *original_length_ptr = nullptr;
   C_run *counts_ptr = nullptr;
   T_symbol *symbols_ptr = nullptr;
+  Byte signature[7] = {'M', 'G', 'X', 'R', 'L', 'E', 'C'};
 
   Array<1, C_global, DeviceType> start_marks;
   Array<1, C_global, DeviceType> scanned_start_marks;
