@@ -138,6 +138,36 @@ public:
     data.resize(num_subdomains);
     initialized = true;
   }
+
+  template <DIM D, typename T, typename DeviceType>
+  void ResizeToSingleDomain(std::vector<SIZE> domain_shape) {
+    // First time reconstruction
+    Initialize(1);
+    SIZE total_num_elem = 1;
+    for (int i = 0; i < D; i++)
+      total_num_elem *= domain_shape[i];
+    MemoryManager<DeviceType>::MallocHost(
+        data[0], total_num_elem * sizeof(T), 0);
+    // Is memset necessary?
+    memset(data[0], 0, total_num_elem * sizeof(T));
+    offset[0] = std::vector<SIZE>(D, 0);
+    shape[0] = domain_shape;
+  }
+
+  template <DIM D, typename T, typename DeviceType, typename DomainDecomposerType>
+  void ResizeToMultipleSubdomains(DomainDecomposerType &domain_decomposer) {
+    SIZE num_subdomains = domain_decomposer.num_subdomains();
+    Initialize(num_subdomains);
+    for (SIZE subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
+      SIZE total_num_elem = 1;
+      for (int i = 0; i < domain_decomposer.subdomain_shape(subdomain_id).size(); i++)
+        total_num_elem *= domain_decomposer.subdomain_shape(subdomain_id)[i];
+      MemoryManager<DeviceType>::MallocHost(
+          data[subdomain_id], total_num_elem * sizeof(T), 0);
+      // Is memset necessary?
+      memset(data[subdomain_id], 0, total_num_elem * sizeof(T));
+    }
+  }
   bool IsInitialized() { return initialized; }
   std::vector<std::vector<SIZE>> offset;
   std::vector<std::vector<SIZE>> shape;
