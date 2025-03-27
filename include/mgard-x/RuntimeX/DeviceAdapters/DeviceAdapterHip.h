@@ -1885,7 +1885,7 @@ template <typename Task> void HipHuffmanCLCustomizedNoCGKernel(Task task) {
                                stream>>>(task);
     DeviceRuntime<HIP>::SyncQueue(task.GetQueueIdx());
 
-    // std::cout << "calling Single_Operation4_Kernel\n";
+    // std::cout << "calling Single_Operation5_Kernel\n";
     Single_Operation5_Kernel<<<blockPerGrid, threadsPerBlock, sm_size,
                                stream>>>(task);
     DeviceRuntime<HIP>::SyncQueue(task.GetQueueIdx());
