@@ -31,15 +31,15 @@ public:
     IDX grid_size = FunctorBase<DeviceType>::GetGridDimX() *
                     FunctorBase<DeviceType>::GetBlockDimX();
     // HIP will fail if making the following line a constexpr
-    IDX MAX_RUN = 1u << sizeof(C_run) * 8;
+    IDX MAX_RUN = (IDX)1 << (sizeof(C_run) * 8);
     for (IDX i = start; i < n; i += grid_size) {
-      if (i == 0)
+      if (i == 0){
         *start_marks(i) = 1;
-      else {
+      } else {
         if (i % MAX_RUN == 0) {
           *start_marks(i) = 1;
         } else {
-          *start_marks(i) = (*data(i) != *data(i - 1));
+          *start_marks(i) = (*data(i) != *data(i - 1) ? 1 : 0);
         }
       }
     }

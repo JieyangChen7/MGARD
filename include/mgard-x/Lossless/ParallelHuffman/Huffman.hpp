@@ -58,6 +58,103 @@ public:
         primary_count, dict_size, chunk_size, estimated_outlier_ratio);
   }
 
+  double EstimateCR(Array<1, Q, DeviceType> &primary_data, int queue_idx) {
+    Timer timer;
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.start();
+    }
+    SubArray primary_subarray(primary_data);
+    workspace.reset(queue_idx);
+
+    primary_count = primary_subarray.shape(0);
+
+    Histogram<Q, unsigned int, DeviceType>(primary_subarray,
+                                           workspace.freq_subarray,
+                                           primary_count, dict_size, queue_idx);
+    auto type_bw = sizeof(H) * 8;
+
+    
+    SubArray<1, H, DeviceType> _d_first_subarray(
+        {(SIZE)type_bw}, (H *)workspace.decodebook_subarray((IDX)0));
+    SubArray<1, H, DeviceType> _d_entry_subarray(
+        {(SIZE)type_bw}, (H *)workspace.decodebook_subarray(sizeof(H) * type_bw));
+    SubArray<1, Q, DeviceType> _d_qcode_subarray(
+        {(SIZE)dict_size}, (Q *)workspace.decodebook_subarray(sizeof(H) * 2 * type_bw));
+
+    // Sort Qcodes by frequency
+    DeviceLauncher<DeviceType>::Execute(
+        FillArraySequenceKernel(_d_qcode_subarray), queue_idx);
+
+    MemoryManager<DeviceType>::Copy1D(workspace._d_freq_copy_subarray.data(),
+                                      workspace.freq_subarray.data(), dict_size,
+                                      queue_idx);
+    MemoryManager<DeviceType>::Copy1D(workspace._d_qcode_copy_subarray.data(),
+                                      _d_qcode_subarray.data(), dict_size,
+                                      queue_idx);
+    DeviceCollective<DeviceType>::SortByKey(
+        (SIZE)dict_size, workspace._d_freq_copy_subarray,
+        workspace._d_qcode_copy_subarray, workspace.freq_subarray, _d_qcode_subarray,
+        workspace.sort_by_key_workspace, true, queue_idx);
+
+    DeviceLauncher<DeviceType>::Execute(
+        GetFirstNonzeroIndexKernel<unsigned int, DeviceType>(
+            workspace.freq_subarray, workspace.first_nonzero_index_subarray),
+        queue_idx);
+
+    unsigned int first_nonzero_index;
+    MemoryManager<DeviceType>().Copy1D(
+        &first_nonzero_index, workspace.first_nonzero_index_subarray(IDX(0)), 1,
+        queue_idx);
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+
+    int nz_dict_size = dict_size - first_nonzero_index;
+
+    SubArray<1, unsigned int, DeviceType> _nz_d_freq_subarray(
+        {(SIZE)nz_dict_size}, workspace.freq_subarray(first_nonzero_index));
+    SubArray<1, H, DeviceType> _nz_d_codebook_subarray(
+        {(SIZE)nz_dict_size}, workspace.codebook_subarray(first_nonzero_index));
+
+    DeviceLauncher<DeviceType>::Execute(
+        GenerateCLKernel<unsigned int, DeviceType>(
+            _nz_d_freq_subarray, workspace.CL_subarray, nz_dict_size,
+            _nz_d_freq_subarray, workspace.lNodesLeader_subarray,
+            workspace.iNodesFreq_subarray, workspace.iNodesLeader_subarray,
+            workspace.tempFreq_subarray, workspace.tempIsLeaf_subarray,
+            workspace.tempIndex_subarray, workspace.copyFreq_subarray,
+            workspace.copyIsLeaf_subarray, workspace.copyIndex_subarray,
+            workspace.diagonal_path_intersections_subarray,
+            workspace.status_subarray),
+        queue_idx);
+
+    unsigned int max_CL;
+    MemoryManager<DeviceType>().Copy1D(&max_CL, workspace.CL_subarray(IDX(0)), 1,
+                                      queue_idx);
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+
+    unsigned int *_freq = new unsigned int[dict_size];
+    unsigned int *_cl = new unsigned int[dict_size];
+    MemoryManager<DeviceType>::Copy1D(_freq, workspace.freq_subarray.data(), dict_size, queue_idx);
+    MemoryManager<DeviceType>::Copy1D(_cl, workspace.CL_subarray.data(), dict_size, queue_idx);
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    double LC = 0;
+    for (SIZE i = 0; i < dict_size; i++) {
+      LC += (double)_freq[i] * _cl[i];
+    }
+    delete[] _freq;
+    delete[] _cl;
+    
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.end();
+      timer.print("Huffman estimate CR", primary_count * sizeof(Q));
+      timer.clear();
+    }
+
+    double CR = (double)(sizeof(Q) * primary_count) / (LC / 8 + 2000);
+    return CR;
+  }
+
   void CompressPrimary(Array<1, Q, DeviceType> &primary_data,
                        Array<1, Byte, DeviceType> &compressed_data,
                        int queue_idx) {
@@ -164,6 +261,7 @@ public:
     size_t ddata_size = total_uInts;
 
     SIZE byte_offset = 0;
+    advance_with_align<Byte>(byte_offset, 7); // signature
     advance_with_align<size_t>(byte_offset, 1);
     advance_with_align<int>(byte_offset, 1);
     advance_with_align<int>(byte_offset, 1);
@@ -183,6 +281,8 @@ public:
     SubArray compressed_data_subarray(compressed_data);
 
     byte_offset = 0;
+    SerializeArray<Byte>(compressed_data_subarray, signature, 7,
+                           byte_offset, queue_idx);
     SerializeArray<size_t>(compressed_data_subarray, &primary_count, 1,
                            byte_offset, queue_idx);
     SerializeArray<int>(compressed_data_subarray, &dict_size, 1, byte_offset,
@@ -257,14 +357,34 @@ public:
     }
   }
 
+  bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+    SubArray compressed_subarray(compressed_data);
+    Byte * signature_ptr;
+    SIZE byte_offset = 0;
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
+                             byte_offset, true, queue_idx);
+    for (int i = 0; i < 7; i++) {
+      if (signature[i] != signature_ptr[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     Timer timer;
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.start();
     }
+    if (!Verify(compressed_data, queue_idx)) {
+      log::err("Huffman signature mismatch.");
+      exit(-1);
+    }
+
     SubArray compressed_subarray(compressed_data);
 
+    Byte * signature_ptr = nullptr;
     size_t *primary_count_ptr = &primary_count;
     int *dict_size_ptr = &dict_size;
     int *chunk_size_ptr = &chunk_size;
@@ -274,6 +394,8 @@ public:
     ATOMIC_IDX *outlier_count_ptr = &outlier_count;
 
     SIZE byte_offset = 0;
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
+                             byte_offset, true, queue_idx);
     DeserializeArray<size_t>(compressed_subarray, primary_count_ptr, 1,
                              byte_offset, false, queue_idx);
     DeserializeArray<int>(compressed_subarray, dict_size_ptr, 1, byte_offset,
@@ -449,6 +571,7 @@ public:
   ATOMIC_IDX *outlier_idx;
   S *outlier;
   H *ddata;
+  Byte signature[7] = {'M', 'G', 'X', 'H', 'U', 'F', 'F'};
 
   HuffmanWorkspace<Q, S, H, DeviceType> workspace;
 };
