@@ -21,6 +21,10 @@
 #include "../MDR-X/Reconstructor/ReconstructorCache.hpp"
 #include "../MDR-X/Refactor/RefactorCache.hpp"
 
+#include "GenerateRequest.hpp"
+#include "RefactorPipeline.hpp"
+#include "ReconstructPipeline.hpp"
+
 namespace mgard_x {
 namespace MDR {
 
@@ -39,235 +43,6 @@ SIZE get_max_output_data_size(
         hierarchy.level_shape(hierarchy.l_target()), config);
   }
   return size;
-}
-
-template <DIM D, typename T, typename DeviceType>
-void generate_request(DomainDecomposer<D, T, ComposedRefactor<D, T, DeviceType>,
-                                       DeviceType> &domain_decomposer,
-                      Config config, RefactoredMetadata &refactored_metadata) {
-  for (int subdomain_id = 0; subdomain_id < domain_decomposer.num_subdomains();
-       subdomain_id++) {
-    Hierarchy<D, T, DeviceType> hierarchy =
-        domain_decomposer.subdomain_hierarchy(subdomain_id);
-    ComposedReconstructor<D, T, DeviceType> reconstructor(hierarchy, config);
-    reconstructor.GenerateRequest(refactored_metadata.metadata[subdomain_id]);
-  }
-}
-
-template <DIM D, typename T, typename DeviceType, typename RefactorType>
-void refactor_pipeline(
-    DomainDecomposer<D, T, RefactorType, DeviceType> &domain_decomposer,
-    Config &config, RefactoredMetadata &refactored_metadata,
-    RefactoredData &refactored_data) {
-  Timer timer_series;
-  if (log::level & log::TIME)
-    timer_series.start();
-
-  using Cache = RefactorCache<D, T, DeviceType, RefactorType>;
-  using HierarchyType = typename RefactorType::HierarchyType;
-
-  RefactorType &refactor = *Cache::cache.refactor;
-
-  Array<D, T, DeviceType> *device_subdomain_buffer =
-      Cache::cache.device_subdomain_buffer;
-  MDRData<DeviceType> *mdr_data = Cache::cache.mdr_data;
-
-  if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(0),
-                                     domain_decomposer.uniform)) {
-    Cache::cache.ClearHierarchyCache();
-  }
-
-  SIZE total_size = 0;
-
-  for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-    if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(id),
-                                       domain_decomposer.uniform)) {
-      Cache::cache.InsertHierarchyCache(
-          domain_decomposer.subdomain_hierarchy(id));
-    }
-  }
-
-  HierarchyType &hierarchy =
-      Cache::cache.GetHierarchyCache(domain_decomposer.subdomain_shape(0));
-
-  log::info("Adjust device buffers");
-  device_subdomain_buffer[0].resize(domain_decomposer.subdomain_shape(0));
-  device_subdomain_buffer[1].resize(domain_decomposer.subdomain_shape(0));
-  mdr_data[0].Resize(hierarchy.l_target() + 1, config.total_num_bitplanes);
-  mdr_data[1].Resize(hierarchy.l_target() + 1, config.total_num_bitplanes);
-  DeviceRuntime<DeviceType>::SyncDevice();
-
-  // Prefetch the first subdomain to one buffer
-  int current_buffer = 0;
-  int current_queue = 0;
-  domain_decomposer.copy_subdomain(
-      device_subdomain_buffer[current_buffer], 0,
-      subdomain_copy_direction::OriginalToSubdomain, current_queue);
-
-  for (SIZE curr_subdomain_id = 0;
-       curr_subdomain_id < domain_decomposer.num_subdomains();
-       curr_subdomain_id++) {
-    SIZE next_subdomain_id;
-    int next_buffer = (current_buffer + 1) % 2;
-    int next_queue = (current_queue + 1) % 3;
-    HierarchyType &hierarchy = Cache::cache.GetHierarchyCache(
-        domain_decomposer.subdomain_shape(curr_subdomain_id));
-    log::info("Adapt Refactor to hierarchy");
-    refactor.Adapt(hierarchy, config, current_queue);
-    total_size += hierarchy.total_num_elems() * sizeof(T);
-    // Prefetch the next subdomain
-    if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
-      next_subdomain_id = curr_subdomain_id + 1;
-      domain_decomposer.copy_subdomain(
-          device_subdomain_buffer[next_buffer], next_subdomain_id,
-          subdomain_copy_direction::OriginalToSubdomain, next_queue);
-    }
-
-    std::stringstream ss;
-    for (DIM d = 0; d < D; d++) {
-      ss << hierarchy.level_shape(hierarchy.l_target(), d) << " ";
-    }
-    log::info("Refactoring subdomain " + std::to_string(curr_subdomain_id) +
-              " with shape: " + ss.str());
-
-    refactor.Refactor(device_subdomain_buffer[current_buffer],
-                      refactored_metadata.metadata[curr_subdomain_id],
-                      mdr_data[current_buffer], current_queue);
-    mdr_data[current_buffer].CopyToRefactoredData(
-        refactored_metadata.metadata[curr_subdomain_id],
-        refactored_data.data[curr_subdomain_id], current_queue);
-
-    current_buffer = next_buffer;
-    current_queue = next_queue;
-  }
-  DeviceRuntime<DeviceType>::SyncDevice();
-  if (log::level & log::TIME) {
-    timer_series.end();
-    timer_series.print("Refactor pipeline", total_size);
-    timer_series.clear();
-  }
-}
-
-template <DIM D, typename T, typename DeviceType, typename ReconstructorType>
-void reconstruct_pipeline(
-    DomainDecomposer<D, T, ReconstructorType, DeviceType> &domain_decomposer,
-    Config &config, RefactoredMetadata &refactored_metadata,
-    RefactoredData &refactored_data, ReconstructedData &reconstructed_data) {
-  Timer timer_series;
-  if (log::level & log::TIME)
-    timer_series.start();
-
-  using Cache = ReconstructorCache<D, T, DeviceType, ReconstructorType>;
-  using HierarchyType = typename ReconstructorType::HierarchyType;
-
-  ReconstructorType &reconstructor = *Cache::cache.reconstructor;
-  Array<D, T, DeviceType> *device_subdomain_buffer =
-      Cache::cache.device_subdomain_buffer;
-  MDRData<DeviceType> *mdr_data = Cache::cache.mdr_data;
-  if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(0),
-                                     domain_decomposer.uniform)) {
-    Cache::cache.ClearHierarchyCache();
-  }
-  for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-    if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(id),
-                                       domain_decomposer.uniform)) {
-      Cache::cache.InsertHierarchyCache(
-          domain_decomposer.subdomain_hierarchy(id));
-    }
-  }
-
-  log::info("Adjust device buffers");
-  int current_buffer = 0;
-  int current_queue = 0;
-  // Prefetch the first subdomain
-  mdr_data[current_buffer].Resize(refactored_metadata.metadata[0]);
-  device_subdomain_buffer[current_buffer].resize(
-      domain_decomposer.subdomain_shape(0));
-  mdr_data[current_buffer].CopyFromRefactoredData(
-      refactored_metadata.metadata[0], refactored_data.data[0], current_queue);
-  mdr_data[current_buffer].CopyFromRefactoredSigns(
-      refactored_metadata.metadata[0], refactored_data.level_signs[0],
-      current_queue);
-
-  SIZE total_size = 0;
-
-  for (SIZE curr_subdomain_id = 0;
-       curr_subdomain_id < domain_decomposer.num_subdomains();
-       curr_subdomain_id++) {
-    SIZE next_subdomain_id;
-    int next_buffer = (current_buffer + 1) % 2;
-    int next_queue = (current_queue + 1) % 3;
-    HierarchyType &hierarchy = Cache::cache.GetHierarchyCache(
-        domain_decomposer.subdomain_shape(curr_subdomain_id));
-    log::info("Adapt Refactor to hierarchy");
-    reconstructor.Adapt(hierarchy, config, current_queue);
-    total_size += hierarchy.total_num_elems() * sizeof(T);
-    if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
-      // Prefetch the next subdomain
-      next_subdomain_id = curr_subdomain_id + 1;
-      mdr_data[next_buffer].Resize(
-          refactored_metadata.metadata[next_subdomain_id]);
-      device_subdomain_buffer[next_buffer].resize(
-          domain_decomposer.subdomain_shape(next_subdomain_id));
-      mdr_data[next_buffer].CopyFromRefactoredData(
-          refactored_metadata.metadata[next_subdomain_id],
-          refactored_data.data[next_subdomain_id], next_queue);
-      // Copy signs
-      mdr_data[next_buffer].CopyFromRefactoredSigns(
-          refactored_metadata.metadata[next_subdomain_id],
-          refactored_data.level_signs[next_subdomain_id], next_queue);
-    }
-
-    mdr_data[current_buffer].CopyFromRefactoredData(
-        refactored_metadata.metadata[curr_subdomain_id],
-        refactored_data.data[curr_subdomain_id], current_queue);
-    mdr_data[current_buffer].CopyFromRefactoredSigns(
-        refactored_metadata.metadata[curr_subdomain_id],
-        refactored_data.level_signs[curr_subdomain_id], current_queue);
-
-    std::stringstream ss;
-    for (DIM d = 0; d < D; d++) {
-      ss << hierarchy.level_shape(hierarchy.l_target(), d) << " ";
-    }
-    log::info("Reconstruct subdomain " + std::to_string(curr_subdomain_id) +
-              " with shape: " + ss.str());
-    device_subdomain_buffer[current_buffer].resize(
-        hierarchy.level_shape(hierarchy.l_target()));
-    // Load previously reconstructred data
-    domain_decomposer.copy_subdomain(
-        device_subdomain_buffer[current_buffer], curr_subdomain_id,
-        subdomain_copy_direction::OriginalToSubdomain, current_queue);
-    // Reconstruct
-    reconstructor.ProgressiveReconstruct(
-        refactored_metadata.metadata[curr_subdomain_id],
-        mdr_data[current_buffer], config.mdr_adaptive_resolution,
-        device_subdomain_buffer[current_buffer], current_queue);
-
-    // Update level signs for future progressive reconstruction
-    mdr_data[current_buffer].CopyToRefactoredSigns(
-        refactored_metadata.metadata[curr_subdomain_id],
-        refactored_data.level_signs[curr_subdomain_id], current_queue);
-
-    // Update reconstructed data
-    domain_decomposer.copy_subdomain(
-        device_subdomain_buffer[current_buffer], curr_subdomain_id,
-        subdomain_copy_direction::SubdomainToOriginal, current_queue);
-
-    if (config.mdr_adaptive_resolution) {
-      reconstructed_data.shape[curr_subdomain_id] =
-          device_subdomain_buffer[current_buffer].shape();
-      reconstructed_data.offset[curr_subdomain_id] =
-          domain_decomposer.dim_subdomain_offset(curr_subdomain_id);
-    }
-    current_buffer = next_buffer;
-    current_queue = next_queue;
-  }
-  DeviceRuntime<DeviceType>::SyncDevice();
-  if (log::level & log::TIME) {
-    timer_series.end();
-    timer_series.print("Reconstruct pipeline", total_size);
-    timer_series.clear();
-  }
 }
 
 template <typename DeviceType>
@@ -337,7 +112,7 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
   }
 
   refactored_metadata.InitializeForRefactor(domain_decomposer.num_subdomains());
-  refactored_data.InitializeForRefactor(domain_decomposer.num_subdomains());
+  refactored_data.InitializeForRefactor(domain_decomposer, config);
 
   log::info("Output preallocated: " + std::to_string(output_pre_allocated));
   log::info("Input previously pinned: " +

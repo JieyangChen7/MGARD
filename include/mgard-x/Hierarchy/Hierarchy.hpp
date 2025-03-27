@@ -560,6 +560,11 @@ SIZE Hierarchy<D, T, DeviceType>::level_num_elems(SIZE level) {
 }
 
 template <DIM D, typename T, typename DeviceType>
+std::vector<SIZE> Hierarchy<D, T, DeviceType>::level_num_elems() {
+  return _level_num_elems;
+}
+
+template <DIM D, typename T, typename DeviceType>
 SIZE Hierarchy<D, T, DeviceType>::linearized_width() {
   return _linearized_width;
 }
