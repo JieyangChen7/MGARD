@@ -233,7 +233,7 @@ void read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 
 void read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
               mgard_x::MDR::RefactoredData &refactored_data, std::string input,
-              bool initialize_signs) {
+              bool initialize_signs, mgard_x::Config config) {
 
   int num_subdomains = refactored_metadata.metadata.size();
   for (int subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
@@ -253,6 +253,7 @@ void read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
         mgard_x::SIZE level_size = readfile(
             input + "/" + filename,
             refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
+        mgard_x::pin_memory(refactored_data.data[subdomain_id][level_idx][bitplane_idx], level_size, config);
         if (level_size != refactored_metadata.metadata[subdomain_id]
                               .level_sizes[level_idx][bitplane_idx]) {
           std::cout << "mdr component size mismatch.";
@@ -265,6 +266,7 @@ void read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
             (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
         memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
                sizeof(bool) * metadata.level_num_elems[level_idx]);
+        mgard_x::pin_memory(refactored_data.level_signs[subdomain_id][level_idx], sizeof(bool) * metadata.level_num_elems[level_idx], config);
       }
     }
   }
@@ -417,7 +419,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       metadata.PrintStatus();
     }
     read_mdr(refactored_metadata, refactored_data, input_file,
-             first_reconstruction);
+             first_reconstruction, config);
 
     mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
                                 reconstructed_data, config, false);

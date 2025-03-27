@@ -47,17 +47,17 @@ public:
     }
   }
 
-  // Reside before reconstruction
-  void Resize(MDRMetadata &mdr_metadata) {
+  // Resize before reconstruction
+  void Resize(MDRMetadata &mdr_metadata, int queue_idx) {
     compressed_bitplanes.resize(mdr_metadata.num_levels);
     level_signs.resize(mdr_metadata.num_levels);
     for (int level_idx = 0; level_idx < mdr_metadata.num_levels; level_idx++) {
       compressed_bitplanes[level_idx].resize(mdr_metadata.num_bitplanes);
-      level_signs[level_idx].resize({mdr_metadata.level_num_elems[level_idx]});
+      level_signs[level_idx].resize({mdr_metadata.level_num_elems[level_idx]}, queue_idx);
       for (int bitplane_idx = 0; bitplane_idx < mdr_metadata.num_bitplanes;
            bitplane_idx++) {
         compressed_bitplanes[level_idx][bitplane_idx].resize(
-            {mdr_metadata.level_sizes[level_idx][bitplane_idx]});
+            {mdr_metadata.level_sizes[level_idx][bitplane_idx]}, queue_idx);
       }
     }
   }
