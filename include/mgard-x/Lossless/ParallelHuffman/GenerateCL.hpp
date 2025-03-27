@@ -215,8 +215,8 @@ public:
           // printf("update leader of leaf %d to just created internal node
           // %d\n", *status((IDX)_lNodesCur),
           // *lNodesLeader((IDX)(*status((IDX)_lNodesCur))));
-          ++(*CL((IDX)(*status((IDX)_lNodesCur)))),
-              ++(*status((IDX)_lNodesCur));
+          ++(*CL((IDX)(*status((IDX)_lNodesCur))));
+          ++(*status((IDX)_lNodesCur));
           // printf("remove mid[0] from unprocessed leaf node list. _lNodesCur =
           // %d\n", *status((IDX)_lNodesCur)); printf("update CL(%d) = %u\n",
           // *status((IDX)_lNodesCur-1),
@@ -246,8 +246,8 @@ public:
           // %d\n",
           //        *status((IDX)_lNodesCur),
           //        *lNodesLeader((IDX)(*status((IDX)_lNodesCur))));
-          ++(*CL((IDX)(*status((IDX)_lNodesCur)))),
-              ++(*status((IDX)_lNodesCur));
+          ++(*CL((IDX)(*status((IDX)_lNodesCur))));
+          ++(*status((IDX)_lNodesCur));
           // printf("remove mid[1] from unprocessed leaf node list. _lNodesCur =
           // %d\n", *status((IDX)_lNodesCur)); printf("update CL(%d) = %u\n",
           // *status((IDX)_lNodesCur-1),
@@ -312,6 +312,9 @@ public:
   }
 
   MGARDX_EXEC void Operation4() {
+    i = (FunctorBase<DeviceType>::GetBlockIdX() *
+         FunctorBase<DeviceType>::GetBlockDimX()) +
+        FunctorBase<DeviceType>::GetThreadIdX();
     // Copy all leaf nodes to be parallel merged in a temp buffer
     if (i - (*status((IDX)_lNodesCur)) < (*status((IDX)_curLeavesNum))) {
       *copyFreq((IDX)i - (*status((IDX)_lNodesCur))) = *lNodesFreq((IDX)i);

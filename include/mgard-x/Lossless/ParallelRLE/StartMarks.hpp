@@ -30,7 +30,8 @@ public:
     IDX n = data.shape(0);
     IDX grid_size = FunctorBase<DeviceType>::GetGridDimX() *
                     FunctorBase<DeviceType>::GetBlockDimX();
-    constexpr IDX MAX_RUN = 1u << sizeof(C_run) * 8;
+    // HIP will fail if making the following line a constexpr
+    IDX MAX_RUN = 1u << sizeof(C_run) * 8;
     for (IDX i = start; i < n; i += grid_size) {
       if (i == 0)
         *start_marks(i) = 1;
