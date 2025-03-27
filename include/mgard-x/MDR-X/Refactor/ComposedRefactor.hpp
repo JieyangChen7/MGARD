@@ -214,6 +214,17 @@ public:
 
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
+      
+      encoded_bitplanes_array[level_idx].resize(
+          {(SIZE)Encoder::MAX_BITPLANES,
+           encoder.bitplane_length(hierarchy->level_num_elems(level_idx))},
+          queue_idx);
+      if (!NegaBinary) {
+        encoded_bitplanes_array[level_idx].memset(0, queue_idx);
+      }
+      encoded_bitplanes_subarray[level_idx] =
+          SubArray<2, T_bitplane, DeviceType>(
+              encoded_bitplanes_array[level_idx]);
       encoder.encode(hierarchy->level_num_elems(level_idx),
                      Encoder::MAX_BITPLANES, exp[level_idx],
                      level_data_subarray[level_idx],

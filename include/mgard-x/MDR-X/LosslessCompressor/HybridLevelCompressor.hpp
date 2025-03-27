@@ -53,23 +53,23 @@ public:
     // All copy
     // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, C); 
     // All Huffman 
-    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, H); 
+    for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, H); 
     // All RLE
     // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, R); 
     // All Zstd 
     // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, Z); 
     
     // Hybrid
-    recipe = {{C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
-              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
-              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
-              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
-              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
-              {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
-              {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
-              {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
-              {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
-              {H, H, H, H, R, R, R, R, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H}};
+    // recipe = {{C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
+    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
+    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
+    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
+    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
+    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
+    //           {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
+    //           {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
+    //           {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
+    //           {H, H, H, H, R, R, R, R, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H}};
     // clang-format on
   }
   static size_t EstimateMemoryFootprint(SIZE max_n, Config config) {
