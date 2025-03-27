@@ -8,6 +8,8 @@
 #ifndef MGARD_X_MDR_HIGH_LEVEL_DATA_HPP
 #define MGARD_X_MDR_HIGH_LEVEL_DATA_HPP
 
+#include "../DomainDecomposer/DomainDecomposer.hpp"
+
 #include "../RuntimeX/DataStructures/MDRMetadata.hpp"
 
 namespace mgard_x {
@@ -80,9 +82,29 @@ public:
 
 class RefactoredData {
 public:
-  void InitializeForRefactor(SIZE num_subdomains) {
-    this->num_subdomains = num_subdomains;
+  template <DIM D, typename T, typename DeviceType, typename RefactorType>
+  void InitializeForRefactor(DomainDecomposer<D, T, RefactorType, DeviceType> &domain_decomposer, Config config) {
+    num_subdomains = domain_decomposer.num_subdomains();
     data.resize(num_subdomains);
+    data_allocation_size.resize(num_subdomains);
+    for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
+      Hierarchy<D, T, DeviceType> hierarchy(domain_decomposer.subdomain_shape(id), config);
+      std::vector<std::vector<SIZE>> estimation = RefactorType::output_size_estimation(hierarchy);
+      SIZE num_levels = estimation.size();
+      SIZE num_bitplanes = estimation[0].size();
+      data[id].resize(num_levels);
+      data_allocation_size[id].resize(num_levels);
+      for (int level_idx = 0; level_idx < num_levels; level_idx++) {
+        data[id][level_idx].resize(num_bitplanes);
+        data_allocation_size[id][level_idx].resize(num_bitplanes);
+        for (int bitplane_idx = 0; bitplane_idx < num_bitplanes; bitplane_idx++) {
+          MemoryManager<DeviceType>::MallocHost(data[id][level_idx][bitplane_idx],
+            estimation[level_idx][bitplane_idx], 0);
+          data_allocation_size[id][level_idx][bitplane_idx] =
+            estimation[level_idx][bitplane_idx];
+        }
+      }
+    }
   }
   void InitializeForReconstruction(RefactoredMetadata &refactored_metadata) {
     int num_subdomains = refactored_metadata.metadata.size();
@@ -102,6 +124,7 @@ public:
   }
 
   std::vector<std::vector<std::vector<Byte *>>> data;
+  std::vector<std::vector<std::vector<SIZE>>> data_allocation_size;
   std::vector<std::vector<bool *>> level_signs;
   SIZE num_subdomains;
 };
