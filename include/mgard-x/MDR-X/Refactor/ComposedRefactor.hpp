@@ -143,7 +143,8 @@ public:
     return size;
   }
 
-  static std::vector<std::vector<SIZE>> output_size_estimation(Hierarchy<D, T_data, DeviceType> &hierarchy) {
+  static std::vector<std::vector<SIZE>>
+  output_size_estimation(Hierarchy<D, T_data, DeviceType> &hierarchy) {
     std::vector<std::vector<SIZE>> estimation;
     estimation.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
@@ -233,7 +234,7 @@ public:
 
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
-      
+
       encoded_bitplanes_array[level_idx].resize(
           {(SIZE)Encoder::MAX_BITPLANES,
            encoder.bitplane_length(hierarchy->level_num_elems(level_idx))},

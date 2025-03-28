@@ -22,9 +22,9 @@
 #include "../MDR-X/Refactor/RefactorCache.hpp"
 
 #include "GenerateRequest.hpp"
-#include "RefactorPipeline.hpp"
 #include "ReconstructPipeline.hpp"
 #include "ReconstructPipelineQoI.hpp"
+#include "RefactorPipeline.hpp"
 
 namespace mgard_x {
 namespace MDR {
@@ -195,8 +195,7 @@ void MDRefactor(std::vector<SIZE> shape, const void *original_data,
 }
 
 template <DIM D, typename T, typename DeviceType>
-void MDRequest(std::vector<SIZE> shape,
-               RefactoredMetadata &refactored_metadata,
+void MDRequest(std::vector<SIZE> shape, RefactoredMetadata &refactored_metadata,
                Config config) {
   DeviceRuntime<DeviceType>::Initialize();
   Metadata<DeviceType> m;
@@ -309,10 +308,10 @@ void MDReconstruct(std::vector<SIZE> shape,
 
   if (config.mdr_qoi_mode) {
     reconstruct_pipeline_qoi(domain_decomposer, config, refactored_metadata,
-                       refactored_data, reconstructed_data);
+                             refactored_data, reconstructed_data);
   } else {
     reconstruct_pipeline(domain_decomposer, config, refactored_metadata,
-                       refactored_data, reconstructed_data);
+                         refactored_data, reconstructed_data);
   }
 
   if (m.dstype == data_structure_type::Cartesian_Grid_Non_Uniform) {
@@ -320,8 +319,8 @@ void MDReconstruct(std::vector<SIZE> shape,
       delete[] coords[d];
   }
 
-  if (config.auto_cache_release && (!config.mdr_qoi_mode ||
-                                   !reconstructed_data.qoi_in_progress)) {
+  if (config.auto_cache_release &&
+      (!config.mdr_qoi_mode || !reconstructed_data.qoi_in_progress)) {
     Cache::cache.SafeRelease();
   }
   DeviceRuntime<DeviceType>::Finalize();

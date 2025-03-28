@@ -45,8 +45,8 @@ void reconstruct_pipeline_qoi(
           domain_decomposer.subdomain_hierarchy(id));
     }
     mdr_data[id].Resize(refactored_metadata.metadata[id], 0);
-    device_subdomain_buffer[id].resize(
-        domain_decomposer.subdomain_shape(id), 0);
+    device_subdomain_buffer[id].resize(domain_decomposer.subdomain_shape(id),
+                                       0);
     // Reset all signs to 0 for the initial QOI reconstruction
     if (!reconstructed_data.qoi_in_progress) {
       mdr_data[id].ResetSigns(0);
@@ -56,7 +56,7 @@ void reconstruct_pipeline_qoi(
   log::info("Adjust device buffers");
   int current_buffer = 0;
   int current_queue = 0;
-  
+
   // Prefetch the first subdomain
   mdr_data[current_buffer].CopyFromRefactoredData(
       refactored_metadata.metadata[0], refactored_data.data[0], current_queue);
@@ -96,7 +96,6 @@ void reconstruct_pipeline_qoi(
       // mdr_data[0].CopyFromRefactoredData(
       //     refactored_metadata.metadata[0],
       //     refactored_data.data[0], next_queue);
-          
     }
 
     std::stringstream ss;
@@ -114,25 +113,25 @@ void reconstruct_pipeline_qoi(
 
     if (curr_subdomain_id == config.mdr_qoi_num_variables - 1) {
       DeviceRuntime<DeviceType>::SyncQueue(current_queue);
-      //We are done with reconstructing all variables now
-      //Do error estimation here
-      //Var0 can be accessed from device_subdomain_buffer[0].data()
-      //Var1 can be accessed from device_subdomain_buffer[1].data()
-      //Var2 can be accessed from device_subdomain_buffer[2].data()
-      // if (tol NOT met) {
-      //   need to contine reconstructing. Device buffers will NOT be released
-      //   reconstructed_data.qoi_in_progress = true;
-      // } else {
-      //    will stop reconstructing. Device buffers will be released
-      //    reconstructed_data.qoi_in_progress = false;
-      // } 
-      // we set it true for testing only
+      // We are done with reconstructing all variables now
+      // Do error estimation here
+      // Var0 can be accessed from device_subdomain_buffer[0].data()
+      // Var1 can be accessed from device_subdomain_buffer[1].data()
+      // Var2 can be accessed from device_subdomain_buffer[2].data()
+      //  if (tol NOT met) {
+      //    need to contine reconstructing. Device buffers will NOT be released
+      //    reconstructed_data.qoi_in_progress = true;
+      //  } else {
+      //     will stop reconstructing. Device buffers will be released
+      //     reconstructed_data.qoi_in_progress = false;
+      //  }
+      //  we set it true for testing only
       reconstructed_data.qoi_in_progress = false;
     }
-  
+
     // Copy final data out if we are done with reconstructing
     if (!reconstructed_data.qoi_in_progress) {
-    // Update reconstructed data
+      // Update reconstructed data
       domain_decomposer.copy_subdomain(
           device_subdomain_buffer[current_buffer], curr_subdomain_id,
           subdomain_copy_direction::SubdomainToOriginal, current_queue);
@@ -149,6 +148,6 @@ void reconstruct_pipeline_qoi(
   }
 }
 
-}
-}
+} // namespace MDR
+} // namespace mgard_x
 #endif

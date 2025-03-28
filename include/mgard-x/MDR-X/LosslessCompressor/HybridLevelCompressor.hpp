@@ -109,9 +109,8 @@ public:
             {merged_bitplane_size}, bitplane);
         int old_log_level = log::level;
         log::level = 0;
-        if (merged_bitplane_size > size_threshold && 
-                  huffman.EstimateCR(encoded_bitplane, queue_idx) >
-                   cr_threshold) {
+        if (merged_bitplane_size > size_threshold &&
+            huffman.EstimateCR(encoded_bitplane, queue_idx) > cr_threshold) {
           // double est_cr = huffman.EstimateCR(encoded_bitplane, queue_idx);
           // printf("Estimated CR: %f\n", est_cr);
           ATOMIC_IDX zero = 0;
@@ -125,8 +124,8 @@ public:
               encoded_bitplane, compressed_bitplanes[bitplane_idx], queue_idx);
           huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
           // RLE
-        } else if (merged_bitplane_size > size_threshold && 
-              rle.EstimateCR(encoded_bitplane, queue_idx) > cr_threshold) {
+        } else if (merged_bitplane_size > size_threshold &&
+                   rle.EstimateCR(encoded_bitplane, queue_idx) > cr_threshold) {
           // double est_cr = rle.EstimateCR(encoded_bitplane, queue_idx);
           // printf("Estimated CR: %f\n", est_cr);
           rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
