@@ -237,10 +237,10 @@ public:
 
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
-    Byte * signature_ptr;
+    Byte * signature_ptr = signature_verify;
     SIZE byte_offset = 0;
     DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
-                             byte_offset, true, queue_idx);
+                             byte_offset, false, queue_idx);
     for (int i = 0; i < 7; i++) {
       if (signature[i] != signature_ptr[i]) {
         return false;
@@ -333,6 +333,7 @@ public:
   C_run *counts_ptr = nullptr;
   T_symbol *symbols_ptr = nullptr;
   Byte signature[7] = {'M', 'G', 'X', 'R', 'L', 'E', 'C'};
+  Byte signature_verify[7];
 
   Array<1, C_global, DeviceType> start_marks;
   Array<1, C_global, DeviceType> scanned_start_marks;

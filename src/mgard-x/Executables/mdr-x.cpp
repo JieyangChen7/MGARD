@@ -382,8 +382,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
   // config.mdr_qoi_mode = true;
   // config.mdr_qoi_num_variables = 3;
-  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
-  config.domain_decomposition_dim = 0;
+  // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  // config.domain_decomposition_dim = 0;
   // config.domain_decomposition_sizes = {512, 512, 512};
 
   mgard_x::Byte *original_data;
