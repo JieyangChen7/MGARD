@@ -128,18 +128,23 @@ void reconstruct_pipeline_qoi(
       //  we set it true for testing only
       reconstructed_data.qoi_in_progress = false;
     }
-
-    // Copy final data out if we are done with reconstructing
-    if (!reconstructed_data.qoi_in_progress) {
-      // Update reconstructed data
-      domain_decomposer.copy_subdomain(
-          device_subdomain_buffer[current_buffer], curr_subdomain_id,
-          subdomain_copy_direction::SubdomainToOriginal, current_queue);
-    }
-
+    
     current_buffer = next_buffer;
     current_queue = next_queue;
   }
+
+  // Copy final data out if we are done with reconstructing
+  if (!reconstructed_data.qoi_in_progress) {
+    for (SIZE curr_subdomain_id = 0;
+      curr_subdomain_id < domain_decomposer.num_subdomains();
+      curr_subdomain_id++) {
+      // Update reconstructed data
+      domain_decomposer.copy_subdomain(
+          device_subdomain_buffer[curr_subdomain_id], curr_subdomain_id,
+          subdomain_copy_direction::SubdomainToOriginal, current_queue);
+    }
+  }
+
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
