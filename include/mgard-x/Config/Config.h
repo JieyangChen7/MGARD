@@ -36,6 +36,8 @@ struct Config {
   int num_local_refactoring_level;
   bool auto_cache_release;
   cpu_parallelization_mode cpu_mode;
+  bool mdr_qoi_mode;
+  int mdr_qoi_num_variables;
 
   Config();
   void apply();

@@ -137,6 +137,7 @@ public:
     shape.resize(num_subdomains);
     data.resize(num_subdomains);
     initialized = true;
+    qoi_in_progress = false;
   }
 
   template <DIM D, typename T, typename DeviceType>
@@ -174,6 +175,7 @@ public:
   std::vector<Byte *> data;
   SIZE num_subdomains;
   bool initialized = false;
+  bool qoi_in_progress = false;
 };
 
 } // namespace MDR

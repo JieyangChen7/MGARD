@@ -88,18 +88,18 @@ public:
     hierarchy_cache = new std::unordered_map<std::string, HierarchyType>();
   }
 
-  void Initialize() {
+  void Initialize(int num_buffers = 2) {
     log::info("Initializing refactor cache");
     hierarchy_cache = new std::unordered_map<std::string, HierarchyType>();
     refactor = new RefactorType();
-    device_subdomain_buffer = new Array<D, T, DeviceType>[2];
-    mdr_data = new MDRData<DeviceType>[2];
+    device_subdomain_buffer = new Array<D, T, DeviceType>[num_buffers];
+    mdr_data = new MDRData<DeviceType>[num_buffers];
     initialized = true;
   }
 
-  void SafeInitialize() {
+  void SafeInitialize(int num_buffers = 2) {
     if (!initialized) {
-      Initialize();
+      Initialize(num_buffers);
     }
   }
 
