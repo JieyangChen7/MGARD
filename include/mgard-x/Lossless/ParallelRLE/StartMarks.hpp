@@ -33,7 +33,7 @@ public:
     // HIP will fail if making the following line a constexpr
     IDX MAX_RUN = (IDX)1 << (sizeof(C_run) * 8);
     for (IDX i = start; i < n; i += grid_size) {
-      if (i == 0){
+      if (i == 0) {
         *start_marks(i) = 1;
       } else {
         if (i % MAX_RUN == 0) {

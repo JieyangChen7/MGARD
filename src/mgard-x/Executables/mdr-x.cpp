@@ -253,7 +253,9 @@ void read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
         mgard_x::SIZE level_size = readfile(
             input + "/" + filename,
             refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
-        mgard_x::pin_memory(refactored_data.data[subdomain_id][level_idx][bitplane_idx], level_size, config);
+        mgard_x::pin_memory(
+            refactored_data.data[subdomain_id][level_idx][bitplane_idx],
+            level_size, config);
         if (level_size != refactored_metadata.metadata[subdomain_id]
                               .level_sizes[level_idx][bitplane_idx]) {
           std::cout << "mdr component size mismatch.";
@@ -266,7 +268,9 @@ void read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
             (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
         memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
                sizeof(bool) * metadata.level_num_elems[level_idx]);
-        mgard_x::pin_memory(refactored_data.level_signs[subdomain_id][level_idx], sizeof(bool) * metadata.level_num_elems[level_idx], config);
+        mgard_x::pin_memory(
+            refactored_data.level_signs[subdomain_id][level_idx],
+            sizeof(bool) * metadata.level_num_elems[level_idx], config);
       }
     }
   }

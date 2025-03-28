@@ -52,7 +52,7 @@ public:
   }
 
   double EstimateCR(Array<1, T_symbol, DeviceType> &original_data,
-                      int queue_idx) {
+                    int queue_idx) {
     Timer timer;
     // Timer timer_each;
     if (log::level & log::TIME) {
@@ -100,7 +100,8 @@ public:
       timer.clear();
     }
 
-    return (double)(original_length * sizeof(T_symbol)) / (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
+    return (double)(original_length * sizeof(T_symbol)) /
+           (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
   }
 
   void Compress(Array<1, T_symbol, DeviceType> &original_data,
@@ -176,8 +177,8 @@ public:
     SubArray<1, Byte, DeviceType> compressed_subarray(compressed_data);
 
     byte_offset = 0;
-    SerializeArray<Byte>(compressed_subarray, signature, 7,
-                           byte_offset, queue_idx);
+    SerializeArray<Byte>(compressed_subarray, signature, 7, byte_offset,
+                         queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &total_run_length, 1, byte_offset,
                          queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &original_length, 1, byte_offset,
@@ -237,10 +238,10 @@ public:
 
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
-    Byte * signature_ptr = signature_verify;
+    Byte *signature_ptr = signature_verify;
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
-                             byte_offset, false, queue_idx);
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7, byte_offset,
+                           false, queue_idx);
     for (int i = 0; i < 7; i++) {
       if (signature[i] != signature_ptr[i]) {
         return false;
@@ -255,12 +256,12 @@ public:
       exit(-1);
     }
     SubArray<1, Byte, DeviceType> compressed_subarray(compressed_data);
-    Byte * signature_ptr = nullptr;
+    Byte *signature_ptr = nullptr;
     total_run_length_ptr = &total_run_length;
     original_length_ptr = &original_length;
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
-                             byte_offset, true, queue_idx);
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7, byte_offset,
+                           true, queue_idx);
     DeserializeArray<SIZE>(compressed_subarray, total_run_length_ptr, 1,
                            byte_offset, false, queue_idx);
     DeserializeArray<SIZE>(compressed_subarray, original_length_ptr, 1,
