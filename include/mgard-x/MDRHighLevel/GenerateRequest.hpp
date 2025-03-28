@@ -16,8 +16,6 @@ void generate_request(DomainDecomposer<D, T, ComposedRefactor<D, T, DeviceType>,
                                        DeviceType> &domain_decomposer,
                       Config config, RefactoredMetadata &refactored_metadata) {
   
-  std::cout << "inside generate_request" << std::endl;
-  std::cout << "num_subdomains: " << domain_decomposer.num_subdomains() << "\n";
   for (int subdomain_id = 0; subdomain_id < domain_decomposer.num_subdomains();
        subdomain_id++) {
     Hierarchy<D, T, DeviceType> hierarchy =
