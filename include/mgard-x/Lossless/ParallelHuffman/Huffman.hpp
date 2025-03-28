@@ -74,13 +74,14 @@ public:
                                            primary_count, dict_size, queue_idx);
     auto type_bw = sizeof(H) * 8;
 
-    
     SubArray<1, H, DeviceType> _d_first_subarray(
         {(SIZE)type_bw}, (H *)workspace.decodebook_subarray((IDX)0));
     SubArray<1, H, DeviceType> _d_entry_subarray(
-        {(SIZE)type_bw}, (H *)workspace.decodebook_subarray(sizeof(H) * type_bw));
+        {(SIZE)type_bw},
+        (H *)workspace.decodebook_subarray(sizeof(H) * type_bw));
     SubArray<1, Q, DeviceType> _d_qcode_subarray(
-        {(SIZE)dict_size}, (Q *)workspace.decodebook_subarray(sizeof(H) * 2 * type_bw));
+        {(SIZE)dict_size},
+        (Q *)workspace.decodebook_subarray(sizeof(H) * 2 * type_bw));
 
     // Sort Qcodes by frequency
     DeviceLauncher<DeviceType>::Execute(
@@ -94,8 +95,8 @@ public:
                                       queue_idx);
     DeviceCollective<DeviceType>::SortByKey(
         (SIZE)dict_size, workspace._d_freq_copy_subarray,
-        workspace._d_qcode_copy_subarray, workspace.freq_subarray, _d_qcode_subarray,
-        workspace.sort_by_key_workspace, true, queue_idx);
+        workspace._d_qcode_copy_subarray, workspace.freq_subarray,
+        _d_qcode_subarray, workspace.sort_by_key_workspace, true, queue_idx);
 
     DeviceLauncher<DeviceType>::Execute(
         GetFirstNonzeroIndexKernel<unsigned int, DeviceType>(
@@ -128,14 +129,16 @@ public:
         queue_idx);
 
     unsigned int max_CL;
-    MemoryManager<DeviceType>().Copy1D(&max_CL, workspace.CL_subarray(IDX(0)), 1,
-                                      queue_idx);
+    MemoryManager<DeviceType>().Copy1D(&max_CL, workspace.CL_subarray(IDX(0)),
+                                       1, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
     unsigned int *_freq = new unsigned int[dict_size];
     unsigned int *_cl = new unsigned int[dict_size];
-    MemoryManager<DeviceType>::Copy1D(_freq, workspace.freq_subarray.data(), dict_size, queue_idx);
-    MemoryManager<DeviceType>::Copy1D(_cl, workspace.CL_subarray.data(), dict_size, queue_idx);
+    MemoryManager<DeviceType>::Copy1D(_freq, workspace.freq_subarray.data(),
+                                      dict_size, queue_idx);
+    MemoryManager<DeviceType>::Copy1D(_cl, workspace.CL_subarray.data(),
+                                      dict_size, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     double LC = 0;
     for (SIZE i = 0; i < dict_size; i++) {
@@ -143,7 +146,7 @@ public:
     }
     delete[] _freq;
     delete[] _cl;
-    
+
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
@@ -281,8 +284,8 @@ public:
     SubArray compressed_data_subarray(compressed_data);
 
     byte_offset = 0;
-    SerializeArray<Byte>(compressed_data_subarray, signature, 7,
-                           byte_offset, queue_idx);
+    SerializeArray<Byte>(compressed_data_subarray, signature, 7, byte_offset,
+                         queue_idx);
     SerializeArray<size_t>(compressed_data_subarray, &primary_count, 1,
                            byte_offset, queue_idx);
     SerializeArray<int>(compressed_data_subarray, &dict_size, 1, byte_offset,
@@ -359,10 +362,10 @@ public:
 
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
-    Byte * signature_ptr = signature_verify;
+    Byte *signature_ptr = signature_verify;
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
-                             byte_offset, false, queue_idx);
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7, byte_offset,
+                           false, queue_idx);
     for (int i = 0; i < 7; i++) {
       if (signature[i] != signature_ptr[i]) {
         return false;
@@ -384,7 +387,7 @@ public:
 
     SubArray compressed_subarray(compressed_data);
 
-    Byte * signature_ptr = nullptr;
+    Byte *signature_ptr = nullptr;
     size_t *primary_count_ptr = &primary_count;
     int *dict_size_ptr = &dict_size;
     int *chunk_size_ptr = &chunk_size;
@@ -394,8 +397,8 @@ public:
     ATOMIC_IDX *outlier_count_ptr = &outlier_count;
 
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7,
-                             byte_offset, true, queue_idx);
+    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7, byte_offset,
+                           true, queue_idx);
     DeserializeArray<size_t>(compressed_subarray, primary_count_ptr, 1,
                              byte_offset, false, queue_idx);
     DeserializeArray<int>(compressed_subarray, dict_size_ptr, 1, byte_offset,

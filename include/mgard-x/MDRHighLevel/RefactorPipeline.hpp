@@ -93,9 +93,8 @@ void refactor_pipeline(
                       mdr_data[current_buffer], current_queue);
     mdr_data[current_buffer].CopyToRefactoredData(
         refactored_metadata.metadata[curr_subdomain_id],
-        refactored_data.data[curr_subdomain_id], 
-        refactored_data.data_allocation_size[curr_subdomain_id],
-        current_queue);
+        refactored_data.data[curr_subdomain_id],
+        refactored_data.data_allocation_size[curr_subdomain_id], current_queue);
 
     current_buffer = next_buffer;
     current_queue = next_queue;
@@ -108,6 +107,6 @@ void refactor_pipeline(
   }
 }
 
-}
-}
+} // namespace MDR
+} // namespace mgard_x
 #endif

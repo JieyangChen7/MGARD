@@ -42,8 +42,9 @@ void reconstruct_pipeline(
   log::info("Adjust device buffers");
   int current_buffer = 0;
   int current_queue = 0;
-  
-  mdr_data[current_buffer].Resize(refactored_metadata.metadata[0], current_queue);
+
+  mdr_data[current_buffer].Resize(refactored_metadata.metadata[0],
+                                  current_queue);
   device_subdomain_buffer[current_buffer].resize(
       domain_decomposer.subdomain_shape(0), current_queue);
 
@@ -74,7 +75,7 @@ void reconstruct_pipeline(
           refactored_metadata.metadata[next_subdomain_id], next_queue);
       device_subdomain_buffer[next_buffer].resize(
           domain_decomposer.subdomain_shape(next_subdomain_id), next_queue);
-          
+
       mdr_data[next_buffer].CopyFromRefactoredData(
           refactored_metadata.metadata[next_subdomain_id],
           refactored_data.data[next_subdomain_id], next_queue);
@@ -129,6 +130,6 @@ void reconstruct_pipeline(
   }
 }
 
-}
-}
+} // namespace MDR
+} // namespace mgard_x
 #endif

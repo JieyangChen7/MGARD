@@ -83,13 +83,17 @@ public:
 class RefactoredData {
 public:
   template <DIM D, typename T, typename DeviceType, typename RefactorType>
-  void InitializeForRefactor(DomainDecomposer<D, T, RefactorType, DeviceType> &domain_decomposer, Config config) {
+  void InitializeForRefactor(
+      DomainDecomposer<D, T, RefactorType, DeviceType> &domain_decomposer,
+      Config config) {
     num_subdomains = domain_decomposer.num_subdomains();
     data.resize(num_subdomains);
     data_allocation_size.resize(num_subdomains);
     for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-      Hierarchy<D, T, DeviceType> hierarchy(domain_decomposer.subdomain_shape(id), config);
-      std::vector<std::vector<SIZE>> estimation = RefactorType::output_size_estimation(hierarchy);
+      Hierarchy<D, T, DeviceType> hierarchy(
+          domain_decomposer.subdomain_shape(id), config);
+      std::vector<std::vector<SIZE>> estimation =
+          RefactorType::output_size_estimation(hierarchy);
       SIZE num_levels = estimation.size();
       SIZE num_bitplanes = estimation[0].size();
       data[id].resize(num_levels);
@@ -97,11 +101,13 @@ public:
       for (int level_idx = 0; level_idx < num_levels; level_idx++) {
         data[id][level_idx].resize(num_bitplanes);
         data_allocation_size[id][level_idx].resize(num_bitplanes);
-        for (int bitplane_idx = 0; bitplane_idx < num_bitplanes; bitplane_idx++) {
-          MemoryManager<DeviceType>::MallocHost(data[id][level_idx][bitplane_idx],
-            estimation[level_idx][bitplane_idx], 0);
+        for (int bitplane_idx = 0; bitplane_idx < num_bitplanes;
+             bitplane_idx++) {
+          MemoryManager<DeviceType>::MallocHost(
+              data[id][level_idx][bitplane_idx],
+              estimation[level_idx][bitplane_idx], 0);
           data_allocation_size[id][level_idx][bitplane_idx] =
-            estimation[level_idx][bitplane_idx];
+              estimation[level_idx][bitplane_idx];
         }
       }
     }
@@ -147,24 +153,26 @@ public:
     SIZE total_num_elem = 1;
     for (int i = 0; i < D; i++)
       total_num_elem *= domain_shape[i];
-    MemoryManager<DeviceType>::MallocHost(
-        data[0], total_num_elem * sizeof(T), 0);
+    MemoryManager<DeviceType>::MallocHost(data[0], total_num_elem * sizeof(T),
+                                          0);
     // Is memset necessary?
     memset(data[0], 0, total_num_elem * sizeof(T));
     offset[0] = std::vector<SIZE>(D, 0);
     shape[0] = domain_shape;
   }
 
-  template <DIM D, typename T, typename DeviceType, typename DomainDecomposerType>
+  template <DIM D, typename T, typename DeviceType,
+            typename DomainDecomposerType>
   void ResizeToMultipleSubdomains(DomainDecomposerType &domain_decomposer) {
     SIZE num_subdomains = domain_decomposer.num_subdomains();
     Initialize(num_subdomains);
     for (SIZE subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
       SIZE total_num_elem = 1;
-      for (int i = 0; i < domain_decomposer.subdomain_shape(subdomain_id).size(); i++)
+      for (int i = 0;
+           i < domain_decomposer.subdomain_shape(subdomain_id).size(); i++)
         total_num_elem *= domain_decomposer.subdomain_shape(subdomain_id)[i];
-      MemoryManager<DeviceType>::MallocHost(
-          data[subdomain_id], total_num_elem * sizeof(T), 0);
+      MemoryManager<DeviceType>::MallocHost(data[subdomain_id],
+                                            total_num_elem * sizeof(T), 0);
       // Is memset necessary?
       memset(data[subdomain_id], 0, total_num_elem * sizeof(T));
     }
