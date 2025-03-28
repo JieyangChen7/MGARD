@@ -221,6 +221,7 @@ public:
 
   void InitializeConfig(Config &config) {
     config.domain_decomposition = ddtype;
+    config.domain_decomposition_dim = domain_decomposed_dim;
     config.decomposition = decomposition;
     config.lossless = ltype;
     config.huff_dict_size = huff_dict_size;

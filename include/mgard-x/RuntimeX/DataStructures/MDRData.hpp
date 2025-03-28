@@ -54,11 +54,18 @@ public:
     for (int level_idx = 0; level_idx < mdr_metadata.num_levels; level_idx++) {
       compressed_bitplanes[level_idx].resize(mdr_metadata.num_bitplanes);
       level_signs[level_idx].resize({mdr_metadata.level_num_elems[level_idx]}, queue_idx);
+      level_signs[level_idx].memset(0, queue_idx);
       for (int bitplane_idx = 0; bitplane_idx < mdr_metadata.num_bitplanes;
            bitplane_idx++) {
         compressed_bitplanes[level_idx][bitplane_idx].resize(
             {mdr_metadata.level_sizes[level_idx][bitplane_idx]}, queue_idx);
       }
+    }
+  }
+
+  void ResetSigns(int queue_idx) {
+    for (int level_idx = 0; level_idx < level_signs.size(); level_idx++) {
+      level_signs[level_idx].memset(0, queue_idx);
     }
   }
 
