@@ -312,6 +312,10 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
     config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   }
 
+  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  config.domain_decomposition_dim = 0;
+  config.domain_decomposition_sizes = {512, 512, 512};
+
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
   if (dtype == mgard_x::data_type::Float) {
@@ -383,12 +387,18 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.dev_type = dev_type;
   config.mdr_adaptive_resolution = adaptive_resolution;
 
+  config.mdr_qoi_mode = true;
+  config.mdr_qoi_num_variables = 3;
+  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  config.domain_decomposition_dim = 0;
+  config.domain_decomposition_sizes = {512, 512, 512};
+
   mgard_x::Byte *original_data;
   size_t in_size = 0;
+  size_t original_size = 1;
+  for (mgard_x::DIM i = 0; i < shape.size(); i++)
+    original_size *= shape[i];
   if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
-    size_t original_size = 1;
-    for (mgard_x::DIM i = 0; i < shape.size(); i++)
-      original_size *= shape[i];
     if (original_file.compare("random") == 0) {
       if (dtype == mgard_x::data_type::Float) {
         in_size = original_size * sizeof(float);
@@ -433,10 +443,15 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   mgard_x::MDR::ReconstructedData reconstructed_data;
   read_mdr_metadata(refactored_metadata, refactored_data, input_file);
   bool first_reconstruction = true;
-  for (double tol : tols) {
-    for (auto &metadata : refactored_metadata.metadata) {
-      metadata.requested_tol = tol;
-      metadata.requested_s = s;
+
+  // testing only
+  std::vector<std::vector<double>> qoi_tols = {{15672.8, 10043.9, 7232.42}, 
+                                                {1741.427200, 4463.934933, 3214.410667}};
+  
+  for (int iter = 0; iter < 2; iter++) {
+    for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+      refactored_metadata.metadata[i].requested_tol = qoi_tols[iter][i];
+      refactored_metadata.metadata[i].requested_s = s;
     }
     mgard_x::MDR::MDRequest(refactored_metadata, config);
     for (auto &metadata : refactored_metadata.metadata) {
@@ -448,20 +463,28 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
                                 reconstructed_data, config, false);
 
+    // we can check reconstructed_data.qoi_in_progress here
+
     first_reconstruction = false;
 
     std::cout << mgard_x::log::log_info << "Additional " << size_read
               << " bytes read for reconstruction\n";
 
     if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
-      if (dtype == mgard_x::data_type::Float) {
-        print_statistics<float>(s, mode, shape, (float *)original_data,
-                                (float *)reconstructed_data.data[0], tol,
-                                config.normalize_coordinates);
-      } else if (dtype == mgard_x::data_type::Double) {
-        print_statistics<double>(s, mode, shape, (double *)original_data,
-                                 (double *)reconstructed_data.data[0], tol,
-                                 config.normalize_coordinates);
+      for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+        std::vector<mgard_x::SIZE> var_shape = shape;
+        var_shape[0] /= config.mdr_qoi_num_variables;
+        mgard_x::Byte* org_var_ptr = original_data + original_size/3 * i;
+        mgard_x::Byte* rec_var_ptr = reconstructed_data.data[0] + original_size/3 * i;
+        if (dtype == mgard_x::data_type::Float) {
+          print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
+                                  (float *)rec_var_ptr, qoi_tols[iter][i],
+                                  config.normalize_coordinates);
+        } else if (dtype == mgard_x::data_type::Double) {
+          print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
+                                  (double *)rec_var_ptr, qoi_tols[iter][i],
+                                  config.normalize_coordinates);
+        }
       }
     }
   }
