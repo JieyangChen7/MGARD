@@ -160,7 +160,7 @@ public:
     T_fp fp_data[BATCH_SIZE];
     T_fp fp_sign[BATCH_SIZE];
     T_bitplane encoded_data[MAX_BITPLANES];
-    T_bitplane encoded_sign[MAX_BITPLANES];
+    T_bitplane encoded_sign[1];
     T_error errors[MAX_BITPLANES + 1];
 
     for (SIZE batch_idx = gid; batch_idx < num_batches;
@@ -192,6 +192,10 @@ public:
       // encode sign
       encode_batch(fp_sign, encoded_sign, 1);
       *encoded_bitplanes(0, num_batches + batch_idx) = encoded_sign[0];
+      // set rest of the bitplanes to 0
+      for (int bp_idx = 1; bp_idx < num_bitplanes; bp_idx++) {
+        *encoded_bitplanes(bp_idx, num_batches + batch_idx) = (T_bitplane)0;
+      }
       // // encode sign
       // encode_batch(signs, encoded_sign, BATCH_SIZE, 1);
       // print_bits(encoded_bitplanes[0 * b + batch_idx * 2 + 1], batch_size);

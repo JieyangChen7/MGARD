@@ -239,9 +239,6 @@ public:
           {(SIZE)Encoder::MAX_BITPLANES,
            encoder.bitplane_length(hierarchy->level_num_elems(level_idx))},
           queue_idx);
-      if (!NegaBinary) {
-        encoded_bitplanes_array[level_idx].memset(0, queue_idx);
-      }
       encoded_bitplanes_subarray[level_idx] =
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
