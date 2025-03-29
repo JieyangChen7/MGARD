@@ -33,6 +33,10 @@ public:
   // CONTROL_L2, DeviceType>;
   using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
                                  CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderOptV2<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                                CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderOptV3<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                               CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
@@ -242,11 +246,14 @@ public:
       encoded_bitplanes_subarray[level_idx] =
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
+      // Timer timer_iter; timer_iter.start();
       encoder.encode(hierarchy->level_num_elems(level_idx),
                      Encoder::MAX_BITPLANES, exp[level_idx],
                      level_data_subarray[level_idx],
                      encoded_bitplanes_subarray[level_idx],
                      level_errors_subarray[level_idx], queue_idx);
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      // timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
     }
 
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
