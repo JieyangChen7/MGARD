@@ -29,8 +29,8 @@ public:
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
-  using Basis = Orthogonal;
-  // using Basis = Hierarchical;
+  // using Basis = Orthogonal;
+  using Basis = Hierarchical;
   using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
@@ -184,13 +184,15 @@ public:
         MaxErrorEstimatorOB<T_data> estimator(D);
         GreedyBasedSizeInterpreter interpreter(estimator);
         retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
+            mdr_metadata.corresponding_error,
             mdr_metadata.requested_level_num_bitplanes);
       } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
         MaxErrorEstimatorHB<T_data> estimator;
         GreedyBasedSizeInterpreter interpreter(estimator);
         retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
+            mdr_metadata.corresponding_error,
             mdr_metadata.requested_level_num_bitplanes);
       }
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
