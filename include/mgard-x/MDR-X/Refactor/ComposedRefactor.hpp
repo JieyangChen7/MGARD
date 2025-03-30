@@ -25,8 +25,8 @@ public:
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
-  using Basis = Orthogonal;
-  // using Basis = Hierarchical;
+  // using Basis = Orthogonal;
+  using Basis = Hierarchical;
   using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,

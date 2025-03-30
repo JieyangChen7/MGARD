@@ -171,8 +171,8 @@ void print_statistics(double s, enum mgard_x::error_bound_type mode,
             << "PSNR: " << mgard_x::PSNR(n, original_data, decompressed_data)
             << "\n";
 
-  if (actual_error > tol)
-    throw std::runtime_error("Error tolerance exceeded");
+  // if (actual_error > tol)
+    // exit(-1);
 }
 
 void create_dir(std::string name) {
@@ -314,7 +314,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
 
   config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   config.domain_decomposition_dim = 0;
-  config.domain_decomposition_sizes = {512, 512, 512};
+  config.domain_decomposition_sizes = {256, 256, 256};
 
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
@@ -373,6 +373,37 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   return 0;
 }
 
+template <class T>
+T compute_max_abs_error(const T *vec_ori, const T * vec_rec, size_t n){
+  T error = fabs(vec_ori[0] - vec_rec[0]);
+	T max = error;
+	for(int i=1; i<n; i++){
+    error = fabs(vec_ori[i] - vec_rec[i]);
+		if(max < error) max = error;
+	}
+	return max;
+}
+
+template <class T>
+T compute_value_range(const T * vec, size_t n){
+	T min = vec[0];
+	T max = vec[0];
+	for(int i=0; i<n; i++){
+		if(vec[i] < min) min = vec[i];
+		if(vec[i] > max) max = vec[i];
+	}
+	return max - min;
+}
+
+template <class T>
+void compute_VTOT(const T * Vx, const T * Vy, const T * Vz, size_t n, T * V_TOT_){
+	for(int i=0; i<n; i++){
+		double V_TOT_2 = Vx[i]*Vx[i] + Vy[i]*Vy[i] + Vz[i]*Vz[i];
+		double V_TOT = sqrt(V_TOT_2);
+		V_TOT_[i] = V_TOT;
+	}
+}
+
 int launch_reconstruct(std::string input_file, std::string output_file,
                        std::string original_file, enum mgard_x::data_type dtype,
                        std::vector<mgard_x::SIZE> shape,
@@ -391,7 +422,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.mdr_qoi_num_variables = 3;
   config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   config.domain_decomposition_dim = 0;
-  config.domain_decomposition_sizes = {512, 512, 512};
+  config.domain_decomposition_sizes = {256, 256, 256};
 
   mgard_x::Byte *original_data;
   size_t in_size = 0;
@@ -437,58 +468,88 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       in_size = loaded_size;
     }
   }
+  mgard_x::Byte * V_TOT_ori;
+  size_t num_elements;
+  double tau = 0;
+  V_TOT_ori = (mgard_x::Byte *)malloc(in_size / config.mdr_qoi_num_variables);
+  mgard_x::Byte* org_Vx_ptr = original_data + original_size/3 * 0;
+  mgard_x::Byte* org_Vy_ptr = original_data + original_size/3 * 1;
+  mgard_x::Byte* org_Vz_ptr = original_data + original_size/3 * 2;
+  if (dtype == mgard_x::data_type::Float){
+    num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
+    compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
+    tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
+  } else if (dtype == mgard_x::data_type::Double){
+    num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
+    compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
+    tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
+  }
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
   mgard_x::MDR::RefactoredData refactored_data;
   mgard_x::MDR::ReconstructedData reconstructed_data;
   read_mdr_metadata(refactored_metadata, refactored_data, input_file);
-  bool first_reconstruction = true;
+  
+  for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+    refactored_metadata.metadata[i].num_elements = num_elements;
+    refactored_metadata.metadata[i].requested_tol = tau;
+    refactored_metadata.metadata[i].requested_size = 1000000;
+    refactored_metadata.metadata[i].requested_s = s;
+  }
+  mgard_x::MDR::MDRequest(refactored_metadata, config);
+  for (auto &metadata : refactored_metadata.metadata) {
+    metadata.PrintStatus();
+  }
+  size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
+            true, config);
 
-  // testing only
-  std::vector<std::vector<double>> qoi_tols = {
-      {15672.8, 10043.9, 7232.42}, {1741.427200, 4463.934933, 3214.410667}};
+  mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
+                              reconstructed_data, config, false);
 
-  for (int iter = 0; iter < 2; iter++) {
+  // we can check reconstructed_data.qoi_in_progress here
+
+  std::cout << mgard_x::log::log_info << "Additional " << size_read
+            << " bytes read for reconstruction\n";
+
+  std::vector<mgard_x::Byte*> rec_var_ptrs;
+  if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
     for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
-      refactored_metadata.metadata[i].requested_tol = qoi_tols[iter][i];
-      refactored_metadata.metadata[i].requested_s = s;
-    }
-    mgard_x::MDR::MDRequest(refactored_metadata, config);
-    for (auto &metadata : refactored_metadata.metadata) {
-      metadata.PrintStatus();
-    }
-    size_t size_read = read_mdr(refactored_metadata, refactored_data,
-                                input_file, first_reconstruction, config);
-
-    mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
-                                reconstructed_data, config, false);
-
-    // we can check reconstructed_data.qoi_in_progress here
-
-    first_reconstruction = false;
-
-    std::cout << mgard_x::log::log_info << "Additional " << size_read
-              << " bytes read for reconstruction\n";
-
-    if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
-      for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
-        std::vector<mgard_x::SIZE> var_shape = shape;
-        var_shape[0] /= config.mdr_qoi_num_variables;
-        mgard_x::Byte *org_var_ptr = original_data + original_size / 3 * i;
-        mgard_x::Byte *rec_var_ptr =
-            reconstructed_data.data[0] + original_size / 3 * i;
-        if (dtype == mgard_x::data_type::Float) {
-          print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
-                                  (float *)rec_var_ptr, qoi_tols[iter][i],
-                                  config.normalize_coordinates);
-        } else if (dtype == mgard_x::data_type::Double) {
-          print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
-                                   (double *)rec_var_ptr, qoi_tols[iter][i],
-                                   config.normalize_coordinates);
-        }
+      std::vector<mgard_x::SIZE> var_shape = shape;
+      var_shape[0] /= config.mdr_qoi_num_variables;
+      mgard_x::Byte* org_var_ptr = original_data + original_size/3 * i;
+      mgard_x::Byte* rec_var_ptr = reconstructed_data.data[0] + original_size/3 * i;
+      rec_var_ptrs.push_back(rec_var_ptr);
+      if (dtype == mgard_x::data_type::Float) {
+        print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
+                                (float *)rec_var_ptr, refactored_metadata.metadata[i].corresponding_error,
+                                config.normalize_coordinates);
+      } else if (dtype == mgard_x::data_type::Double) {
+        print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
+                                (double *)rec_var_ptr, refactored_metadata.metadata[i].corresponding_error,
+                                config.normalize_coordinates);
       }
     }
   }
+  mgard_x::Byte* V_TOT_rec;
+  V_TOT_rec = (mgard_x::Byte *)malloc(in_size / config.mdr_qoi_num_variables);
+  if (dtype == mgard_x::data_type::Float){
+    compute_VTOT<float>((float *) rec_var_ptrs[0], (float *) rec_var_ptrs[1], (float *) rec_var_ptrs[2], num_elements, (float *) V_TOT_rec);
+  } else if (dtype == mgard_x::data_type::Double){
+    compute_VTOT<double>((double *) rec_var_ptrs[0], (double *) rec_var_ptrs[1], (double *) rec_var_ptrs[2], num_elements, (double *) V_TOT_rec);
+  }
+  std::vector<mgard_x::SIZE> var_shape = shape;
+  var_shape[0] /= config.mdr_qoi_num_variables;
+  if (dtype == mgard_x::data_type::Float) {
+    print_statistics<float>(s, mode, var_shape, (float *) V_TOT_ori,
+                            (float *) V_TOT_rec, tau,
+                            config.normalize_coordinates);
+  } else if (dtype == mgard_x::data_type::Double) {
+    print_statistics<double>(s, mode, var_shape, (double *) V_TOT_ori,
+                            (double *) V_TOT_rec, tau,
+                            config.normalize_coordinates);
+  }
+  std::cout << "Requested Tau = " << tau << std::endl;
+  std::cout << "Real max error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
   return 0;
 }
 

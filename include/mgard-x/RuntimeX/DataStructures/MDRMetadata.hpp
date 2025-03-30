@@ -47,6 +47,9 @@ public:
   T_error loaded_tol, loaded_s;
   T_error requested_tol, requested_s;
   T_error prev_tol, prev_s;
+  uint32_t requested_size;
+  size_t num_elements;
+  double corresponding_error;
   std::vector<uint8_t> loaded_level_num_bitplanes;
   std::vector<uint8_t> requested_level_num_bitplanes;
   std::vector<uint8_t> prev_used_level_num_bitplanes;
@@ -70,7 +73,7 @@ public:
   }
 
   void PrintStatus() {
-    printf("Request tol: %f, s: %f\n", requested_tol, requested_s);
+    printf("Request size: %u, s: %f\n", requested_size, requested_s);
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
       printf("Level %d bitplanes: used [%2d] loaded [%2d] requested [%2d]\n",
              level_idx, prev_used_level_num_bitplanes[level_idx],
