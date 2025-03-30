@@ -209,6 +209,15 @@ public:
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // NegaBinaryGreedyBasedSizeInterpreter interpreter(estimator);
     }
+
+    for (uint8_t &n : mdr_metadata.requested_level_num_bitplanes) {
+      // Ensure requested bitplanes is a multiple of num_merged_bitplanes
+      // This ensure all each batch of merged bitplanes are used for
+      // Reconstruction. Otherwise, unsed bitplanes will not be guaranteed
+      // to be in memory in future reconstructions.
+      int m = Compressor::num_merged_bitplanes;
+      n = ((n - 1) / m + 1) * m;
+    }
     timer.end();
     timer.print("Preprocessing");
   }
