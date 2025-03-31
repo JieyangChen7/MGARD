@@ -59,7 +59,7 @@ __global__ void estimate_error_V_TOT(const T *Vx, const T *Vy, const T *Vz, size
                      + compute_bound_x_square((double)Vz[i], eb_Vz);
     double V_TOT_2 = Vx[i]*Vx[i] + Vy[i]*Vy[i] + Vz[i]*Vz[i];
     double e_V_TOT = compute_bound_square_root_x(V_TOT_2, e_V_TOT_2);
-    double V_TOT = sqrt(V_TOT_2);
+    // double V_TOT = sqrt(V_TOT_2);
     if (e_V_TOT > tolerance){
 			raise_flag(tolerance_exceed_flag);
 			return;
