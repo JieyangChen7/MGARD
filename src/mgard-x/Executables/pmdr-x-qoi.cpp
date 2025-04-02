@@ -12,7 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <iomanip>
+#include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -235,9 +236,8 @@ size_t read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 }
 
 size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
-                mgard_x::MDR::RefactoredData &refactored_data,
-                std::string input, bool initialize_signs,
-                mgard_x::Config config) {
+              mgard_x::MDR::RefactoredData &refactored_data, std::string input,
+              bool initialize_signs, mgard_x::Config config) {
 
   size_t size_read = 0;
   int num_subdomains = refactored_metadata.metadata.size();
@@ -263,7 +263,8 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
             level_size, config);
         if (level_size != refactored_metadata.metadata[subdomain_id]
                               .level_sizes[level_idx][bitplane_idx]) {
-          throw std::runtime_error("mdr component size mismatch.");
+          std::cout << "mdr component size mismatch.";
+          exit(-1);
         }
         size_read += level_size;
       }
@@ -301,6 +302,16 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
                     std::string domain_decomposition, mgard_x::SIZE block_size,
                     enum mgard_x::device_type dev_type, int verbose,
                     mgard_x::SIZE max_memory_footprint) {
+
+  int rank = std::stoi(std::getenv("SLURM_PROCID"));
+  std::ostringstream oss;
+  oss << "JHTDB_" << std::setw(1) << std::setfill('0') << rank;
+  std::string filename = oss.str() + ".dat";
+  if (!input_file.empty() && input_file.back() == '/')  input_file += filename;
+  else input_file += "/" + filename;
+  filename = oss.str();
+  if (!output_file.empty() && output_file.back() == '/') output_file += filename;
+  else output_file += "/" + filename;
 
   mgard_x::Config config;
   config.normalize_coordinates = false;
@@ -371,7 +382,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   write_mdr(refactored_metadata, refactored_data, output_file);
 
   mgard_x::unpin_memory(original_data, config);
-  delete[] (T *)original_data;
+  delete[](T *) original_data;
 
   return 0;
 }
@@ -414,6 +425,16 @@ int launch_reconstruct(std::string input_file, std::string output_file,
                        enum mgard_x::error_bound_type mode,
                        bool adaptive_resolution,
                        enum mgard_x::device_type dev_type, int verbose) {
+
+  int rank = std::stoi(std::getenv("SLURM_PROCID"));
+  std::ostringstream oss;
+  oss << "JHTDB_" << std::setw(1) << std::setfill('0') << rank;
+  std::string filename = oss.str();
+  if (!input_file.empty() && input_file.back() == '/')  input_file += filename;
+  else input_file += "/" + filename;
+  filename = oss.str() + ".dat";
+  if (!original_file.empty() && original_file.back() == '/') original_file += filename;
+  else original_file += "/" + filename;
 
   double bitrate = 0;
   mgard_x::Config config;

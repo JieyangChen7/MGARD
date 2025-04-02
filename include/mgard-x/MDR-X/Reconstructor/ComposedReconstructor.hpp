@@ -188,33 +188,31 @@ public:
       level_errors = level_abs_errors;
 
       if constexpr (std::is_same<Basis, Orthogonal>::value) {
-        using Estimator = MaxErrorEstimatorOB<T_data>;
-        Estimator estimator(D);
-        using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
-        using NegaBinaryInterp =
-            NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
-        using Interpreter =
-            typename std::conditional<NegaBinary, NegaBinaryInterp,
-                                      BinaryInterp>::type;
-        Interpreter interpreter(estimator);
-        retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
-            mdr_metadata.corresponding_error,
-            mdr_metadata.requested_level_num_bitplanes);
+        MaxErrorEstimatorOB<T_data> estimator(D);
+        GreedyBasedSizeInterpreter interpreter(estimator);
+        if(mdr_metadata.segmented) {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
+              mdr_metadata.corresponding_error,
+              mdr_metadata.requested_level_num_bitplanes);
+        } else {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+              mdr_metadata.requested_level_num_bitplanes);
+        }
       } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
-        using Estimator = MaxErrorEstimatorHB<T_data>;
-        Estimator estimator;
-        using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
-        using NegaBinaryInterp =
-            NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
-        using Interpreter =
-            typename std::conditional<NegaBinary, NegaBinaryInterp,
-                                      BinaryInterp>::type;
-        Interpreter interpreter(estimator);
-        retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
-            mdr_metadata.corresponding_error,
-            mdr_metadata.requested_level_num_bitplanes);
+        MaxErrorEstimatorHB<T_data> estimator;
+        GreedyBasedSizeInterpreter interpreter(estimator);
+        if(mdr_metadata.segmented) {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
+              mdr_metadata.corresponding_error,
+              mdr_metadata.requested_level_num_bitplanes);
+        } else {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+              mdr_metadata.requested_level_num_bitplanes);
+        }
       }
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // RoundRobinSizeInterpreter interpreter(estimator);

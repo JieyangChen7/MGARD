@@ -31,6 +31,7 @@ public:
   std::vector<Byte> header;
   std::vector<MDRMetadata> metadata;
   SIZE num_subdomains;
+  size_t total_size = 0;
 
   template <typename T> void Serialize(Byte *&ptr, T *data, SIZE bytes) {
     memcpy(ptr, (Byte *)data, bytes);
