@@ -145,6 +145,11 @@ if (MGARD_ENABLE_SERIAL OR
     target_include_directories(mdr-x-qoi PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                                               $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
     install(TARGETS mdr-x-qoi)
+    add_executable(pmdr-x-qoi ${CMAKE_CURRENT_SOURCE_DIR}/src/mgard-x/Executables/pmdr-x-qoi.cpp)
+    target_link_libraries(pmdr-x-qoi mgard-library  ${CMAKE_DL_LIBS})
+    target_include_directories(pmdr-x-qoi PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                                              $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
+    install(TARGETS pmdr-x-qoi)
   endif()
 endif()
 
