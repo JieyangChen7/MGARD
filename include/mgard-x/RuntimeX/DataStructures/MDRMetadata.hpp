@@ -42,6 +42,7 @@ public:
   std::vector<std::vector<T_error>> level_squared_errors;
   std::vector<std::vector<SIZE>> level_sizes;
   std::vector<SIZE> level_num_elems;
+  bool segmented = false;
 
   // For progressive reconstruction
   T_error loaded_tol, loaded_s;

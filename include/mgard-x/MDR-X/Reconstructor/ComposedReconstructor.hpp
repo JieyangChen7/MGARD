@@ -183,17 +183,29 @@ public:
       if constexpr (std::is_same<Basis, Orthogonal>::value) {
         MaxErrorEstimatorOB<T_data> estimator(D);
         GreedyBasedSizeInterpreter interpreter(estimator);
-        retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
-            mdr_metadata.corresponding_error,
-            mdr_metadata.requested_level_num_bitplanes);
+        if(mdr_metadata.segmented) {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
+              mdr_metadata.corresponding_error,
+              mdr_metadata.requested_level_num_bitplanes);
+        } else {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+              mdr_metadata.requested_level_num_bitplanes);
+        }
       } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
         MaxErrorEstimatorHB<T_data> estimator;
         GreedyBasedSizeInterpreter interpreter(estimator);
-        retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
-            mdr_metadata.corresponding_error,
-            mdr_metadata.requested_level_num_bitplanes);
+        if(mdr_metadata.segmented) {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
+              mdr_metadata.corresponding_error,
+              mdr_metadata.requested_level_num_bitplanes);
+        } else {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+              mdr_metadata.requested_level_num_bitplanes);
+        }
       }
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // RoundRobinSizeInterpreter interpreter(estimator);

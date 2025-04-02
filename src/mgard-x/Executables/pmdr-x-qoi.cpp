@@ -12,7 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <iomanip>
+#include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -302,6 +303,16 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
                     enum mgard_x::device_type dev_type, int verbose,
                     mgard_x::SIZE max_memory_footprint) {
 
+  int rank = std::stoi(std::getenv("SLURM_PROCID"));
+  std::ostringstream oss;
+  oss << "JHTDB_" << std::setw(1) << std::setfill('0') << rank;
+  std::string filename = oss.str() + ".dat";
+  if (!input_file.empty() && input_file.back() == '/')  input_file += filename;
+  else input_file += "/" + filename;
+  filename = oss.str();
+  if (!output_file.empty() && output_file.back() == '/') output_file += filename;
+  else output_file += "/" + filename;
+
   mgard_x::Config config;
   config.normalize_coordinates = false;
   config.log_level = verbose_to_log_level(verbose);
@@ -414,6 +425,16 @@ int launch_reconstruct(std::string input_file, std::string output_file,
                        enum mgard_x::error_bound_type mode,
                        bool adaptive_resolution,
                        enum mgard_x::device_type dev_type, int verbose) {
+
+  int rank = std::stoi(std::getenv("SLURM_PROCID"));
+  std::ostringstream oss;
+  oss << "JHTDB_" << std::setw(1) << std::setfill('0') << rank;
+  std::string filename = oss.str();
+  if (!input_file.empty() && input_file.back() == '/')  input_file += filename;
+  else input_file += "/" + filename;
+  filename = oss.str() + ".dat";
+  if (!original_file.empty() && original_file.back() == '/') original_file += filename;
+  else original_file += "/" + filename;
 
   double bitrate = 0;
   mgard_x::Config config;
