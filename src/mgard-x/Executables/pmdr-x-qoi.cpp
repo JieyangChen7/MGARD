@@ -12,8 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <iomanip>
-#include <sstream>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -21,7 +20,7 @@
 #include "mdr_x.hpp"
 #include "mgard-x/RuntimeX/Utilities/Log.h"
 #include "mgard-x/Utilities/ErrorCalculator.h"
-
+#include <mpi.h>
 #include "ArgumentParser.h"
 using namespace std::chrono;
 
@@ -235,6 +234,54 @@ size_t read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
   return metadata_size;
 }
 
+// size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
+//               mgard_x::MDR::RefactoredData &refactored_data, std::string input,
+//               bool initialize_signs, mgard_x::Config config) {
+
+//   size_t size_read = 0;
+//   int num_subdomains = refactored_metadata.metadata.size();
+//   for (int subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
+//     mgard_x::MDR::MDRMetadata metadata =
+//         refactored_metadata.metadata[subdomain_id];
+//     int num_levels = metadata.level_sizes.size();
+//     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
+//       int num_bitplanes = metadata.level_sizes[level_idx].size();
+//       int loaded_bitplanes = metadata.loaded_level_num_bitplanes[level_idx];
+//       int reqested_bitplanes =
+//           metadata.requested_level_num_bitplanes[level_idx];
+//       for (int bitplane_idx = loaded_bitplanes;
+//            bitplane_idx < reqested_bitplanes; bitplane_idx++) {
+//         std::string filename = "component_" + std::to_string(subdomain_id) +
+//                                "_" + std::to_string(level_idx) + "_" +
+//                                std::to_string(bitplane_idx);
+//         mgard_x::SIZE level_size = readfile(
+//             input + "/" + filename,
+//             refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
+//         mgard_x::pin_memory(
+//             refactored_data.data[subdomain_id][level_idx][bitplane_idx],
+//             level_size, config);
+//         if (level_size != refactored_metadata.metadata[subdomain_id]
+//                               .level_sizes[level_idx][bitplane_idx]) {
+//           std::cout << "mdr component size mismatch.";
+//           exit(-1);
+//         }
+//         size_read += level_size;
+//       }
+//       if (initialize_signs) {
+//         // level sign
+//         refactored_data.level_signs[subdomain_id][level_idx] =
+//             (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
+//         memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
+//                sizeof(bool) * metadata.level_num_elems[level_idx]);
+//         mgard_x::pin_memory(
+//             refactored_data.level_signs[subdomain_id][level_idx],
+//             sizeof(bool) * metadata.level_num_elems[level_idx], config);
+//       }
+//     }
+//   }
+//   return size_read;
+// }
+
 size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
               mgard_x::MDR::RefactoredData &refactored_data, std::string input,
               bool initialize_signs, mgard_x::Config config) {
@@ -247,11 +294,8 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
     int num_levels = metadata.level_sizes.size();
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
       int num_bitplanes = metadata.level_sizes[level_idx].size();
-      int loaded_bitplanes = metadata.loaded_level_num_bitplanes[level_idx];
-      int reqested_bitplanes =
-          metadata.requested_level_num_bitplanes[level_idx];
-      for (int bitplane_idx = loaded_bitplanes;
-           bitplane_idx < reqested_bitplanes; bitplane_idx++) {
+      for (int bitplane_idx = 0;
+           bitplane_idx < num_bitplanes; bitplane_idx++) {
         std::string filename = "component_" + std::to_string(subdomain_id) +
                                "_" + std::to_string(level_idx) + "_" +
                                std::to_string(bitplane_idx);
@@ -302,16 +346,6 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
                     std::string domain_decomposition, mgard_x::SIZE block_size,
                     enum mgard_x::device_type dev_type, int verbose,
                     mgard_x::SIZE max_memory_footprint) {
-
-  int rank = std::stoi(std::getenv("SLURM_PROCID"));
-  std::ostringstream oss;
-  oss << "JHTDB_" << std::setw(1) << std::setfill('0') << rank;
-  std::string filename = oss.str() + ".dat";
-  if (!input_file.empty() && input_file.back() == '/')  input_file += filename;
-  else input_file += "/" + filename;
-  filename = oss.str();
-  if (!output_file.empty() && output_file.back() == '/') output_file += filename;
-  else output_file += "/" + filename;
 
   mgard_x::Config config;
   config.normalize_coordinates = false;
@@ -426,16 +460,6 @@ int launch_reconstruct(std::string input_file, std::string output_file,
                        bool adaptive_resolution,
                        enum mgard_x::device_type dev_type, int verbose) {
 
-  int rank = std::stoi(std::getenv("SLURM_PROCID"));
-  std::ostringstream oss;
-  oss << "JHTDB_" << std::setw(1) << std::setfill('0') << rank;
-  std::string filename = oss.str();
-  if (!input_file.empty() && input_file.back() == '/')  input_file += filename;
-  else input_file += "/" + filename;
-  filename = oss.str() + ".dat";
-  if (!original_file.empty() && original_file.back() == '/') original_file += filename;
-  else original_file += "/" + filename;
-
   double bitrate = 0;
   mgard_x::Config config;
   config.normalize_coordinates = false;
@@ -519,17 +543,20 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
     refactored_metadata.metadata[i].num_elements = num_elements;
     refactored_metadata.metadata[i].requested_tol = tau;
-    refactored_metadata.metadata[i].requested_size = 50000;
+    refactored_metadata.metadata[i].requested_size = 10000000;
     refactored_metadata.metadata[i].requested_s = s;
     refactored_metadata.metadata[i].segmented = true;
   }
   mgard_x::MDR::MDRequest(refactored_metadata, config);
+  refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
+                                    + refactored_metadata.metadata[1].retrieved_size
+                                    + refactored_metadata.metadata[2].retrieved_size;
   // for (auto &metadata : refactored_metadata.metadata) {
   //   metadata.PrintStatus();
   // }
   size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
             true, config);
-  refactored_metadata.total_size += size_read;
+  // refactored_metadata.total_size += size_read;
 
   mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
                               reconstructed_data, config, false);
@@ -590,12 +617,24 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 bool try_refactoring(int argc, char *argv[]) {
   if (!has_arg(argc, argv, "-z", "--refactor"))
     return false;
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  std::ostringstream oss;
+  // oss << "JHTDB_" << rank;
+  oss << rank;
+  
   mgard_x::log::info("Mode: refactor", true);
 
   std::string input_file =
       get_arg<std::string>(argc, argv, "Original data", "-i", "--input");
+  // if (!input_file.empty() && input_file.back() == '/') input_file += oss.str() + ".dat";
+  // else input_file += "/" + oss.str() + ".dat";
   std::string output_file =
       get_arg<std::string>(argc, argv, "Refactored data", "-o", "--output");
+  // if (!output_file.empty() && output_file.back() == '/') output_file += oss.str();
+  // else output_file += "/" + oss.str();
+  output_file += oss.str();
   enum mgard_x::data_type dtype = get_data_type(argc, argv);
   std::vector<mgard_x::SIZE> shape =
       get_args<mgard_x::SIZE>(argc, argv, "Dimensions", "-dim", "--dimension");
@@ -638,9 +677,16 @@ bool try_refactoring(int argc, char *argv[]) {
 bool try_reconstruction(int argc, char *argv[]) {
   if (!has_arg(argc, argv, "-x", "--reconstruct"))
     return false;
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  std::ostringstream oss;
+  // oss << "JHTDB_" << rank;
+  oss << rank;
   mgard_x::log::info("mode: reconstruct", true);
   std::string input_file =
       get_arg<std::string>(argc, argv, "Refactored data", "-i", "--input");
+  // if (!input_file.empty() && input_file.back() == '/') input_file += oss.str();
+  // else input_file += "/" + oss.str();
   std::string output_file =
       get_arg<std::string>(argc, argv, "Reconstructed data", "-o", "--output");
   // default is none (means original data not provided)
@@ -650,6 +696,9 @@ bool try_reconstruction(int argc, char *argv[]) {
   if (has_arg(argc, argv, "-g", "--orignal")) {
     original_file =
         get_arg<std::string>(argc, argv, "Original data", "-g", "--orignal");
+    // if (!original_file.empty() && original_file.back() == '/') original_file += oss.str() + ".dat";
+    // else original_file += "/" + oss.str() + ".dat";
+    original_file += oss.str() + ".dat";
     dtype = get_data_type(argc, argv);
     shape = get_args<mgard_x::SIZE>(argc, argv, "Dimensions", "-dim",
                                     "--dimension");
@@ -689,8 +738,12 @@ bool try_reconstruction(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
 
+  MPI_Init(&argc, &argv);
+
   if (!try_refactoring(argc, argv) && !try_reconstruction(argc, argv)) {
     print_usage_message("");
   }
+
+  MPI_Finalize();
   return 0;
 }
