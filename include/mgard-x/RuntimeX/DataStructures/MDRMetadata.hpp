@@ -43,6 +43,7 @@ public:
   std::vector<std::vector<SIZE>> level_sizes;
   std::vector<SIZE> level_num_elems;
   bool segmented = false;
+  size_t retrieved_size = 0;
 
   // For progressive reconstruction
   T_error loaded_tol, loaded_s;

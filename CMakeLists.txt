@@ -39,7 +39,7 @@ option(MGARD_ENABLE_HIP "Enable HIP support" OFF)
 option(MGARD_ENABLE_SYCL "Enable SYCL support" OFF)
 option(MGARD_ENABLE_LEGACY_CUDA "Enable legacy CUDA support" OFF)
 option(MGARD_ENABLE_AUTO_TUNING "Enable auto tuning" OFF)
-option(MGARD_ENABLE_MDR "Enable MDR" OFF)
+option(MGARD_ENABLE_MDR "Enable MDR" ON)
 option(MGARD_ENABLE_EXTERNAL_COMPRESSOR "Enable external compressor" OFF)
 
 option(MGARD_ENABLE_CLI "Build executable." OFF)
@@ -145,8 +145,9 @@ if (MGARD_ENABLE_SERIAL OR
     target_include_directories(mdr-x-qoi PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                                               $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
     install(TARGETS mdr-x-qoi)
+    find_package(MPI REQUIRED)
     add_executable(pmdr-x-qoi ${CMAKE_CURRENT_SOURCE_DIR}/src/mgard-x/Executables/pmdr-x-qoi.cpp)
-    target_link_libraries(pmdr-x-qoi mgard-library  ${CMAKE_DL_LIBS})
+    target_link_libraries(pmdr-x-qoi mgard-library MPI::MPI_CXX ${CMAKE_DL_LIBS})
     target_include_directories(pmdr-x-qoi PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                                               $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
     install(TARGETS pmdr-x-qoi)
