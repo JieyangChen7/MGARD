@@ -17,7 +17,7 @@ public:
   MGARDX_CONT
   BPEncoderOptV1Functor() {}
   MGARDX_CONT
-  BPEncoderOptV1Functor(SIZE n, SIZE num_bitplanes, SIZE exp,
+  BPEncoderOptV1Functor(SIZE n, int num_bitplanes, int exp,
                         SubArray<1, T_data, DeviceType> v,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -80,7 +80,7 @@ public:
   }
 
   MGARDX_EXEC void error_collect_binary(T_data *shifted_data, T_error *errors,
-                                        SIZE num_bitplanes, SIZE exp) {
+                                        int num_bitplanes, int exp) {
 
     int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
                         FunctorBase<DeviceType>::GetBlockDimX() +
@@ -112,8 +112,8 @@ public:
   }
 
   MGARDX_EXEC void error_collect_negabinary(T_data *shifted_data,
-                                            T_error *errors, SIZE num_bitplanes,
-                                            SIZE exp) {
+                                            T_error *errors, int num_bitplanes,
+                                            int exp) {
 
     int batch_idx = FunctorBase<DeviceType>::GetBlockIdX() *
                         FunctorBase<DeviceType>::GetBlockDimX() +
@@ -282,8 +282,8 @@ public:
 private:
   // parameters
   SIZE n;
-  SIZE num_bitplanes;
-  SIZE exp;
+  int num_bitplanes;
+  int exp;
   SubArray<1, T_data, DeviceType> v;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<2, T_error, DeviceType> level_errors_workspace;
@@ -299,7 +299,7 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   MGARDX_CONT
-  BPEncoderOptV1Kernel(SIZE n, SIZE num_bitplanes, SIZE exp,
+  BPEncoderOptV1Kernel(SIZE n, int num_bitplanes, int exp,
                        SubArray<1, T_data, DeviceType> v,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -332,8 +332,8 @@ public:
 
 private:
   SIZE n;
-  SIZE num_bitplanes;
-  SIZE exp;
+  int num_bitplanes;
+  int exp;
   SubArray<1, T_data, DeviceType> v;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<2, T_error, DeviceType> level_errors_workspace;
@@ -346,8 +346,8 @@ public:
   MGARDX_CONT
   BPDecoderOptV1Functor() {}
   MGARDX_CONT
-  BPDecoderOptV1Functor(SIZE n, SIZE starting_bitplane, SIZE num_bitplanes,
-                        SIZE exp,
+  BPDecoderOptV1Functor(SIZE n, SIZE starting_bitplane, int num_bitplanes,
+                        int exp,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<1, bool, DeviceType> signs,
                         SubArray<1, T_data, DeviceType> v)
@@ -479,8 +479,8 @@ private:
   // parameters
   SIZE n;
   SIZE starting_bitplane;
-  SIZE num_bitplanes;
-  SIZE exp;
+  int num_bitplanes;
+  int exp;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<1, bool, DeviceType> signs;
   SubArray<1, T_data, DeviceType> v;
@@ -495,8 +495,8 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   MGARDX_CONT
-  BPDecoderOptV1Kernel(SIZE n, SIZE starting_bitplane, SIZE num_bitplanes,
-                       SIZE exp,
+  BPDecoderOptV1Kernel(SIZE n, SIZE starting_bitplane, int num_bitplanes,
+                       int exp,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<1, bool, DeviceType> signs,
                        SubArray<1, T_data, DeviceType> v)
@@ -530,8 +530,8 @@ public:
 private:
   SIZE n;
   SIZE starting_bitplane;
-  SIZE num_bitplanes;
-  SIZE exp;
+  int num_bitplanes;
+  int exp;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<1, bool, DeviceType> signs;
   SubArray<1, T_data, DeviceType> v;
@@ -615,7 +615,7 @@ public:
     return size;
   }
 
-  void encode(SIZE n, SIZE num_bitplanes, int32_t exp,
+  void encode(SIZE n, int num_bitplanes, int32_t exp,
               SubArray<1, T_data, DeviceType> v,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
               SubArray<1, T_error, DeviceType> level_errors, int queue_idx) {
@@ -641,12 +641,12 @@ public:
     }
   }
 
-  void decode(SIZE n, SIZE num_bitplanes, int32_t exp,
+  void decode(SIZE n, int num_bitplanes, int32_t exp,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes, int level,
               SubArray<1, T_data, DeviceType> v, int queue_idx) {}
 
   // decode the data and record necessary information for progressiveness
-  void progressive_decode(SIZE n, SIZE starting_bitplanes, SIZE num_bitplanes,
+  void progressive_decode(SIZE n, SIZE starting_bitplanes, int num_bitplanes,
                           int32_t exp,
                           SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                           SubArray<1, bool, DeviceType> level_signs, int level,
