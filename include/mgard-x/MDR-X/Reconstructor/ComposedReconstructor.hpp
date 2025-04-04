@@ -188,6 +188,7 @@ public:
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
               mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
+          mdr_metadata.retrieved_size = std::accumulate(retrieve_sizes.begin(), retrieve_sizes.end(), 0);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
@@ -201,6 +202,7 @@ public:
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
               mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
+          mdr_metadata.retrieved_size = std::accumulate(retrieve_sizes.begin(), retrieve_sizes.end(), 0);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
