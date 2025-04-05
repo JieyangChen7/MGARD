@@ -200,6 +200,21 @@ void Array<D, T, DeviceType, Pitched, Managed>::load(const T *data, SIZE ld,
   MemoryManager<DeviceType>::CopyND(dv, __ldvs[D - 1], data, ld, __shape[D - 1],
                                     linearized_width, queue_idx);
 }
+template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
+void Array<D, T, DeviceType, Pitched, Managed>::hostAllocate(bool keep,
+                                                       int queue_idx) {
+  log::dbg("Calling Array::hostAllocate");
+  if (!device_allocated) {
+    std::cout << log::log_err << "device buffer not initialized.\n";
+    exit(-1);
+  }
+  if (!host_allocated) {
+    MemoryManager<DeviceType>::MallocHost(hv, __shape[D - 1] * linearized_width,
+                                          queue_idx);
+    host_allocated = true;
+  }
+  keepHostCopy = keep;
+}
 
 template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 T *Array<D, T, DeviceType, Pitched, Managed>::hostCopy(bool keep,

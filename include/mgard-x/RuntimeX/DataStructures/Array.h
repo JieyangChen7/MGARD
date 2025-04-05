@@ -32,6 +32,7 @@ public:
   ~Array();
   void load(const T *data, SIZE ld = 0,
             int queue_idx = MGARDX_SYNCHRONIZED_QUEUE);
+  void hostAllocate(bool keep = false, int queue_idx = MGARDX_SYNCHRONIZED_QUEUE);
   T *hostCopy(bool keep = false, int queue_idx = MGARDX_SYNCHRONIZED_QUEUE);
   T *data(SIZE &ld);
   SIZE &shape(DIM d);
