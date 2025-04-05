@@ -94,7 +94,7 @@ public:
           SubArray<1, T_data, DeviceType>(level_data_array[level_idx]);
     }
     abs_max_result_array.resize({1}, queue_idx);
-    abs_max_result_array.hostCopy(false, queue_idx);
+    abs_max_result_array.hostAllocate(false, queue_idx);
     DeviceCollective<DeviceType>::AbsMax(
         hierarchy.level_num_elems(hierarchy.l_target()),
         SubArray<1, T_data, DeviceType>(), SubArray<1, T_data, DeviceType>(),
