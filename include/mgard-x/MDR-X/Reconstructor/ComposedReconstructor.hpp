@@ -136,6 +136,26 @@ public:
     return size;
   }
 
+  static std::vector<std::vector<SIZE>>
+  EstimateMaxBitplaneSizes(Hierarchy<D, T_data, DeviceType> &hierarchy) {
+    std::vector<std::vector<SIZE>> estimation;
+    estimation.resize(hierarchy.l_target() + 1);
+    for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
+      estimation[level_idx].resize(Encoder::MAX_BITPLANES);
+      for (int bitplane_idx = 0; bitplane_idx < Encoder::MAX_BITPLANES;
+           bitplane_idx++) {
+        if (bitplane_idx % Compressor::num_merged_bitplanes == 0) {
+          estimation[level_idx][bitplane_idx] =
+              Encoder::bitplane_length(hierarchy.level_num_elems(level_idx)) *
+              sizeof(T_bitplane) * Compressor::num_merged_bitplanes;
+        } else {
+          estimation[level_idx][bitplane_idx] = 1;
+        }
+      }
+    }
+    return estimation;
+  }
+
   void GenerateRequest(MDRMetadata &mdr_metadata) {
     mgard_x::Timer timer;
     timer.start();

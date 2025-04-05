@@ -32,14 +32,16 @@ public:
   template <typename RefactorType, typename HierarchyType>
   void Resize(RefactorType &refactor, HierarchyType &hierarchy, int queue_idx) {
     std::vector<std::vector<SIZE>> estimation =
-        RefactorType::output_size_estimation(hierarchy);
+        RefactorType::EstimateMaxBitplaneSizes(hierarchy);
     SIZE num_levels = estimation.size();
     SIZE num_bitplanes = estimation[0].size();
     std::vector<SIZE> level_num_elems = hierarchy.level_num_elems();
     compressed_bitplanes.resize(num_levels);
-    level_signs.resize(num_levels); // no need to initialize level_signs
+    level_signs.resize(num_levels);
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
       compressed_bitplanes[level_idx].resize(num_bitplanes);
+      level_signs[level_idx].resize({hierarchy.level_num_elems(level_idx)},
+                                    queue_idx);
       for (int bitplane_idx = 0; bitplane_idx < num_bitplanes; bitplane_idx++) {
         compressed_bitplanes[level_idx][bitplane_idx].resize(
             {estimation[level_idx][bitplane_idx]}, queue_idx);

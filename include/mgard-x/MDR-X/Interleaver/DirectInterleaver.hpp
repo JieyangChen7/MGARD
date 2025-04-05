@@ -70,11 +70,13 @@ public:
   void Adapt(Hierarchy<D, T, DeviceType> &hierarchy, int queue_idx) {
     this->initialized = true;
     this->hierarchy = &hierarchy;
-    if (initialized) {
+    if (levels_decomposed_data_device_length < hierarchy.l_target() + 1) {
       MemoryManager<DeviceType>::Free(levels_decomposed_data_device, queue_idx);
-    }
-    MemoryManager<DeviceType>::Malloc1D(levels_decomposed_data_device,
+      MemoryManager<DeviceType>::Malloc1D(levels_decomposed_data_device,
                                         hierarchy.l_target() + 1, queue_idx);
+      levels_decomposed_data_device_length = hierarchy.l_target() + 1;
+    }
+    
   }
   ~DirectInterleaver() {
     if (initialized) {
@@ -132,6 +134,7 @@ private:
   bool initialized;
   Hierarchy<D, T, DeviceType> *hierarchy;
   SubArray<1, T, DeviceType> *levels_decomposed_data_device = nullptr;
+  SIZE levels_decomposed_data_device_length = 0;
 };
 
 } // namespace MDR

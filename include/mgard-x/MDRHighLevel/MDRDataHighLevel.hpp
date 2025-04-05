@@ -93,7 +93,7 @@ public:
       Hierarchy<D, T, DeviceType> hierarchy(
           domain_decomposer.subdomain_shape(id), config);
       std::vector<std::vector<SIZE>> estimation =
-          RefactorType::output_size_estimation(hierarchy);
+          RefactorType::EstimateMaxBitplaneSizes(hierarchy);
       SIZE num_levels = estimation.size();
       SIZE num_bitplanes = estimation[0].size();
       data[id].resize(num_levels);
