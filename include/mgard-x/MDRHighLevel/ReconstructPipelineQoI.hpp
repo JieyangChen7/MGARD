@@ -143,9 +143,9 @@ void reconstruct_pipeline_qoi(
         eb_Vy = refactored_metadata.metadata[1].corresponding_error;
         eb_Vz = refactored_metadata.metadata[2].corresponding_error;
         // std::cout << "eb_Vx: " << eb_Vx << ", eb_Vy: " << eb_Vy << ", eb_Vz: " << eb_Vz << ", requested QoI error: " << tol << std::endl;
-        // uint32_t usr_def_requested_size = read_file_tmp();
+        uint32_t usr_def_requested_size = read_file_tmp();
         for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-          // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
+          refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
           reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
         }
         // for (auto &metadata : refactored_metadata.metadata) {
