@@ -268,6 +268,50 @@ public:
     timer.print("Interpolation");
   }
 
+  void LoadMetadata(MDRMetadata &mdr_metadata, MDRData<DeviceType> &mdr_data,
+                    int queue_idx) {
+    for (int level_idx = 0; level_idx <= mdr_metadata.CurrFinalLevel(); level_idx++) {
+      level_num_bitplanes[level_idx] =
+          mdr_metadata.loaded_level_num_bitplanes[level_idx] -
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx];
+      level_signs_subarray[level_idx] =
+          SubArray<1, bool, DeviceType>(mdr_data.level_signs[level_idx]);
+      
+      T_data abs_max = (T_data)mdr_metadata.level_error_bounds[level_idx];
+      MemoryManager<DeviceType>::Copy1D(abs_max_array[level_idx].data(), &abs_max, 1, queue_idx);
+    }
+  }
+
+  void Decompress(MDRMetadata &mdr_metadata,
+                           MDRData<DeviceType> &mdr_data, int queue_idx) {
+
+    Timer timer;
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.start();
+    }
+    for (int level_idx = 0; level_idx <= mdr_metadata.CurrFinalLevel(); level_idx++) {
+      // Number of bitplanes need to be retrieved in addition to previously
+      // already retrieved bitplanes
+      SIZE num_bitplanes =
+          mdr_metadata.loaded_level_num_bitplanes[level_idx] -
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx];
+      // Decompress bitplanes: compressed_bitplanes[level_idx] -->
+      // encoded_bitplanes
+      compressor.decompress_level(
+          mdr_data.compressed_bitplanes[level_idx],
+          encoded_bitplanes_subarray[level_idx],
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx], level_num_bitplanes[level_idx],
+          level_idx, queue_idx);
+    }
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.end();
+      timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.clear();
+      timer.start();
+    }
+  }
   void ProgressiveReconstruct(MDRMetadata &mdr_metadata,
                               MDRData<DeviceType> &mdr_data,
                               bool adaptive_resolution,
@@ -284,8 +328,8 @@ public:
     // Decompress and decode bitplanes of each level
     int prev_final_level = mdr_metadata.PrevFinalLevel();
     int curr_final_level = mdr_metadata.CurrFinalLevel();
-    log::info("Prev Final level: " + std::to_string(prev_final_level));
-    log::info("Curr Final level: " + std::to_string(curr_final_level));
+    // log::info("Prev Final level: " + std::to_string(prev_final_level));
+    // log::info("Curr Final level: " + std::to_string(curr_final_level));
 
     if (!adaptive_resolution) {
       curr_final_level = hierarchy->l_target();
@@ -295,40 +339,8 @@ public:
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.start();
     }
-    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
-      // Number of bitplanes need to be retrieved in addition to previously
-      // already retrieved bitplanes
-      SIZE num_bitplanes =
-          mdr_metadata.loaded_level_num_bitplanes[level_idx] -
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx];
-      // Decompress bitplanes: compressed_bitplanes[level_idx] -->
-      // encoded_bitplanes
-      compressor.decompress_level(
-          mdr_data.compressed_bitplanes[level_idx],
-          encoded_bitplanes_subarray[level_idx],
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx], num_bitplanes,
-          level_idx, queue_idx);
-    }
-    if (log::level & log::TIME) {
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer.end();
-      timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
-      timer.clear();
-      timer.start();
-    }
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
-      level_num_bitplanes[level_idx] =
-          mdr_metadata.loaded_level_num_bitplanes[level_idx] -
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx];
-      level_signs_subarray[level_idx] =
-          SubArray<1, bool, DeviceType>(mdr_data.level_signs[level_idx]);
-      
-      T_data abs_max = (T_data)mdr_metadata.level_error_bounds[level_idx];
-      MemoryManager<DeviceType>::Copy1D(abs_max_array[level_idx].data(), &abs_max, 1, queue_idx);
-    // }
-
-    // for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       encoder.progressive_decode(
           level_num_elems[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx],
@@ -338,14 +350,9 @@ public:
           level_data_subarray[level_idx], queue_idx);
     }
 
-    // batched_encoder.progressive_decode(
-    //     level_num_elems, mdr_metadata.prev_used_level_num_bitplanes,
-    //     level_num_bitplanes, exp, encoded_bitplanes_subarray,
-    //     level_signs_subarray, level_data_subarray, queue_idx);
-
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       if (level_num_bitplanes[level_idx] == 0) {
-        level_data_array[level_idx].memset(0);
+        level_data_array[level_idx].memset(0, queue_idx);
       }
     }
 
@@ -356,9 +363,6 @@ public:
       timer.clear();
       timer.start();
     }
-
-    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    compressor.decompress_release();
 
     partial_reconsctructed_data.resize(
         hierarchy->level_shape(curr_final_level));
