@@ -87,6 +87,7 @@ public:
     encoded_bitplanes_subarray.resize(hierarchy.l_target() + 1);
     level_num_bitplanes.resize(hierarchy.l_target() + 1);
     level_signs_subarray.resize(hierarchy.l_target() + 1);
+    abs_max_array.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
       encoded_bitplanes_array[level_idx].resize(
           {(SIZE)Encoder::MAX_BITPLANES,
@@ -95,6 +96,8 @@ public:
       encoded_bitplanes_subarray[level_idx] =
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
+      abs_max_array[level_idx].resize({1}, queue_idx);
+      abs_max_array[level_idx].hostAllocate(false, queue_idx);
     }
   }
 
@@ -315,21 +318,21 @@ public:
     }
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
-      int level_exp = 0;
-      frexp(mdr_metadata.level_error_bounds[level_idx], &level_exp);
-      exp[level_idx] = level_exp;
       level_num_bitplanes[level_idx] =
           mdr_metadata.loaded_level_num_bitplanes[level_idx] -
           mdr_metadata.prev_used_level_num_bitplanes[level_idx];
       level_signs_subarray[level_idx] =
           SubArray<1, bool, DeviceType>(mdr_data.level_signs[level_idx]);
-    }
+      
+      T_data abs_max = (T_data)mdr_metadata.level_error_bounds[level_idx];
+      MemoryManager<DeviceType>::Copy1D(abs_max_array[level_idx].data(), &abs_max, 1, queue_idx);
+    // }
 
-    for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
+    // for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       encoder.progressive_decode(
           level_num_elems[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx],
-          level_num_bitplanes[level_idx], exp[level_idx],
+          level_num_bitplanes[level_idx], SubArray(abs_max_array[level_idx]),
           encoded_bitplanes_subarray[level_idx],
           level_signs_subarray[level_idx], level_idx,
           level_data_subarray[level_idx], queue_idx);
@@ -436,6 +439,7 @@ private:
   std::vector<Array<2, T_bitplane, DeviceType>> encoded_bitplanes_array;
   std::vector<SubArray<2, T_bitplane, DeviceType>> encoded_bitplanes_subarray;
   std::vector<SubArray<1, bool, DeviceType>> level_signs_subarray;
+  std::vector<Array<1, T_data, DeviceType>> abs_max_array;
 
   bool prev_reconstructed;
 

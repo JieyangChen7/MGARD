@@ -129,11 +129,6 @@ public:
             workspace.status_subarray),
         queue_idx);
 
-    unsigned int max_CL;
-    MemoryManager<DeviceType>().Copy1D(&max_CL, workspace.CL_subarray(IDX(0)),
-                                       1, queue_idx);
-    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-
     unsigned int *_freq = new unsigned int[dict_size];
     unsigned int *_cl = new unsigned int[dict_size];
     MemoryManager<DeviceType>::Copy1D(_freq, workspace.freq_subarray.data(),
