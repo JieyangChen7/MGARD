@@ -10,7 +10,7 @@
 // #include "BPEncoderOptV2.hpp"
 // #include "BPEncoderOptV2a.hpp"
 // #include "BPEncoderOptV3.hpp"
-#include "GroupedBPEncoderGPU.hpp"
+// #include "GroupedBPEncoderGPU.hpp"
 // #include "GroupedWarpBPEncoderGPU.hpp"
 // #include "PerBitBPEncoderGPU.hpp"
 
