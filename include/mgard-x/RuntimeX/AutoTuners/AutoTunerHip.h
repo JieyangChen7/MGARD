@@ -69,17 +69,17 @@ public:
   static constexpr int lwqzk[num_types][num_dims] = {{4, 4, 3, 3, 3, 0, 2, 0, 0},
                                                       {2, 3, 3, 3, 3, 0, 2, 0, 0}};
 
-  static constexpr int lwdqzk[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
-                                                      {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  static constexpr int lwdqzk[num_types][num_dims] = {{4, 4, 3, 3, 3, 0, 2, 0, 0},
+                                                      {2, 3, 3, 3, 3, 0, 2, 0, 0}};
 
-  static constexpr int llk[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
-                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  static constexpr int llk[num_types][num_dims] = {{3, 3, 3, 3, 3, 3, 3, 3, 3},
+                                                    {3, 3, 3, 3, 3, 3, 3, 3, 3}};
 
-  static constexpr int sdck[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
-                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  static constexpr int sdck[num_types][num_dims] = {{3, 3, 3, 3, 3, 3, 3, 3, 3},
+                                                    {3, 3, 3, 3, 3, 3, 3, 3, 3}};
 
-  static constexpr int sdmtk[num_types][num_dims] = {{0, 0, 0, 0, 0, 0, 0, 0, 0},
-                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  static constexpr int sdmtk[num_types][num_dims] = {{3, 3, 3, 3, 3, 3, 3, 3, 3},
+                                                    {3, 3, 3, 3, 3, 3, 3, 3, 3}};
 
   static constexpr int encode[num_types][num_dims] = {{4, 4, 4, 4, 4, 4, 4, 4, 4},
                                                     {4, 4, 4, 4, 4, 4, 4, 4, 4}};
