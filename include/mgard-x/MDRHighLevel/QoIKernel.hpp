@@ -7,7 +7,7 @@
 
 #include "../Hierarchy/Hierarchy.h"
 #include "../RuntimeX/RuntimeX.h"
-
+#include <stdio.h>
 
 #ifndef MGARD_X_QoIKernel
 #define MGARD_X_QoIKernel
@@ -25,7 +25,7 @@ public:
   MGARDX_CONT QoIFunctor(SubArray<D, T, DeviceType> x,
                           SubArray<D, T, DeviceType> y,
                           SubArray<D, T, DeviceType> z,
-                          SubArray<D, bool, DeviceType> out,
+                          SubArray<D, double, DeviceType> out,
                           double eb_x,
                           double eb_y,
                           double eb_z,
@@ -64,7 +64,7 @@ public:
                       + compute_bound_x_square(Vz, eb_z);
       double V_TOT_2 = Vx * Vx + Vy * Vy + Vz * Vz;
       double e_V_TOT = compute_bound_square_root_x(V_TOT_2, e_V_TOT_2);
-      *out(i) = e_V_TOT > tolerance;
+      *out(i) = e_V_TOT;
       // double V_TOT = sqrt(V_TOT_2);
       // if (e_V_TOT > tolerance){
       //   raise_flag(tolerance_exceed_flag);
@@ -82,7 +82,7 @@ private:
   SubArray<D, T, DeviceType> x;
   SubArray<D, T, DeviceType> y;
   SubArray<D, T, DeviceType> z;
-  SubArray<D, bool, DeviceType> out;
+  SubArray<D, double, DeviceType> out;
   double eb_x;
   double eb_y;
   double eb_z;
@@ -94,12 +94,12 @@ template <DIM D, typename T, typename DeviceType>
 class QoIKernel : public Kernel {
 public:
   constexpr static std::string_view Name = "qoi kernel";
-  constexpr static bool EnableAutoTuning() { return false; }
+  constexpr static double EnableAutoTuning() { return false; }
   MGARDX_CONT
   QoIKernel(SubArray<D, T, DeviceType> x,
                           SubArray<D, T, DeviceType> y,
                           SubArray<D, T, DeviceType> z,
-                          SubArray<D, bool, DeviceType> out,
+                          SubArray<D, double, DeviceType> out,
                           double eb_x,
                           double eb_y,
                           double eb_z,
@@ -129,7 +129,7 @@ private:
   SubArray<D, T, DeviceType> x;
   SubArray<D, T, DeviceType> y;
   SubArray<D, T, DeviceType> z;
-  SubArray<D, bool, DeviceType> out;
+  SubArray<D, double, DeviceType> out;
   double eb_x;
   double eb_y;
   double eb_z;
@@ -140,7 +140,7 @@ template <DIM D, typename T, typename DeviceType>
 void Copy3D(SubArray<D, T, DeviceType> x,
             SubArray<D, T, DeviceType> y,
             SubArray<D, T, DeviceType> z,
-            SubArray<D, bool, DeviceType> out, int queue_idx) {
+            SubArray<D, double, DeviceType> out, int queue_idx) {
   
   DeviceLauncher<DeviceType>::Execute(QoIKernel<D, T, DeviceType>(x, y, z, out), queue_idx);
   
