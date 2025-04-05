@@ -68,7 +68,7 @@ void reconstruct_pipeline_qoi(
        curr_subdomain_id++) {
     SIZE next_subdomain_id;
     int next_buffer = current_buffer + 1;
-    int next_queue = (current_queue + 1) % 2;
+    int next_queue = current_queue + 1;
     HierarchyType &hierarchy = Cache::cache.GetHierarchyCache(
         domain_decomposer.subdomain_shape(curr_subdomain_id));
     log::info("Adapt Refactor to hierarchy");
@@ -105,12 +105,18 @@ void reconstruct_pipeline_qoi(
     log::info("Reconstruct subdomain " + std::to_string(curr_subdomain_id) +
               " with shape: " + ss.str());
 
+    reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+    reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+
+
     // Reconstruct
     reconstructor.ProgressiveReconstruct(
         refactored_metadata.metadata[curr_subdomain_id],
         mdr_data[current_buffer], config.mdr_adaptive_resolution,
         device_subdomain_buffer[current_buffer], current_queue);
 
+    DeviceRuntime<DeviceType>::SyncQueue(current_queue);
+    
     if (curr_subdomain_id == config.mdr_qoi_num_variables - 1) {
       DeviceRuntime<DeviceType>::SyncQueue(current_queue);
       // We are done with reconstructing all variables now
