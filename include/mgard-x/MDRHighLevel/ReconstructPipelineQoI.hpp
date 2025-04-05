@@ -57,7 +57,7 @@ void reconstruct_pipeline_qoi(
   for(int i=0; i<2; i++){
     error_final_out.resize({1}, i);
     DeviceCollective<DeviceType>::AbsMax( config.domain_decomposition_sizes[0] * config.domain_decomposition_sizes[1] * config.domain_decomposition_sizes[2],
-        SubArray<1, T, DeviceType>(), SubArray<1, T, DeviceType>(),
+        SubArray<1, double, DeviceType>(), SubArray<1, double, DeviceType>(),
         workspace, false, 0);
   }
 
@@ -68,6 +68,7 @@ void reconstruct_pipeline_qoi(
         "number of subdomains");
   }
 
+   log::info("Adjust device buffers");
   if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(0),
                                      domain_decomposer.uniform)) {
     Cache::cache.ClearHierarchyCache();
@@ -87,7 +88,11 @@ void reconstruct_pipeline_qoi(
     }
   }
 
-  log::info("Adjust device buffers");
+  HierarchyType &hierarchy = Cache::cache.GetHierarchyCache(
+          domain_decomposer.subdomain_shape(0));
+  reconstructor.Adapt(hierarchy, config, 0);
+
+ 
   int current_buffer = 0;
   int current_queue = 0;
 
@@ -119,10 +124,8 @@ void reconstruct_pipeline_qoi(
       log::info("Adapt Refactor to hierarchy");
       reconstructor.Adapt(hierarchy, config, current_queue);
       total_size += hierarchy.total_num_elems() * sizeof(T);
-
       reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
       reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
-      
       if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
         // Prefetch the next subdomain
         next_subdomain_id = curr_subdomain_id + 1;
@@ -194,14 +197,17 @@ void reconstruct_pipeline_qoi(
         //  }
         //  we set it true for testing only
 
-        if (log::level & log::TIME) qoi_timer.start();
+        if (log::level & log::TIME) {
+          DeviceRuntime<DeviceType>::SyncQueue(current_queue);
+          qoi_timer.start();
+        }
         DeviceLauncher<DeviceType>::Execute(
-          mgard_x::data_refactoring::multi_dimension::QoIKernel<D, T, DeviceType>(
-                                            SubArray(device_subdomain_buffer[0]), 
-                                            SubArray(device_subdomain_buffer[1]), 
-                                            SubArray(device_subdomain_buffer[2]), 
-                                            SubArray(error_out), eb_Vx, eb_Vy, eb_Vz, tol), 
-                                          current_queue);
+        mgard_x::data_refactoring::multi_dimension::QoIKernel<D, T, DeviceType>(
+                                          SubArray(device_subdomain_buffer[0]), 
+                                          SubArray(device_subdomain_buffer[1]), 
+                                          SubArray(device_subdomain_buffer[2]), 
+                                          SubArray(error_out), eb_Vx, eb_Vy, eb_Vz, tol), 
+                                        current_queue);
         SubArray<1, double, DeviceType> out_1d({config.domain_decomposition_sizes[0]*config.domain_decomposition_sizes[1]*config.domain_decomposition_sizes[2]}, error_out.data());
         // std::vector<double> out_vec(refactored_metadata.metadata[0].num_elements);
         // std::cout << "num_elements = " << refactored_metadata.metadata[0].num_elements << std::endl;
