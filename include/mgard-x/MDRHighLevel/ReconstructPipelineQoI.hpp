@@ -113,12 +113,16 @@ void reconstruct_pipeline_qoi(
 
       SIZE next_subdomain_id;
       int next_buffer = (current_buffer + 1) % domain_decomposer.num_subdomains();
-      int next_queue = (current_queue + 1) % 2;
+      int next_queue = (current_queue + 1) % domain_decomposer.num_subdomains();
       HierarchyType &hierarchy = Cache::cache.GetHierarchyCache(
           domain_decomposer.subdomain_shape(curr_subdomain_id));
       log::info("Adapt Refactor to hierarchy");
       reconstructor.Adapt(hierarchy, config, current_queue);
       total_size += hierarchy.total_num_elems() * sizeof(T);
+
+      reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+      reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+      
       if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
         // Prefetch the next subdomain
         next_subdomain_id = curr_subdomain_id + 1;
@@ -136,9 +140,9 @@ void reconstruct_pipeline_qoi(
         eb_Vy = refactored_metadata.metadata[1].corresponding_error;
         eb_Vz = refactored_metadata.metadata[2].corresponding_error;
         // std::cout << "eb_Vx: " << eb_Vx << ", eb_Vy: " << eb_Vy << ", eb_Vz: " << eb_Vz << ", requested QoI error: " << tol << std::endl;
-        uint32_t usr_def_requested_size = read_file_tmp();
+        // uint32_t usr_def_requested_size = read_file_tmp();
         for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-          refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
+          // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
           reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
         }
         // for (auto &metadata : refactored_metadata.metadata) {
@@ -161,6 +165,7 @@ void reconstruct_pipeline_qoi(
                 " with shape: " + ss.str());
 
       // Reconstruct
+      
       reconstructor.ProgressiveReconstruct(
           refactored_metadata.metadata[curr_subdomain_id],
           mdr_data[current_buffer], config.mdr_adaptive_resolution,
@@ -168,7 +173,7 @@ void reconstruct_pipeline_qoi(
 
       if (curr_subdomain_id == config.mdr_qoi_num_variables - 1) {
 
-        DeviceRuntime<DeviceType>::SyncQueue(current_queue);
+        // DeviceRuntime<DeviceType>::SyncQueue(current_queue);
 
         // for (int q = 0; q < 2; q++) {
         //   DeviceRuntime<DeviceType>::SyncQueue(q);
@@ -198,15 +203,16 @@ void reconstruct_pipeline_qoi(
                                             SubArray(error_out), eb_Vx, eb_Vy, eb_Vz, tol), 
                                           current_queue);
         SubArray<1, double, DeviceType> out_1d({config.domain_decomposition_sizes[0]*config.domain_decomposition_sizes[1]*config.domain_decomposition_sizes[2]}, error_out.data());
-        std::vector<double> out_vec(refactored_metadata.metadata[0].num_elements);
-        std::cout << "num_elements = " << refactored_metadata.metadata[0].num_elements << std::endl;
-        std::cout << "out_vec.data() = " << out_vec.data() << std::endl;
-        MemoryManager<DeviceType>::Copy1D(out_vec.data(), out_1d.data(), refactored_metadata.metadata[0].num_elements,
-                                          current_queue);
-        std::cout << "max est error = " << *std::max_element(out_vec.begin(), out_vec.end()) << std::endl;
+        // std::vector<double> out_vec(refactored_metadata.metadata[0].num_elements);
+        // std::cout << "num_elements = " << refactored_metadata.metadata[0].num_elements << std::endl;
+        // std::cout << "out_vec.data() = " << out_vec.data() << std::endl;
+        // MemoryManager<DeviceType>::Copy1D(out_vec.data(), out_1d.data(), refactored_metadata.metadata[0].num_elements,
+        //                                   current_queue);
+        // std::cout << "max est error = " << *std::max_element(out_vec.begin(), out_vec.end()) << std::endl;
         DeviceCollective<DeviceType>::AbsMax(config.domain_decomposition_sizes[0]*config.domain_decomposition_sizes[1]*config.domain_decomposition_sizes[2], out_1d, SubArray(error_final_out),
                                  workspace, true, current_queue);
         if (log::level || log::TIME) {
+          DeviceRuntime<DeviceType>::SyncQueue(current_queue);
           qoi_timer.end();
           qoi_timer.print("QoI error estimation: ", total_size / 3);
           qoi_timer.clear();
@@ -225,6 +231,8 @@ void reconstruct_pipeline_qoi(
         }
         // std::cout << "reconstructed_data.qoi_in_progress = " << reconstructed_data.qoi_in_progress << std::endl;   
       }
+
+      DeviceRuntime<DeviceType>::SyncQueue(current_queue);
       
       current_buffer = next_buffer;
       current_queue = next_queue;
