@@ -34,6 +34,7 @@ public:
     start_marks.resize({max_size}, queue_idx);
     scanned_start_marks.resize({max_size}, queue_idx);
     start_positions.resize({max_size}, queue_idx);
+    MemoryManager<DeviceType>::MallocHost(signature_verify, 7 * sizeof(char), queue_idx);
     DeviceCollective<DeviceType>::ScanSumInclusive(
         max_size, SubArray<1, C_global, DeviceType>(),
         SubArray<1, C_global, DeviceType>(), this->scan_workspace, false,
@@ -238,12 +239,12 @@ public:
 
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
-    Byte *signature_ptr = signature_verify;
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_ptr, 7, byte_offset,
+    DeserializeArray<Byte>(compressed_subarray, signature_verify, 7, byte_offset,
                            false, queue_idx);
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     for (int i = 0; i < 7; i++) {
-      if (signature[i] != signature_ptr[i]) {
+      if (signature[i] != signature_verify[i]) {
         return false;
       }
     }
@@ -334,7 +335,7 @@ public:
   C_run *counts_ptr = nullptr;
   T_symbol *symbols_ptr = nullptr;
   Byte signature[7] = {'M', 'G', 'X', 'R', 'L', 'E', 'C'};
-  Byte signature_verify[7];
+  Byte * signature_verify;
 
   Array<1, C_global, DeviceType> start_marks;
   Array<1, C_global, DeviceType> scanned_start_marks;
