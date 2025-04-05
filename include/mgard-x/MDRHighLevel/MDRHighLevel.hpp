@@ -257,7 +257,7 @@ void MDReconstruct(std::vector<SIZE> shape,
   using Cache = ReconstructorCache<D, T, DeviceType, ReconstructorType>;
 
   if (!config.mdr_qoi_mode) {
-    Cache::cache.SafeInitialize();
+    Cache::cache.SafeInitialize(3);
   } else if (config.mdr_qoi_mode && !reconstructed_data.qoi_in_progress) {
     Cache::cache.SafeInitialize(config.mdr_qoi_num_variables);
   }

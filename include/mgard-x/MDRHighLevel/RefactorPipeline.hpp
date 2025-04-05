@@ -91,6 +91,8 @@ void refactor_pipeline(
     refactor.Refactor(device_subdomain_buffer[current_buffer],
                       refactored_metadata.metadata[curr_subdomain_id],
                       mdr_data[current_buffer], current_queue);
+    refactor.Compress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+    refactor.StoreMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
     mdr_data[current_buffer].CopyToRefactoredData(
         refactored_metadata.metadata[curr_subdomain_id],
         refactored_data.data[curr_subdomain_id],

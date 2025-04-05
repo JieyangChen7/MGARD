@@ -45,9 +45,12 @@ void reconstruct_pipeline(
   log::info("Adjust device buffers");
   mdr_data[0].Resize(reconstructor, hierarchy, 0);
   mdr_data[1].Resize(reconstructor, hierarchy, 0);
+  mdr_data[2].Resize(reconstructor, hierarchy, 0);
   device_subdomain_buffer[0].resize(
       domain_decomposer.subdomain_shape(0), 0);
   device_subdomain_buffer[1].resize(
+      domain_decomposer.subdomain_shape(0), 0);
+  device_subdomain_buffer[2].resize(
       domain_decomposer.subdomain_shape(0), 0);
 
   // Prefetch the first subdomain
@@ -73,7 +76,7 @@ void reconstruct_pipeline(
        curr_subdomain_id < domain_decomposer.num_subdomains();
        curr_subdomain_id++) {
     SIZE next_subdomain_id;
-    int next_buffer = (current_buffer + 1) % 2;
+    int next_buffer = (current_buffer + 1) % 3;
     int next_queue = (current_queue + 1) % 3;
     HierarchyType &hierarchy = Cache::cache.GetHierarchyCache(
         domain_decomposer.subdomain_shape(curr_subdomain_id));
@@ -107,6 +110,27 @@ void reconstruct_pipeline(
     }
     log::info("Reconstruct subdomain " + std::to_string(curr_subdomain_id) +
               " with shape: " + ss.str());
+    
+    reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+    reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+
+    if (curr_subdomain_id > 0) {
+      // We delay D2H since since it can delay the D2H in lossless decompession
+      // and dequantization
+      int previous_buffer = std::abs((current_buffer - 1) % 3);
+      int previous_queue = std::abs((current_queue - 1) % 3);
+      SIZE prev_subdomain_id = curr_subdomain_id - 1;
+      // Update level signs for future progressive reconstruction
+      mdr_data[previous_buffer].CopyToRefactoredSigns(
+          refactored_metadata.metadata[prev_subdomain_id],
+          refactored_data.level_signs[prev_subdomain_id], previous_queue);
+
+      // Update reconstructed data
+      domain_decomposer.copy_subdomain(
+          device_subdomain_buffer[previous_buffer], prev_subdomain_id,
+          subdomain_copy_direction::SubdomainToOriginal, previous_queue);
+    }
+
     // Reconstruct
     reconstructor.ProgressiveReconstruct(
         refactored_metadata.metadata[curr_subdomain_id],
@@ -116,15 +140,15 @@ void reconstruct_pipeline(
     // Need to ensure reconstruction is complete before next reconstruction
     DeviceRuntime<DeviceType>::SyncQueue(current_queue);
 
-    // Update level signs for future progressive reconstruction
-    mdr_data[current_buffer].CopyToRefactoredSigns(
-        refactored_metadata.metadata[curr_subdomain_id],
-        refactored_data.level_signs[curr_subdomain_id], current_queue);
+    // // Update level signs for future progressive reconstruction
+    // mdr_data[current_buffer].CopyToRefactoredSigns(
+    //     refactored_metadata.metadata[curr_subdomain_id],
+    //     refactored_data.level_signs[curr_subdomain_id], current_queue);
 
-    // Update reconstructed data
-    domain_decomposer.copy_subdomain(
-        device_subdomain_buffer[current_buffer], curr_subdomain_id,
-        subdomain_copy_direction::SubdomainToOriginal, current_queue);
+    // // Update reconstructed data
+    // domain_decomposer.copy_subdomain(
+    //     device_subdomain_buffer[current_buffer], curr_subdomain_id,
+    //     subdomain_copy_direction::SubdomainToOriginal, current_queue);
 
     if (config.mdr_adaptive_resolution) {
       reconstructed_data.shape[curr_subdomain_id] =
@@ -135,6 +159,21 @@ void reconstruct_pipeline(
     current_buffer = next_buffer;
     current_queue = next_queue;
   }
+
+  // Copy the last subdomain
+  int previous_buffer = std::abs((current_buffer - 1) % 3);
+  int previous_queue = std::abs((current_queue - 1) % 3);
+  SIZE prev_subdomain_id = domain_decomposer.num_subdomains() - 1;
+  // Update level signs for future progressive reconstruction
+  mdr_data[previous_buffer].CopyToRefactoredSigns(
+      refactored_metadata.metadata[prev_subdomain_id],
+      refactored_data.level_signs[prev_subdomain_id], previous_queue);
+
+  // Update reconstructed data
+  domain_decomposer.copy_subdomain(
+      device_subdomain_buffer[previous_buffer], prev_subdomain_id,
+      subdomain_copy_direction::SubdomainToOriginal, previous_queue);
+
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();

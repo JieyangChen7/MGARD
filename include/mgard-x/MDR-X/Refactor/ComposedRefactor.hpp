@@ -243,21 +243,67 @@ public:
       timer.clear();
     }
 
+    // if (log::level & log::TIME) {
+    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //   timer.start();
+    // }
+
+    // for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
+    //      level_idx++) {
+    //   compressor.compress_level(encoded_bitplanes_subarray[level_idx],
+    //                             mdr_data.compressed_bitplanes[level_idx],
+    //                             level_idx, queue_idx);
+    //   for (int bitplane_idx = 0; bitplane_idx < Encoder::MAX_BITPLANES;
+    //        bitplane_idx++) {
+    //     mdr_metadata.level_sizes[level_idx][bitplane_idx] +=
+    //         mdr_data.compressed_bitplanes[level_idx][bitplane_idx].shape(0);
+    //   }
+    // }
+    // if (log::level & log::TIME) {
+    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //   timer.end();
+    //   timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
+    //   timer.clear();
+    // }
+
+    // Compress(mdr_metadata, mdr_data, queue_idx);
+    // StoreMetadata(mdr_metadata, mdr_data, queue_idx);
+    // for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
+    //      level_idx++) {
+    //   abs_max_array[level_idx].hostCopy(false, queue_idx);
+    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //   T_data level_max_error = abs_max_array[level_idx].dataHost()[0];
+    //   mdr_metadata.level_error_bounds[level_idx] = level_max_error;
+    //   mdr_metadata.level_num_elems[level_idx] = hierarchy->level_num_elems(level_idx);
+    //   std::vector<T_error> squared_error(Encoder::MAX_BITPLANES + 1);
+    //   MemoryManager<DeviceType>::Copy1D(squared_error.data(),
+    //                                     level_errors_array[level_idx].data(),
+    //                                     Encoder::MAX_BITPLANES + 1, queue_idx);
+    //   mdr_metadata.level_squared_errors[level_idx] = squared_error;
+    //   // PrintSubarray("level_errors", level_errors_subarray[level_idx]);
+    // }
+
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer_all.end();
+      timer_all.print("Low-level refactoring",
+                      hierarchy->total_num_elems() * sizeof(T_data));
+      timer_all.clear();
+    }
+  }
+
+  void Compress(MDRMetadata &mdr_metadata, MDRData<DeviceType> &mdr_data,
+                int queue_idx) {
+    Timer timer;
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.start();
     }
-
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
       compressor.compress_level(encoded_bitplanes_subarray[level_idx],
                                 mdr_data.compressed_bitplanes[level_idx],
                                 level_idx, queue_idx);
-      for (int bitplane_idx = 0; bitplane_idx < Encoder::MAX_BITPLANES;
-           bitplane_idx++) {
-        mdr_metadata.level_sizes[level_idx][bitplane_idx] +=
-            mdr_data.compressed_bitplanes[level_idx][bitplane_idx].shape(0);
-      }
     }
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -265,7 +311,9 @@ public:
       timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
       timer.clear();
     }
+  }
 
+  void StoreMetadata(MDRMetadata &mdr_metadata, MDRData<DeviceType> &mdr_data, int queue_idx) {
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
       abs_max_array[level_idx].hostCopy(false, queue_idx);
@@ -278,15 +326,12 @@ public:
                                         level_errors_array[level_idx].data(),
                                         Encoder::MAX_BITPLANES + 1, queue_idx);
       mdr_metadata.level_squared_errors[level_idx] = squared_error;
+      for (int bitplane_idx = 0; bitplane_idx < Encoder::MAX_BITPLANES;
+           bitplane_idx++) {
+        mdr_metadata.level_sizes[level_idx][bitplane_idx] +=
+            mdr_data.compressed_bitplanes[level_idx][bitplane_idx].shape(0);
+      }
       // PrintSubarray("level_errors", level_errors_subarray[level_idx]);
-    }
-
-    if (log::level & log::TIME) {
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer_all.end();
-      timer_all.print("Low-level refactoring",
-                      hierarchy->total_num_elems() * sizeof(T_data));
-      timer_all.clear();
     }
   }
 
