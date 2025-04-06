@@ -658,7 +658,7 @@ public:
               SubArray<1, T_data, DeviceType> v, int queue_idx) {}
 
   // decode the data and record necessary information for progressiveness
-  void progressive_decode(SIZE n, SIZE starting_bitplanes, int num_bitplanes,
+  void progressive_decode(SIZE n, int starting_bitplane, int num_bitplanes,
                           SubArray<1, T_data, DeviceType> abs_max,
                           SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                           SubArray<1, bool, DeviceType> level_signs, int level,
@@ -667,7 +667,7 @@ public:
     if (num_bitplanes > 0) {
       DeviceLauncher<DeviceType>::Execute(
           BPDecoderOptV1Kernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
-                               DeviceType>(n, starting_bitplanes, num_bitplanes,
+                               DeviceType>(n, starting_bitplane, num_bitplanes,
                                            abs_max, encoded_bitplanes, level_signs,
                                            v),
           queue_idx);
