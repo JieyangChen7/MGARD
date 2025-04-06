@@ -48,7 +48,7 @@ public:
                       int queue_idx) = 0;
 
   virtual void
-  progressive_decode(SIZE n, SIZE starting_bitplanes, int num_bitplanes,
+  progressive_decode(SIZE n, int starting_bitplane, int num_bitplanes,
                      SubArray<1, T_data, DeviceType> abs_max,
                      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                      SubArray<1, bool, DeviceType> level_signs, int level,
