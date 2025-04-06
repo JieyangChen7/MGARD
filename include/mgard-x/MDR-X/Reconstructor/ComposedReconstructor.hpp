@@ -14,6 +14,7 @@
 #include "../Retriever/Retriever.hpp"
 #include "../SizeInterpreter/SizeInterpreter.hpp"
 #include "ReconstructorInterface.hpp"
+#include <stdio.h>
 // #include "../DataStructures/MDRData.hpp"
 
 namespace mgard_x {
@@ -195,7 +196,6 @@ public:
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
               mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
-          mdr_metadata.retrieved_size = std::accumulate(retrieve_sizes.begin(), retrieve_sizes.end(), 0);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
@@ -209,13 +209,13 @@ public:
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
               mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
-          mdr_metadata.retrieved_size = std::accumulate(retrieve_sizes.begin(), retrieve_sizes.end(), 0);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
               mdr_metadata.requested_level_num_bitplanes);
         }
       }
+      mdr_metadata.retrieved_size = std::accumulate(retrieve_sizes.begin(), retrieve_sizes.end(), 0);
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // RoundRobinSizeInterpreter interpreter(estimator);
       // InorderSizeInterpreter interpreter(estimator);
@@ -267,7 +267,7 @@ public:
       n = ((n - 1) / m + 1) * m;
     }
     timer.end();
-    timer.print("Preprocessing");
+    // timer.print("Preprocessing");
   }
 
   void InterpolateToLevel(Array<D, T_data, DeviceType> &reconstructed_data,

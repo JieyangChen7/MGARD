@@ -105,7 +105,8 @@ void reconstruct_pipeline_qoi(
   uint32_t iter = 0;
   int buffer_for_variable[3];
   double eb_Vx, eb_Vy, eb_Vz;
-  double tol = refactored_metadata.metadata[0].requested_tol;
+  double tol = refactored_metadata.metadata[0].tau;
+  double alpha = (refactored_metadata.relative_eb > 0.01) ? 0.5 : 1;
 
   reconstructed_data.qoi_in_progress = true;
 
@@ -139,15 +140,17 @@ void reconstruct_pipeline_qoi(
         // so, we need to fetch more data
         //
         // We need to update the metadata for all variables
-        eb_Vx = refactored_metadata.metadata[0].corresponding_error;
-        eb_Vy = refactored_metadata.metadata[1].corresponding_error;
-        eb_Vz = refactored_metadata.metadata[2].corresponding_error;
-        // std::cout << "eb_Vx: " << eb_Vx << ", eb_Vy: " << eb_Vy << ", eb_Vz: " << eb_Vz << ", requested QoI error: " << tol << std::endl;
-        uint32_t usr_def_requested_size = read_file_tmp();
-        for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-          refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
-          reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
-        }
+        eb_Vx = refactored_metadata.metadata[0].requested_tol;
+        eb_Vy = refactored_metadata.metadata[1].requested_tol;
+        eb_Vz = refactored_metadata.metadata[2].requested_tol;
+        // uint32_t usr_def_requested_size = read_file_tmp();
+        // std::cout << "current ebs : ";
+        // for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
+        //   std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+        //   // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
+          
+        // }
+        // std::cout << std::endl;
         // for (auto &metadata : refactored_metadata.metadata) {
         //   metadata.PrintStatus();
         // }
@@ -155,9 +158,9 @@ void reconstruct_pipeline_qoi(
         // refactored_metadata.total_size += size_read;*****
         // initiate the bitplane transfer for the 1st variable which
         // should coorespond to the next_buffer
-        mdr_data[0].CopyFromRefactoredData(
-            refactored_metadata.metadata[0],
-            refactored_data.data[0], next_queue);
+        // mdr_data[0].CopyFromRefactoredData(
+        //     refactored_metadata.metadata[0],
+        //     refactored_data.data[0], next_queue);
       }
 
       std::stringstream ss;
@@ -230,10 +233,20 @@ void reconstruct_pipeline_qoi(
         // reconstructed_data.qoi_in_progress = error_final_out_host ? true : false;
         std::cout << "==== maximal est error = " << error_final_out_host << " ====" << std::endl;
         reconstructed_data.qoi_in_progress = (error_final_out_host > tol) ? true : false;
-        if(reconstructed_data.qoi_in_progress){
-            refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
+        refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
                                     + refactored_metadata.metadata[1].retrieved_size
-                                    + refactored_metadata.metadata[2].retrieved_size;
+                                    + refactored_metadata.metadata[2].retrieved_size;    
+        if(reconstructed_data.qoi_in_progress){              
+            // std::cout << "new ebs : ";
+            for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
+              refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::pow(tol / error_final_out_host, alpha) * refactored_metadata.metadata[id].requested_tol);
+              // std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+              reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
+            }
+            // std::cout << std::endl;
+            mdr_data[0].CopyFromRefactoredData(
+                refactored_metadata.metadata[0],
+                refactored_data.data[0], next_queue);
         }
         // std::cout << "reconstructed_data.qoi_in_progress = " << reconstructed_data.qoi_in_progress << std::endl;   
       }
@@ -245,9 +258,9 @@ void reconstruct_pipeline_qoi(
     }
   }
 
-  refactored_metadata.metadata[0].corresponding_error = eb_Vx;
-  refactored_metadata.metadata[1].corresponding_error = eb_Vy;
-  refactored_metadata.metadata[2].corresponding_error = eb_Vz;
+  refactored_metadata.metadata[0].requested_tol = eb_Vx;
+  refactored_metadata.metadata[1].requested_tol = eb_Vy;
+  refactored_metadata.metadata[2].requested_tol = eb_Vz;
   // Copy final data out if we are done with reconstructing
   for (SIZE curr_subdomain_id = 0;
     curr_subdomain_id < domain_decomposer.num_subdomains();
