@@ -35,14 +35,16 @@ public:
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // // DeviceType>;
-  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
-                                 CONTROL_L2, DeviceType>;
-    // using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary,
-    //                             CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                                CONTROL_L2, DeviceType>;
+    using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
+
+  static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
+  static constexpr SIZE MAX_BITPLANES = sizeof(T_data) * 8;
 
   ComposedReconstructor() : initialized(false) {}
   ComposedReconstructor(Hierarchy<D, T_data, DeviceType> &hierarchy,
@@ -77,8 +79,7 @@ public:
     level_num_elems.resize(hierarchy.l_target() + 1);
     exp.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      level_data_array[level_idx].resize({hierarchy.level_num_elems(level_idx)},
-                                         queue_idx);
+      level_data_array[level_idx].resize({round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE)}, queue_idx);
       level_data_subarray[level_idx] =
           SubArray<1, T_data, DeviceType>(level_data_array[level_idx]);
       level_num_elems[level_idx] = hierarchy.level_num_elems(level_idx);
@@ -119,7 +120,7 @@ public:
     }
     size += partial_data_size * 2; // including interpolation workspace
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      size += hierarchy.level_num_elems(level_idx) * sizeof(T_data);
+      size += round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE) * sizeof(T_data);
     }
 
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
@@ -342,7 +343,7 @@ public:
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       encoder.progressive_decode(
-          level_num_elems[level_idx],
+          level_data_subarray[level_idx].shape(0),
           mdr_metadata.prev_used_level_num_bitplanes[level_idx],
           level_num_bitplanes[level_idx], SubArray(abs_max_array[level_idx]),
           encoded_bitplanes_subarray[level_idx],
