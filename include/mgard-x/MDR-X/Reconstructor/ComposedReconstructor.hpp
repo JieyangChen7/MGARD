@@ -286,6 +286,34 @@ public:
   void Decompress(MDRMetadata &mdr_metadata,
                            MDRData<DeviceType> &mdr_data, int queue_idx) {
 
+    {
+      int level_idx = hierarchy->l_target();
+      encoder.progressive_decode(
+          level_data_subarray[level_idx].shape(0),
+          0, 32, SubArray(abs_max_array[level_idx]),
+          encoded_bitplanes_subarray[level_idx],
+          level_signs_subarray[level_idx], level_idx,
+          level_data_subarray[level_idx], queue_idx);
+      encoder.progressive_decode(
+      level_data_subarray[level_idx].shape(0),
+      0, 32, SubArray(abs_max_array[level_idx]),
+      encoded_bitplanes_subarray[level_idx],
+      level_signs_subarray[level_idx], level_idx,
+      level_data_subarray[level_idx], queue_idx);
+      
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      Timer timer_iter; timer_iter.start();
+      encoder.progressive_decode(
+          level_data_subarray[level_idx].shape(0),
+          0, 32, SubArray(abs_max_array[level_idx]),
+          encoded_bitplanes_subarray[level_idx],
+          level_signs_subarray[level_idx], level_idx,
+          level_data_subarray[level_idx], queue_idx);
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      // exit(0);
+    }
+
     Timer timer;
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -342,6 +370,8 @@ public:
     }
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      Timer timer_iter; timer_iter.start();
       encoder.progressive_decode(
           level_data_subarray[level_idx].shape(0),
           mdr_metadata.prev_used_level_num_bitplanes[level_idx],
@@ -349,6 +379,8 @@ public:
           encoded_bitplanes_subarray[level_idx],
           level_signs_subarray[level_idx], level_idx,
           level_data_subarray[level_idx], queue_idx);
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
     }
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
