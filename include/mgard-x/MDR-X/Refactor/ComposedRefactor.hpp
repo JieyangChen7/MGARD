@@ -48,8 +48,8 @@ public:
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
   // using Compressor = NullLevelCompressor<T_bitplane, DeviceType>;
 
-  static constexpr int BATCH_SIZE = sizeof(T_bitplane) * 8;
-  static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
+  static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
+  static constexpr SIZE MAX_BITPLANES = sizeof(T_data) * 8;
 
   ComposedRefactor() : initialized(false) {}
 
@@ -89,7 +89,7 @@ public:
     level_data_subarray.resize(hierarchy.l_target() + 1);
     abs_max_array.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      level_data_array[level_idx].resize({hierarchy.level_num_elems(level_idx)},
+      level_data_array[level_idx].resize({round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE)},
                                          queue_idx);
       level_data_subarray[level_idx] =
           SubArray<1, T_data, DeviceType>(level_data_array[level_idx]);
@@ -129,7 +129,7 @@ public:
     size_t size = 0;
     size += hierarchy.EstimateMemoryFootprint(shape);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      size += hierarchy.level_num_elems(level_idx) * sizeof(T_data);
+      size += round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE) * sizeof(T_data);
     }
     size += sizeof(T_data);
     Array<1, Byte, DeviceType> tmp;
@@ -183,6 +183,31 @@ public:
     mdr_metadata.Initialize(hierarchy->l_target() + 1, Encoder::MAX_BITPLANES);
     mdr_data.Resize(*this, *hierarchy, queue_idx);
 
+    // {
+    // int level_idx = hierarchy->l_target();
+    // encoder.encode(level_data_subarray[level_idx].shape(0),
+    //                 Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+    //                 level_data_subarray[level_idx],
+    //                 encoded_bitplanes_subarray[level_idx],
+    //                 level_errors_subarray[level_idx], queue_idx);
+    // encoder.encode(level_data_subarray[level_idx].shape(0),
+    //                   Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+    //                   level_data_subarray[level_idx],
+    //                   encoded_bitplanes_subarray[level_idx],
+    //                   level_errors_subarray[level_idx], queue_idx);
+      
+    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //   Timer timer_iter; timer_iter.start();
+    //   encoder.encode(level_data_subarray[level_idx].shape(0),
+    //                   Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+    //                   level_data_subarray[level_idx],
+    //                   encoded_bitplanes_subarray[level_idx],
+    //                   level_errors_subarray[level_idx], queue_idx);
+    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //   timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+    //   exit(0);
+    // }
+
     SubArray<D, T_data, DeviceType> data(data_array);
 
     Timer timer, timer_all;
@@ -225,15 +250,15 @@ public:
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
 
-      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // Timer timer_iter; timer_iter.start();
-      encoder.encode(hierarchy->level_num_elems(level_idx),
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      Timer timer_iter; timer_iter.start();
+      encoder.encode(level_data_subarray[level_idx].shape(0),
                      Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
                      level_data_subarray[level_idx],
                      encoded_bitplanes_subarray[level_idx],
                      level_errors_subarray[level_idx], queue_idx);
-      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
     }
 
     if (log::level & log::TIME) {

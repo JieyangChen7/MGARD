@@ -52,6 +52,10 @@ template <typename T1, typename T2> MGARDX_CONT_EXEC SIZE roundup(T2 a) {
   return ((a - 1) / sizeof(T1) + 1) * sizeof(T1);
 }
 
+template <typename T> MGARDX_CONT_EXEC T round_up(T a, T b) {
+  return ((a - 1) / b + 1) * b;
+}
+
 } // namespace mgard_x
 
 #endif
