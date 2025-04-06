@@ -49,6 +49,7 @@ public:
   T_error loaded_tol, loaded_s;
   T_error requested_tol, requested_s;
   T_error prev_tol, prev_s;
+  T_error tau;
   uint32_t requested_size;
   size_t num_elements;
   double corresponding_error;

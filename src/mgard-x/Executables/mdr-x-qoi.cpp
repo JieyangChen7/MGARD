@@ -518,6 +518,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     }
   }
   mgard_x::Byte * V_TOT_ori;
+  std::vector<double> ebs;
   size_t num_elements;
   double tau = 0;
   V_TOT_ori = (mgard_x::Byte *)malloc(in_size / config.mdr_qoi_num_variables);
@@ -528,10 +529,16 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
     compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
     tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
+    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
   } else if (dtype == mgard_x::data_type::Double){
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
     compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
     tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
+    ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
   }
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
@@ -540,17 +547,19 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   size_t metadata_size = read_mdr_metadata(refactored_metadata, refactored_data, input_file);
   refactored_metadata.total_size += metadata_size;
 
+  refactored_metadata.relative_eb = tols[0];
   for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
     refactored_metadata.metadata[i].num_elements = num_elements;
-    refactored_metadata.metadata[i].requested_tol = tau;
-    refactored_metadata.metadata[i].requested_size = 10000000;
+    refactored_metadata.metadata[i].requested_tol = ebs[i];
+    // refactored_metadata.metadata[i].requested_size = 10000000;
+    refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;
-    refactored_metadata.metadata[i].segmented = true;
+    // refactored_metadata.metadata[i].segmented = true;
   }
   mgard_x::MDR::MDRequest(refactored_metadata, config);
-  refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
-                                    + refactored_metadata.metadata[1].retrieved_size
-                                    + refactored_metadata.metadata[2].retrieved_size;
+  // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
+  //                                   + refactored_metadata.metadata[1].retrieved_size
+  //                                   + refactored_metadata.metadata[2].retrieved_size;
   // for (auto &metadata : refactored_metadata.metadata) {
   //   metadata.PrintStatus();
   // }
@@ -576,11 +585,11 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       rec_var_ptrs.push_back(rec_var_ptr);
       if (dtype == mgard_x::data_type::Float) {
         print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
-                                (float *)rec_var_ptr, refactored_metadata.metadata[i].corresponding_error,
+                                (float *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
                                 config.normalize_coordinates);
       } else if (dtype == mgard_x::data_type::Double) {
         print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
-                                (double *)rec_var_ptr, refactored_metadata.metadata[i].corresponding_error,
+                                (double *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
                                 config.normalize_coordinates);
       }
     }
