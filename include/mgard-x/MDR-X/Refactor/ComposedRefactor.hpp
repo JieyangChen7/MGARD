@@ -183,30 +183,38 @@ public:
     mdr_metadata.Initialize(hierarchy->l_target() + 1, Encoder::MAX_BITPLANES);
     mdr_data.Resize(*this, *hierarchy, queue_idx);
 
-    // {
-    // int level_idx = hierarchy->l_target();
-    // encoder.encode(level_data_subarray[level_idx].shape(0),
-    //                 Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-    //                 level_data_subarray[level_idx],
-    //                 encoded_bitplanes_subarray[level_idx],
-    //                 level_errors_subarray[level_idx], queue_idx);
-    // encoder.encode(level_data_subarray[level_idx].shape(0),
-    //                   Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-    //                   level_data_subarray[level_idx],
-    //                   encoded_bitplanes_subarray[level_idx],
-    //                   level_errors_subarray[level_idx], queue_idx);
+    if (0){
+    int level_idx = hierarchy->l_target();
+    encoder.encode(level_data_subarray[level_idx].shape(0),
+                    Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+                    level_data_subarray[level_idx],
+                    encoded_bitplanes_subarray[level_idx],
+                    level_errors_subarray[level_idx], queue_idx);
+    encoder.encode(level_data_subarray[level_idx].shape(0),
+                      Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+                      level_data_subarray[level_idx],
+                      encoded_bitplanes_subarray[level_idx],
+                      level_errors_subarray[level_idx], queue_idx);
       
-    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    //   Timer timer_iter; timer_iter.start();
-    //   encoder.encode(level_data_subarray[level_idx].shape(0),
-    //                   Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-    //                   level_data_subarray[level_idx],
-    //                   encoded_bitplanes_subarray[level_idx],
-    //                   level_errors_subarray[level_idx], queue_idx);
-    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    //   timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
-    //   exit(0);
-    // }
+      for (int i = 0; i < 10; i++) {
+        SIZE N = pow(2, i) * 1e6;
+        N = round_up(N, BATCH_SIZE) ;
+        Array<1, T_data, DeviceType> test_data({N}, queue_idx);
+        Array<2, T_bitplane, DeviceType> encoded_data(
+          {(SIZE)Encoder::MAX_BITPLANES, encoder.bitplane_length(N)}, queue_idx);
+
+        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        Timer timer_iter; timer_iter.start();
+        encoder.encode(test_data.shape(0),
+                        Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+                        SubArray(test_data),
+                        encoded_bitplanes_subarray[level_idx],
+                        level_errors_subarray[level_idx], queue_idx);
+        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        timer_iter.end(); timer_iter.print("Encoding level", test_data.shape(0) * sizeof(T_data));
+      }
+      // exit(0);
+    }
 
     SubArray<D, T_data, DeviceType> data(data_array);
 
