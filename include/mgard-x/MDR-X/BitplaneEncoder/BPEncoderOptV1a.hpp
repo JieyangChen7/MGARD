@@ -17,11 +17,11 @@ public:
   MGARDX_CONT
   BPEncoderOptV1aFunctor() {}
   MGARDX_CONT
-  BPEncoderOptV1aFunctor(SIZE n, int num_bitplanes, int exp,
+  BPEncoderOptV1aFunctor(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<1, T_data, DeviceType> v,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<2, T_error, DeviceType> level_errors_workspace)
-      : n(n), num_bitplanes(num_bitplanes), exp(exp),
+      : n(n), num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), v(v),
         level_errors_workspace(level_errors_workspace) {
     Functor<DeviceType>();
@@ -34,46 +34,6 @@ public:
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
         buffer += bit << BATCH_SIZE - 1 - data_idx;
-      }
-      encoded[bp_idx] = buffer;
-    }
-  }
-
-  MGARDX_EXEC void encode_batch_with_prediction(T_fp *v, T_bitplane *encoded,
-                                                int num_bitplanes) {
-    T_fp data_values[BATCH_SIZE];
-    for (int i = 0; i < BATCH_SIZE; i++) {
-      data_values[i] = 0;
-    }
-    for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-      T_bitplane buffer = 0;
-      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane cur_bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
-        if (bp_idx == 0) {
-          buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
-        } else {
-          if constexpr (NegaBinary) {
-            data_values[data_idx] = data_values[data_idx] * (-2);
-          } else {
-            data_values[data_idx] = data_values[data_idx] * 2;
-          }
-          if (data_idx) {
-            T_bitplane pred_bit = 0;
-            T_fp d0 = abs((T_sfp)data_values[data_idx - 1] -
-                          (T_sfp)data_values[data_idx]);
-            T_fp d1 = abs((T_sfp)data_values[data_idx - 1] -
-                          (T_sfp)data_values[data_idx] - 1);
-            if (d0 > d1) {
-              pred_bit = 1;
-            }
-            if (pred_bit != cur_bit) {
-              buffer += 1u << BATCH_SIZE - 1 - data_idx;
-            }
-          } else {
-            buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
-          }
-          data_values[data_idx] += cur_bit;
-        }
       }
       encoded[bp_idx] = buffer;
     }
@@ -155,7 +115,6 @@ public:
     SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
                      FunctorBase<DeviceType>::GetBlockDimX();
     SIZE warp_size = 32;
-
     SIZE warp_id = FunctorBase<DeviceType>::GetThreadIdX() / warp_size;
     SIZE lane_id = FunctorBase<DeviceType>::GetThreadIdX() % warp_size;
 
@@ -172,6 +131,8 @@ public:
     T_bitplane encoded_sign[1];
     T_error errors[MAX_BITPLANES + 1];
 
+    int exp;
+    frexp(*abs_max((IDX)0), &exp);  
     // using WarpExchangeT =
     //   cub::WarpExchange<T_data, BATCH_SIZE, 32>;
 
@@ -183,44 +144,11 @@ public:
     //  SIZE batch_idx = gid;
       SIZE batch_idx_warp = (batch_idx / warp_size) * warp_size;
       SIZE load_data_idx = batch_idx_warp * BATCH_SIZE + lane_id;
-      for (int data_idx = 0; data_idx < 32; data_idx ++) {
-        T_data data = 0;
-        // load_data_idx += BATCH_SIZE;
-
-        if (load_data_idx < n) {
-          data = *v(load_data_idx + data_idx * BATCH_SIZE);
-        }
-
-        // SIZE des_idx = warp_id * warp_size * BATCH_SIZE + load_iter * BATCH_SIZE + lane_id;
-
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx ++) {
+        T_data data = *v(load_data_idx + data_idx * BATCH_SIZE);
         shifted_data[data_idx] = ldexp(data, num_bitplanes - exp);
-        // sm_shifted_data_warp[load_iter * BATCH_SIZE + lane_id] = ldexp(data, num_bitplanes - exp);
-        // sm[des_idx] = ldexp(data, num_bitplanes - exp);
-        // sm_shifted_data_warp[load_iter * BATCH_SIZE + lane_id] = ldexp(data, num_bitplanes - exp);
-        // sm_shifted_data_warp[lane_id] = ldexp(data, num_bitplanes - exp);
-      // }
-
-      // for (int load_iter = 0; load_iter < 32; load_iter ++) {
-      //   sm_shifted_data_warp[load_iter * BATCH_SIZE + lane_id] = shifted_data[load_iter];
-      // }
-
-      // for (int load_iter = 0; load_iter < 32; load_iter ++) {
-      //   shifted_data[load_iter] = sm_shifted_data[load_iter];
-      // }
-        // SIZE data_idx = load_iter;
-      // for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx ++) {
-        // shifted_data[data_idx] = sm_shifted_data[data_idx];
-        // shifted_data[data_idx] = ldexp(data, num_bitplanes - exp);
         fp_data[data_idx] = (T_fp)fabs(shifted_data[data_idx]);
         fp_sign[data_idx] = (T_fp)(signbit(data) == 0 ? 0 : 1);
-        // fp_data[data_idx] = (T_fp)fabs(shifted_data[data_idx]);
-        // if (batch_idx == 0) {
-        //   printf("fp_data[data_idx]: %llu\n", fp_data[data_idx]);
-        // }
-        // printf("%f: ", data); print_bits(fp_data[data_idx], b);
-        // printf("data: %f, fp_data[data_idx]: %llu, signbit(data): %lld,
-        // fp_sign[data_idx]: %llu \n", data, fp_data[data_idx], signbit(data),
-        // fp_sign[data_idx]);
       }
 
     // if (batch_idx < num_batches) {
@@ -228,27 +156,15 @@ public:
       encode_batch(fp_data, encoded_data, num_bitplanes);
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         *encoded_bitplanes(bp_idx, batch_idx) = encoded_data[bp_idx];
-        // if (batch_idx == 0) {
-        //   printf("encoded_data: %llu\n", encoded_data[bp_idx]);
-        // }
-        // print_bits(encoded_bitplanes[bp_idx * b + batch_idx * 2],
-        // batch_size);
       }
       // encode sign
       encode_batch(fp_sign, encoded_sign, 1);
-
-      // if (batch_idx == 0) {
-      //   printf("encoded_sign: %u\n", encoded_sign[0]);
-      // }
 
       *encoded_bitplanes(0, num_batches + batch_idx) = encoded_sign[0];
       // set rest of the bitplanes to 0
       for (int bp_idx = 1; bp_idx < num_bitplanes; bp_idx++) {
         *encoded_bitplanes(bp_idx, num_batches + batch_idx) = (T_bitplane)0;
       }
-      // // encode sign
-      // encode_batch(signs, encoded_sign, BATCH_SIZE, 1);
-      // print_bits(encoded_bitplanes[0 * b + batch_idx * 2 + 1], batch_size);
 
       if constexpr (CollectError) {
         error_collect_binary(shifted_data, errors, num_bitplanes, exp);
@@ -267,27 +183,31 @@ public:
     SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
                      FunctorBase<DeviceType>::GetBlockDimX();
 
+    SIZE warp_size = 32;
+    SIZE warp_id = FunctorBase<DeviceType>::GetThreadIdX() / warp_size;
+    SIZE lane_id = FunctorBase<DeviceType>::GetThreadIdX() % warp_size;
+
     SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
     T_data shifted_data[BATCH_SIZE];
     T_fp fp_data[BATCH_SIZE];
     T_bitplane encoded_data[MAX_BITPLANES];
     T_error errors[MAX_BITPLANES + 1];
 
+    int exp;
+    frexp(*abs_max((IDX)0), &exp); 
     exp += 2;
+
+    
 
     for (SIZE batch_idx = gid; batch_idx < num_batches;
          batch_idx += grid_size) {
-      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_data data = 0;
-        if (batch_idx * BATCH_SIZE + data_idx < n) {
-          data = *v(batch_idx * BATCH_SIZE + data_idx);
-        }
+      SIZE batch_idx_warp = (batch_idx / warp_size) * warp_size;
+      SIZE load_data_idx = batch_idx_warp * BATCH_SIZE + lane_id;
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx ++) {
+        T_data data = *v(load_data_idx + data_idx * BATCH_SIZE);
         shifted_data[data_idx] = ldexp(data, num_bitplanes - exp);
         fp_data[data_idx] =
             Math<DeviceType>::binary2negabinary((T_sfp)shifted_data[data_idx]);
-        // fp_data[data_idx] = (T_fp)fabs(shifted_data[data_idx]);
-
-        // printf("%f: ", data); print_bits(fp_data[data_idx], b);
       }
       // encode data
       encode_batch(fp_data, encoded_data, num_bitplanes);
@@ -325,7 +245,7 @@ private:
   // parameters
   SIZE n;
   int num_bitplanes;
-  int exp;
+  SubArray<1, T_data, DeviceType> abs_max;
   SubArray<1, T_data, DeviceType> v;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<2, T_error, DeviceType> level_errors_workspace;
@@ -342,11 +262,11 @@ public:
   constexpr static bool ConfigTask() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   MGARDX_CONT
-  BPEncoderOptV1aKernel(SIZE n, int num_bitplanes, int exp,
+  BPEncoderOptV1aKernel(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<1, T_data, DeviceType> v,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<2, T_error, DeviceType> level_errors_workspace)
-      : n(n), num_bitplanes(num_bitplanes), exp(exp),
+      : n(n), num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), v(v),
         level_errors_workspace(level_errors_workspace) {}
 
@@ -357,7 +277,7 @@ public:
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
     n = std::max((n / 32) * 32, (SIZE)1);
-    FunctorType functor(n, num_bitplanes, exp, v, encoded_bitplanes,
+    FunctorType functor(n, num_bitplanes, abs_max, v, encoded_bitplanes,
                         level_errors_workspace);
     SIZE tbx, tby, tbz, gridx, gridy, gridz;
     size_t sm_size = functor.shared_memory_size();
@@ -377,7 +297,7 @@ public:
 private:
   SIZE n;
   int num_bitplanes;
-  int exp;
+  SubArray<1, T_data, DeviceType> abs_max;
   SubArray<1, T_data, DeviceType> v;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<2, T_error, DeviceType> level_errors_workspace;
@@ -390,13 +310,13 @@ public:
   MGARDX_CONT
   BPDecoderOptV1aFunctor() {}
   MGARDX_CONT
-  BPDecoderOptV1aFunctor(SIZE n, SIZE starting_bitplane, int num_bitplanes,
-                        int exp,
+  BPDecoderOptV1aFunctor(SIZE n, int starting_bitplane, int num_bitplanes,
+                        SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<1, bool, DeviceType> signs,
                         SubArray<1, T_data, DeviceType> v)
       : n(n), starting_bitplane(starting_bitplane),
-        num_bitplanes(num_bitplanes), exp(exp),
+        num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {
     Functor<DeviceType>();
   }
@@ -426,6 +346,9 @@ public:
     T_fp fp_sign[BATCH_SIZE];
     T_bitplane encoded_data[MAX_BITPLANES];
     T_bitplane encoded_sign[MAX_BITPLANES];
+
+    int exp;
+    frexp(*abs_max((IDX)0), &exp); 
 
     int ending_bitplane = starting_bitplane + num_bitplanes;
 
@@ -478,6 +401,9 @@ public:
     T_fp fp_data[BATCH_SIZE];
     T_bitplane encoded_data[MAX_BITPLANES];
 
+    int exp;
+    frexp(*abs_max((IDX)0), &exp); 
+
     exp += 2;
 
     int ending_bitplane = starting_bitplane + num_bitplanes;
@@ -522,9 +448,9 @@ public:
 private:
   // parameters
   SIZE n;
-  SIZE starting_bitplane;
+  int starting_bitplane;
   int num_bitplanes;
-  int exp;
+  SubArray<1, T_data, DeviceType> abs_max;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<1, bool, DeviceType> signs;
   SubArray<1, T_data, DeviceType> v;
@@ -540,12 +466,12 @@ public:
   constexpr static std::string_view Name = "grouped bp decoder";
   MGARDX_CONT
   BPDecoderOptV1aKernel(SIZE n, SIZE starting_bitplane, int num_bitplanes,
-                       int exp,
+                       SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<1, bool, DeviceType> signs,
                        SubArray<1, T_data, DeviceType> v)
       : n(n), starting_bitplane(starting_bitplane),
-        num_bitplanes(num_bitplanes), exp(exp),
+        num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
 
   using FunctorType = BPDecoderOptV1aFunctor<T_data, T_fp, T_sfp, T_bitplane,
@@ -554,7 +480,7 @@ public:
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
 
-    FunctorType functor(n, starting_bitplane, num_bitplanes, exp,
+    FunctorType functor(n, starting_bitplane, num_bitplanes, abs_max,
                         encoded_bitplanes, signs, v);
     SIZE tbx, tby, tbz, gridx, gridy, gridz;
     size_t sm_size = functor.shared_memory_size();
@@ -573,9 +499,9 @@ public:
 
 private:
   SIZE n;
-  SIZE starting_bitplane;
+  int starting_bitplane;
   int num_bitplanes;
-  int exp;
+  SubArray<1, T_data, DeviceType> abs_max;
   SubArray<2, T_bitplane, DeviceType> encoded_bitplanes;
   SubArray<1, bool, DeviceType> signs;
   SubArray<1, T_data, DeviceType> v;
@@ -659,7 +585,7 @@ public:
     return size;
   }
 
-  void encode(SIZE n, int num_bitplanes, int32_t exp,
+  void encode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
               SubArray<1, T_data, DeviceType> v,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
               SubArray<1, T_error, DeviceType> level_errors, int queue_idx) {
@@ -669,7 +595,7 @@ public:
     DeviceLauncher<DeviceType>::Execute(
         BPEncoderOptV1aKernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
                              NegaBinary, CollectError, DeviceType>(
-            n, num_bitplanes, exp, v, encoded_bitplanes, level_errors_work),
+            n, num_bitplanes, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
 
     if constexpr (CollectError) {
@@ -685,13 +611,13 @@ public:
     }
   }
 
-  void decode(SIZE n, int num_bitplanes, int32_t exp,
+  void decode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes, int level,
               SubArray<1, T_data, DeviceType> v, int queue_idx) {}
 
   // decode the data and record necessary information for progressiveness
-  void progressive_decode(SIZE n, SIZE starting_bitplanes, int num_bitplanes,
-                          int32_t exp,
+  void progressive_decode(SIZE n, int starting_bitplanes, int num_bitplanes,
+                          SubArray<1, T_data, DeviceType> abs_max,
                           SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                           SubArray<1, bool, DeviceType> level_signs, int level,
                           SubArray<1, T_data, DeviceType> v, int queue_idx) {
@@ -700,7 +626,7 @@ public:
       DeviceLauncher<DeviceType>::Execute(
           BPDecoderOptV1aKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
                                DeviceType>(n, starting_bitplanes, num_bitplanes,
-                                           exp, encoded_bitplanes, level_signs,
+                                           abs_max, encoded_bitplanes, level_signs,
                                            v),
           queue_idx);
     }

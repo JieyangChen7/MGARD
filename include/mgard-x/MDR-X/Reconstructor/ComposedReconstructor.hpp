@@ -38,6 +38,7 @@ public:
   // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
   //                                CONTROL_L2, DeviceType>;
     using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
+    //  using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
@@ -286,7 +287,7 @@ public:
   void Decompress(MDRMetadata &mdr_metadata,
                            MDRData<DeviceType> &mdr_data, int queue_idx) {
 
-    {
+    if (0){
       int level_idx = hierarchy->l_target();
       encoder.progressive_decode(
           level_data_subarray[level_idx].shape(0),
@@ -311,7 +312,7 @@ public:
           level_data_subarray[level_idx], queue_idx);
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
-      // exit(0);
+      exit(0);
     }
 
     Timer timer;
