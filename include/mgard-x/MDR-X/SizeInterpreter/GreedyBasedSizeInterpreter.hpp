@@ -73,7 +73,59 @@ public:
     //           << ", estimated error = " << accumulated_error << std::endl;
     return retrieve_sizes;
   }
+  // corresponding error return
+  std::vector<SIZE>
+  interpret_retrieve_size(const std::vector<std::vector<SIZE>> &level_sizes,
+                          const std::vector<std::vector<double>> &level_errors,
+                          double tolerance, double & eb, std::vector<uint8_t> &index) const {
+    const int num_levels = level_sizes.size();
+    std::vector<SIZE> retrieve_sizes(num_levels, 0);
 
+    double accumulated_error = 0;
+    for (int i = 0; i < num_levels; i++) {
+      accumulated_error +=
+          error_estimator.estimate_error(level_errors[i][index[i]], i);
+    }
+    std::priority_queue<UnitErrorGain, std::vector<UnitErrorGain>,
+                        CompareUnitErrorGain>
+        heap;
+    for (int i = 0; i < num_levels; i++) {
+      if (index[i] < level_sizes[i].size()) {
+        double error_gain = error_estimator.estimate_error_gain(
+            accumulated_error, level_errors[i][index[i]],
+            level_errors[i][index[i] + 1], i);
+        heap.push(UnitErrorGain(error_gain / level_sizes[i][index[i]], i));
+      }
+    }
+
+    bool tolerance_met = false;
+    while ((!tolerance_met) && (!heap.empty())) {
+      auto unit_error_gain = heap.top();
+      heap.pop();
+      int i = unit_error_gain.level;
+      int j = index[i];
+      retrieve_sizes[i] += level_sizes[i][j];
+      accumulated_error -=
+          error_estimator.estimate_error(level_errors[i][j], i);
+      accumulated_error +=
+          error_estimator.estimate_error(level_errors[i][j + 1], i);
+      if (accumulated_error < tolerance) {
+        tolerance_met = true;
+      }
+      index[i]++;
+      if (index[i] < level_sizes[i].size()) {
+        double error_gain = error_estimator.estimate_error_gain(
+            accumulated_error, level_errors[i][index[i]],
+            level_errors[i][index[i] + 1], i);
+        heap.push(UnitErrorGain(error_gain / level_sizes[i][index[i]], i));
+      }
+    }
+    // std::cout << "Requested tolerance = " << tolerance
+    //           << ", estimated error = " << accumulated_error << std::endl;
+    eb = accumulated_error;
+    return retrieve_sizes;
+  }
+  // segmented
   std::vector<SIZE>
   interpret_retrieve_size(const std::vector<std::vector<SIZE>> &level_sizes,
                           const std::vector<std::vector<double>> &level_errors,
