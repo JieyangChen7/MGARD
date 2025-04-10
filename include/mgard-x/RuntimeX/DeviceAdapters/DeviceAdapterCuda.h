@@ -2461,6 +2461,13 @@ struct AbsMaxOp {
   }
 };
 
+struct AbsMinOp {
+  template <typename T>
+  __device__ __forceinline__ T operator()(const T &a, const T &b) const {
+    return (fabs(b) > fabs(a)) ? fabs(a) : fabs(b);
+  }
+};
+
 struct SquareOp {
   template <typename T>
   __device__ __forceinline__ T operator()(const T &a) const {
@@ -2509,6 +2516,28 @@ public:
     ErrorAsyncCheck(cudaGetLastError(), "DeviceCollective<CUDA>::AbsMax");
     if (DeviceRuntime<CUDA>::SyncAllKernelsAndCheckErrors) {
       ErrorSyncCheck(cudaDeviceSynchronize(), "DeviceCollective<CUDA>::AbsMax");
+    }
+    if (!workspace_allocated) {
+      workspace.resize({(SIZE)temp_storage_bytes}, queue_idx);
+    }
+  }
+
+  template <typename T>
+  MGARDX_CONT static void AbsMin(SIZE n, SubArray<1, T, CUDA> v,
+                                 SubArray<1, T, CUDA> result,
+                                 Array<1, Byte, CUDA> &workspace,
+                                 bool workspace_allocated, int queue_idx) {
+
+    Byte *d_temp_storage = workspace_allocated ? workspace.data() : nullptr;
+    size_t temp_storage_bytes = workspace_allocated ? workspace.shape(0) : 0;
+    AbsMinOp absMinOp;
+    cudaStream_t stream = DeviceRuntime<CUDA>::GetQueue(queue_idx);
+    cub::DeviceReduce::Reduce(d_temp_storage, temp_storage_bytes, v.data(),
+                              result.data(), n, absMinOp, static_cast<T>(0),
+                              stream);
+    ErrorAsyncCheck(cudaGetLastError(), "DeviceCollective<CUDA>::AbsMin");
+    if (DeviceRuntime<CUDA>::SyncAllKernelsAndCheckErrors) {
+      ErrorSyncCheck(cudaDeviceSynchronize(), "DeviceCollective<CUDA>::AbsMin");
     }
     if (!workspace_allocated) {
       workspace.resize({(SIZE)temp_storage_bytes}, queue_idx);

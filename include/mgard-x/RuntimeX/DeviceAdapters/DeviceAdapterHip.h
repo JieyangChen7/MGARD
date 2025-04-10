@@ -2292,6 +2292,13 @@ struct AbsMaxOp {
   }
 };
 
+struct AbsMaxOp {
+  template <typename T>
+  __device__ __forceinline__ T operator()(const T &a, const T &b) const {
+    return (fabs(b) > fabs(a)) ? fabs(a) : fabs(b);
+  }
+};
+
 struct SquareOp {
   template <typename T>
   __device__ __forceinline__ T operator()(const T &a) const {
@@ -2335,6 +2342,28 @@ public:
     hipStream_t stream = DeviceRuntime<HIP>::GetQueue(queue_idx);
     hipcub::DeviceReduce::Reduce(d_temp_storage, temp_storage_bytes, v.data(),
                                  result.data(), n, absMaxOp, static_cast<T>(0),
+                                 stream);
+    ErrorAsyncCheck(hipGetLastError(), "DeviceCollective<HIP>::AbsMax");
+    if (DeviceRuntime<HIP>::SyncAllKernelsAndCheckErrors) {
+      ErrorSyncCheck(hipDeviceSynchronize(), "DeviceCollective<HIP>::AbsMax");
+    }
+    if (!workspace_allocated) {
+      workspace.resize({(SIZE)temp_storage_bytes}, queue_idx);
+    }
+  }
+
+  template <typename T>
+  MGARDX_CONT static void AbsMin(SIZE n, SubArray<1, T, HIP> v,
+                                 SubArray<1, T, HIP> result,
+                                 Array<1, Byte, HIP> &workspace,
+                                 bool workspace_allocated, int queue_idx) {
+
+    Byte *d_temp_storage = workspace_allocated ? workspace.data() : nullptr;
+    size_t temp_storage_bytes = workspace_allocated ? workspace.shape(0) : 0;
+    AbsMinOp absMinOp;
+    hipStream_t stream = DeviceRuntime<HIP>::GetQueue(queue_idx);
+    hipcub::DeviceReduce::Reduce(d_temp_storage, temp_storage_bytes, v.data(),
+                                 result.data(), n, absMinOp, static_cast<T>(0),
                                  stream);
     ErrorAsyncCheck(hipGetLastError(), "DeviceCollective<HIP>::AbsMax");
     if (DeviceRuntime<HIP>::SyncAllKernelsAndCheckErrors) {

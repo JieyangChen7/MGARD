@@ -1772,6 +1772,12 @@ template <typename T> struct AbsMaxOp {
   }
 };
 
+template <typename T> struct AbsMinOp {
+  T operator()(const T &a, const T &b) const {
+    return (fabs(b) > fabs(a)) ? fabs(a) : fabs(b);
+  }
+};
+
 template <typename T> struct SquareOp {
   T operator()(const T &a) const { return a * a; }
 };
@@ -1815,6 +1821,27 @@ public:
         T *input = v.data();
         h.parallel_for(
             sycl::range{n}, sycl::reduction(res, (T)0, AbsMaxOp<T>()),
+            [=](sycl::id<1> i, auto &res) { res.combine(input[i]); });
+      });
+      DeviceRuntime<SYCL>::SyncDevice();
+    } else {
+      workspace.resize({(SIZE)1}, queue_idx);
+    }
+  }
+
+  template <typename T>
+  MGARDX_CONT static void AbsMin(SIZE n, SubArray<1, T, SYCL> v,
+                                 SubArray<1, T, SYCL> result,
+                                 Array<1, Byte, SYCL> &workspace,
+                                 bool workspace_allocated, int queue_idx) {
+
+    if (workspace_allocated) {
+      sycl::queue q = DeviceRuntime<SYCL>::GetQueue(queue_idx);
+      q.submit([&](sycl::handler &h) {
+        T *res = result.data();
+        T *input = v.data();
+        h.parallel_for(
+            sycl::range{n}, sycl::reduction(res, (T)0, AbsMinOp<T>()),
             [=](sycl::id<1> i, auto &res) { res.combine(input[i]); });
       });
       DeviceRuntime<SYCL>::SyncDevice();
