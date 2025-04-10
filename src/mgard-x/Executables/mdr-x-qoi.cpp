@@ -555,6 +555,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;
     // refactored_metadata.metadata[i].segmented = true;
+    refactored_metadata.metadata[i].corresponding_error_return = true;
   }
   mgard_x::MDR::MDRequest(refactored_metadata, config);
   // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size

@@ -141,13 +141,13 @@ void reconstruct_pipeline_qoi(
         // so, we need to fetch more data
         //
         // We need to update the metadata for all variables
-        ebs[0] = refactored_metadata.metadata[0].requested_tol;
-        ebs[1] = refactored_metadata.metadata[1].requested_tol;
-        ebs[2] = refactored_metadata.metadata[2].requested_tol;
+        ebs[0] = refactored_metadata.metadata[0].corresponding_error;
+        ebs[1] = refactored_metadata.metadata[1].corresponding_error;
+        ebs[2] = refactored_metadata.metadata[2].corresponding_error;
         // uint32_t usr_def_requested_size = read_file_tmp();
         std::cout << "current ebs : ";
         for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-          std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+          std::cout << refactored_metadata.metadata[id].corresponding_error << ", ";
           // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
           
         }
@@ -241,7 +241,7 @@ void reconstruct_pipeline_qoi(
             std::cout << "new ebs : ";
             for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
               // naive
-              // refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::pow(tol / error_final_out_host, 0.5) * refactored_metadata.metadata[id].requested_tol);
+              refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
 
               // log
               // refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host))); // log
@@ -251,8 +251,8 @@ void reconstruct_pipeline_qoi(
               // else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, ((ebs[id]-last_ebs[id]) - last_maximal_error * ebs[id] + error_final_out_host * last_ebs[id]) / (error_final_out_host - last_maximal_error)); // linear prediction
               
               // log linear prediction
-              if(iter < 2) refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host)));
-              else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp((std::log(ebs[id]) * std::log(tol / last_maximal_error) + std::log(last_ebs[id]) * std::log(error_final_out_host / tol)) / std::log(error_final_out_host / last_maximal_error))); // linear prediction
+              // if(iter < 2) refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host)));
+              // else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp((std::log(ebs[id]) * std::log(tol / last_maximal_error) + std::log(last_ebs[id]) * std::log(error_final_out_host / tol)) / std::log(error_final_out_host / last_maximal_error))); // linear prediction
               std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
               reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
             }
