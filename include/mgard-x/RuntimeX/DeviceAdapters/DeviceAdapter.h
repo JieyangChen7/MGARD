@@ -192,6 +192,12 @@ public:
                                  Array<1, Byte, DeviceType> &workspace,
                                  bool workspace_allocated, int queue_idx);
 
+    template <typename T>
+  MGARDX_CONT static void AbsMin(SIZE n, SubArray<1, T, DeviceType> v,
+                                 SubArray<1, T, DeviceType> result,
+                                 Array<1, Byte, DeviceType> &workspace,
+                                 bool workspace_allocated, int queue_idx);
+
   template <typename T>
   MGARDX_CONT static void SquareSum(SIZE n, SubArray<1, T, DeviceType> v,
                                     SubArray<1, T, DeviceType> result,
