@@ -196,6 +196,11 @@ public:
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
               mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
+        } else if (mdr_metadata.corresponding_error_return) {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+            mdr_metadata.corresponding_error,
+            mdr_metadata.requested_level_num_bitplanes);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
@@ -209,6 +214,11 @@ public:
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
               mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
+        } else if (mdr_metadata.corresponding_error_return) {
+          retrieve_sizes = interpreter.interpret_retrieve_size(
+            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+            mdr_metadata.corresponding_error,
+            mdr_metadata.requested_level_num_bitplanes);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
               mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,

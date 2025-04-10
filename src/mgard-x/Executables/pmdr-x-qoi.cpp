@@ -528,17 +528,40 @@
    if (dtype == mgard_x::data_type::Float){
      num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
      compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
-     tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
+    //  tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
      ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
      ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
      ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+     float local_max = -std::numeric_limits<float>::max();
+     float local_min = std::numeric_limits<float>::max();
+     float global_max = 0, global_min = 0;
+     float* V_TOT = (float*) V_TOT_ori;
+     for(int i=0; i<num_elements; i++){
+      if(V_TOT[i] > local_max) local_max = V_TOT[i];
+      if(V_TOT[i] < local_min) local_min = V_TOT[i];
+     }
+     std::cout << "local_min = " << local_min << ", local_max = " << local_max << std::endl;
+      MPI_Allreduce(&local_min, &global_min, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_max, &global_max, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
+      tau = (double) (global_max - global_min) * tols[0];
    } else if (dtype == mgard_x::data_type::Double){
      num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
      compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
-     tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
+    //  tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
      ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
      ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
      ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+     double local_min = -std::numeric_limits<double>::max();
+     double local_max = std::numeric_limits<double>::max();
+     double global_max = 0, global_min = 0;
+     double* V_TOT = (double*) V_TOT_ori;
+     for(int i=0; i<num_elements; i++){
+      if(V_TOT[i] > local_max) local_max = V_TOT[i];
+      if(V_TOT[i] < local_min) local_min = V_TOT[i];
+     }
+      MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      tau = (double) (global_max - global_min) * tols[0];
    }
  
    mgard_x::MDR::RefactoredMetadata refactored_metadata;
@@ -555,6 +578,7 @@
      refactored_metadata.metadata[i].tau = tau;
      refactored_metadata.metadata[i].requested_s = s;
      // refactored_metadata.metadata[i].segmented = true;
+     refactored_metadata.metadata[i].corresponding_error_return = true;
    }
    mgard_x::MDR::MDRequest(refactored_metadata, config);
    // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
@@ -566,10 +590,12 @@
    size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
              true, config);
    // refactored_metadata.total_size += size_read;
- 
+   double local_elapsed_time = 0, max_time = 0;
+   local_elapsed_time = -MPI_Wtime();
    mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
                                reconstructed_data, config, false);
- 
+   local_elapsed_time += MPI_Wtime();
+   MPI_Reduce(&local_elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
    // we can check reconstructed_data.qoi_in_progress here
  
    std::cout << mgard_x::log::log_info << "Additional " << size_read
@@ -620,6 +646,7 @@
    // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ", Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] << std::endl;
    std::cout << "Requested Tau = " << tau << std::endl;
    std::cout << "Real max error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
+
    return 0;
  }
  
@@ -631,19 +658,16 @@
    int rank;
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
    std::ostringstream oss;
-   // oss << "JHTDB_" << rank;
    oss << rank;
 
    std::string input_file =
         get_arg<std::string>(argc, argv, "Original data", "-i", "--input");
-    // if (!input_file.empty() && input_file.back() == '/') input_file += oss.str() + ".dat";
-    // else input_file += "/" + oss.str() + ".dat";
-   std::cout << input_file << std::endl;
+    input_file += oss.str() + ".dat";
+  //  std::cout << input_file << std::endl;
    std::string output_file =
        get_arg<std::string>(argc, argv, "Refactored data", "-o", "--output");
-   // if (!output_file.empty() && output_file.back() == '/') output_file += oss.str();
-   // else output_file += "/" + oss.str();
    output_file += oss.str();
+  //  output_file += oss.str();
    enum mgard_x::data_type dtype = get_data_type(argc, argv);
    std::vector<mgard_x::SIZE> shape =
        get_args<mgard_x::SIZE>(argc, argv, "Dimensions", "-dim", "--dimension");
