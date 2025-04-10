@@ -362,7 +362,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
 
   config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   config.domain_decomposition_dim = 0;
-  config.domain_decomposition_sizes = {shape[0] / 3, shape[1], shape[2]};
+  config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3, shape[0] / 3};
 
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
@@ -471,7 +471,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.mdr_qoi_num_variables = shape.size();
   config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   config.domain_decomposition_dim = 0;
-  config.domain_decomposition_sizes = {shape[0] / 3, shape[1], shape[2]};
+  config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3, shape[0] / 3};
 
   mgard_x::Byte *original_data;
   size_t in_size = 0;

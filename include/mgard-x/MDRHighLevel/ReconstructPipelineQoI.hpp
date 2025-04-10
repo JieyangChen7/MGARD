@@ -50,13 +50,13 @@ void reconstruct_pipeline_qoi(
       Cache::cache.device_subdomain_buffer;
   MDRData<DeviceType> *mdr_data = Cache::cache.mdr_data;
 
-  Array<D, double, DeviceType> error_out({config.domain_decomposition_sizes[0], config.domain_decomposition_sizes[1], config.domain_decomposition_sizes[2]});
+  Array<D, double, DeviceType> error_out(domain_decomposer.subdomain_shape(0));
   Array<1, double, DeviceType> error_final_out({1});
   Array<1, Byte, DeviceType> workspace;
 
   for(int i=0; i<2; i++){
     error_final_out.resize({1}, i);
-    DeviceCollective<DeviceType>::AbsMax( config.domain_decomposition_sizes[0] * config.domain_decomposition_sizes[1] * config.domain_decomposition_sizes[2],
+    DeviceCollective<DeviceType>::AbsMax(domain_decomposer.subdomain_shape(0)[0]*domain_decomposer.subdomain_shape(0)[1]*domain_decomposer.subdomain_shape(0)[2],
         SubArray<1, double, DeviceType>(), SubArray<1, double, DeviceType>(),
         workspace, false, 0);
   }
@@ -104,9 +104,10 @@ void reconstruct_pipeline_qoi(
   uint32_t max_iter = 20;
   uint32_t iter = 0;
   int buffer_for_variable[3];
-  double eb_Vx, eb_Vy, eb_Vz;
+  std::vector<double> ebs(3);
+  std::vector<double> last_ebs(3);
+  double last_maximal_error;
   double tol = refactored_metadata.metadata[0].tau;
-  double alpha = (refactored_metadata.relative_eb > 0.01) ? 0.5 : 1;
 
   reconstructed_data.qoi_in_progress = true;
 
@@ -140,17 +141,17 @@ void reconstruct_pipeline_qoi(
         // so, we need to fetch more data
         //
         // We need to update the metadata for all variables
-        eb_Vx = refactored_metadata.metadata[0].requested_tol;
-        eb_Vy = refactored_metadata.metadata[1].requested_tol;
-        eb_Vz = refactored_metadata.metadata[2].requested_tol;
+        ebs[0] = refactored_metadata.metadata[0].requested_tol;
+        ebs[1] = refactored_metadata.metadata[1].requested_tol;
+        ebs[2] = refactored_metadata.metadata[2].requested_tol;
         // uint32_t usr_def_requested_size = read_file_tmp();
-        // std::cout << "current ebs : ";
-        // for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-        //   std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
-        //   // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
+        std::cout << "current ebs : ";
+        for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
+          std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+          // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
           
-        // }
-        // std::cout << std::endl;
+        }
+        std::cout << std::endl;
         // for (auto &metadata : refactored_metadata.metadata) {
         //   metadata.PrintStatus();
         // }
@@ -209,16 +210,16 @@ void reconstruct_pipeline_qoi(
                                           SubArray(device_subdomain_buffer[0]), 
                                           SubArray(device_subdomain_buffer[1]), 
                                           SubArray(device_subdomain_buffer[2]), 
-                                          SubArray(error_out), eb_Vx, eb_Vy, eb_Vz, tol), 
+                                          SubArray(error_out), ebs[0], ebs[1], ebs[2], tol), 
                                         current_queue);
-        SubArray<1, double, DeviceType> out_1d({config.domain_decomposition_sizes[0]*config.domain_decomposition_sizes[1]*config.domain_decomposition_sizes[2]}, error_out.data());
+        SubArray<1, double, DeviceType> out_1d({device_subdomain_buffer[0].shape(0)*device_subdomain_buffer[0].shape(1)*device_subdomain_buffer[0].shape(2)}, error_out.data());
         // std::vector<double> out_vec(refactored_metadata.metadata[0].num_elements);
         // std::cout << "num_elements = " << refactored_metadata.metadata[0].num_elements << std::endl;
         // std::cout << "out_vec.data() = " << out_vec.data() << std::endl;
         // MemoryManager<DeviceType>::Copy1D(out_vec.data(), out_1d.data(), refactored_metadata.metadata[0].num_elements,
         //                                   current_queue);
         // std::cout << "max est error = " << *std::max_element(out_vec.begin(), out_vec.end()) << std::endl;
-        DeviceCollective<DeviceType>::AbsMax(config.domain_decomposition_sizes[0]*config.domain_decomposition_sizes[1]*config.domain_decomposition_sizes[2], out_1d, SubArray(error_final_out),
+        DeviceCollective<DeviceType>::AbsMax(device_subdomain_buffer[0].shape(0)*device_subdomain_buffer[0].shape(1)*device_subdomain_buffer[0].shape(2), out_1d, SubArray(error_final_out),
                                  workspace, true, current_queue);
         if (log::level || log::TIME) {
           DeviceRuntime<DeviceType>::SyncQueue(current_queue);
@@ -237,17 +238,30 @@ void reconstruct_pipeline_qoi(
                                     + refactored_metadata.metadata[1].retrieved_size
                                     + refactored_metadata.metadata[2].retrieved_size;    
         if(reconstructed_data.qoi_in_progress){              
-            // std::cout << "new ebs : ";
+            std::cout << "new ebs : ";
             for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-              refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::pow(tol / error_final_out_host, alpha) * refactored_metadata.metadata[id].requested_tol);
-              // std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+              // naive
+              // refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::pow(tol / error_final_out_host, 0.5) * refactored_metadata.metadata[id].requested_tol);
+
+              // log
+              // refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host))); // log
+
+              // linear prediction
+              // if(iter < 2) refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::pow(tol / error_final_out_host, 1) * refactored_metadata.metadata[id].requested_tol);
+              // else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, ((ebs[id]-last_ebs[id]) - last_maximal_error * ebs[id] + error_final_out_host * last_ebs[id]) / (error_final_out_host - last_maximal_error)); // linear prediction
+              
+              // log linear prediction
+              if(iter < 2) refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host)));
+              else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp((std::log(ebs[id]) * std::log(tol / last_maximal_error) + std::log(last_ebs[id]) * std::log(error_final_out_host / tol)) / std::log(error_final_out_host / last_maximal_error))); // linear prediction
+              std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
               reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
             }
-            // std::cout << std::endl;
+            std::cout << std::endl;
             mdr_data[0].CopyFromRefactoredData(
                 refactored_metadata.metadata[0],
                 refactored_data.data[0], next_queue);
         }
+        last_maximal_error = error_final_out_host;
         // std::cout << "reconstructed_data.qoi_in_progress = " << reconstructed_data.qoi_in_progress << std::endl;   
       }
 
@@ -255,12 +269,15 @@ void reconstruct_pipeline_qoi(
       
       current_buffer = next_buffer;
       current_queue = next_queue;
+      last_ebs[0] = ebs[0];
+      last_ebs[1] = ebs[1];
+      last_ebs[2] = ebs[2];
     }
   }
 
-  refactored_metadata.metadata[0].requested_tol = eb_Vx;
-  refactored_metadata.metadata[1].requested_tol = eb_Vy;
-  refactored_metadata.metadata[2].requested_tol = eb_Vz;
+  refactored_metadata.metadata[0].requested_tol = ebs[0];
+  refactored_metadata.metadata[1].requested_tol = ebs[1];
+  refactored_metadata.metadata[2].requested_tol = ebs[2];
   // Copy final data out if we are done with reconstructing
   for (SIZE curr_subdomain_id = 0;
     curr_subdomain_id < domain_decomposer.num_subdomains();
