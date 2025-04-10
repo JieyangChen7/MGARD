@@ -1365,6 +1365,23 @@ public:
   }
 
   template <typename T>
+  MGARDX_CONT static void AbsMin(SIZE n, SubArray<1, T, SERIAL> v,
+                                 SubArray<1, T, SERIAL> result,
+                                 Array<1, Byte, SERIAL> &workspace,
+                                 bool workspace_allocated, int queue_idx) {
+
+    if (workspace_allocated) {
+      T max_result = 0;
+      for (SIZE i = 0; i < n; ++i) {
+        max_result = std::min((T)fabs(*v(i)), max_result);
+      }
+      *result((IDX)0) = max_result;
+    } else {
+      workspace.resize({(SIZE)1}, queue_idx);
+    }
+  }
+
+  template <typename T>
   MGARDX_CONT static void SquareSum(SIZE n, SubArray<1, T, SERIAL> v,
                                     SubArray<1, T, SERIAL> result,
                                     Array<1, Byte, SERIAL> &workspace,

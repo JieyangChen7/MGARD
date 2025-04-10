@@ -441,8 +441,8 @@ public:
     for (u_int32_t mask = 0; mask < BATCH_SIZE; mask++) {
       // printf("lane_id: %d, mask: %u, lane_id^mask: %d\n", lane_id, mask, lane_id^mask);
       #define FULL_MASK 0xffffffff
-      // T_data buffer = __shfl_xor_sync(FULL_MASK, shifted_data[lane_id^mask], mask);
-      // shifted_data[lane_id^mask] = buffer;
+      T_data buffer = __shfl_xor_sync(FULL_MASK, shifted_data[lane_id^mask], mask);
+      shifted_data[lane_id^mask] = buffer;
     }
 
     for (int i = 0; i < actual_batch_per_warp; i++) {
