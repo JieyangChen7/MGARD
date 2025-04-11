@@ -458,7 +458,7 @@
                         std::vector<double> tols, double s,
                         enum mgard_x::error_bound_type mode,
                         bool adaptive_resolution,
-                        enum mgard_x::device_type dev_type, int verbose) {
+                        enum mgard_x::device_type dev_type, int verbose, int rank, int decrease_method = 0) {
  
    double bitrate = 0;
    mgard_x::Config config;
@@ -571,14 +571,20 @@
    refactored_metadata.total_size += metadata_size;
  
    refactored_metadata.relative_eb = tols[0];
+   refactored_metadata.decrease_method = decrease_method;
    for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
-     refactored_metadata.metadata[i].num_elements = num_elements;
-     refactored_metadata.metadata[i].requested_tol = ebs[i];
-     // refactored_metadata.metadata[i].requested_size = 10000000;
-     refactored_metadata.metadata[i].tau = tau;
-     refactored_metadata.metadata[i].requested_s = s;
-     // refactored_metadata.metadata[i].segmented = true;
-     refactored_metadata.metadata[i].corresponding_error_return = true;
+    refactored_metadata.metadata[i].num_elements = num_elements;
+    if (decrease_method == 0) {
+      refactored_metadata.metadata[i].requested_tol = ebs[i];
+    } else if(decrease_method == 1) {
+      refactored_metadata.metadata[i].corresponding_error_return = true;
+      refactored_metadata.metadata[i].requested_tol = ebs[i];
+    } else if(decrease_method == 2) {
+      refactored_metadata.metadata[i].requested_size = 1;
+      refactored_metadata.metadata[i].segmented = true;
+    }
+    refactored_metadata.metadata[i].tau = tau;
+    refactored_metadata.metadata[i].requested_s = s;
    }
    mgard_x::MDR::MDRequest(refactored_metadata, config);
    // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
@@ -596,6 +602,7 @@
                                reconstructed_data, config, false);
    local_elapsed_time += MPI_Wtime();
    MPI_Reduce(&local_elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   if(rank == 0) std::cout << "max_elpased_time = " << max_time << std::endl;
    // we can check reconstructed_data.qoi_in_progress here
  
    std::cout << mgard_x::log::log_info << "Additional " << size_read
@@ -767,8 +774,13 @@
    }
    if (verbose)
      std::cout << mgard_x::log::log_info << "verbose: enabled.\n";
+   int decrease_method;
+   if (has_arg(argc, argv, "-dm", "--decrease-method")){
+     decrease_method = get_arg<int>(argc, argv, "Decrease method", "-dm",
+                                   "--decrease-method");
+   }
    launch_reconstruct(input_file, output_file, original_file, dtype, shape, tols,
-                      s, mode, adaptive_resolution, dev_type, verbose);
+                      s, mode, adaptive_resolution, dev_type, verbose, rank, decrease_method);
    return true;
  }
  
