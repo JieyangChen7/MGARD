@@ -338,7 +338,7 @@ void reconstruct_pipeline_qoi(
                 }
             } else if (refactored_metadata.decrease_method == 3){
                 // hybrid: linear + segmented
-                if (error_final_out_host / tol > 2) {
+                if (error_final_out_host / tol > 2 && (refactored_metadata.metadata[0].corresponding_error_return)) {
                   std::cout << "new ebs : ";
                   for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
                     refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
