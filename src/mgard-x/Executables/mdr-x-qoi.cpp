@@ -559,6 +559,9 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     } else if(decrease_method == 2) {
       refactored_metadata.metadata[i].requested_size = 1;
       refactored_metadata.metadata[i].segmented = true;
+    } else if(decrease_method == 3) {
+      refactored_metadata.metadata[i].corresponding_error_return = true;
+      refactored_metadata.metadata[i].requested_tol = ebs[i];
     }
     refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;

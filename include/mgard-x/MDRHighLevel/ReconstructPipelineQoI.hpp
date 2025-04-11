@@ -324,22 +324,10 @@ void reconstruct_pipeline_qoi(
                 }
                 std::cout << std::endl;
             } else if (refactored_metadata.decrease_method == 1) {
+                // linear
                 std::cout << "new ebs : ";
                 for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-                  // naive
                   refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
-
-                  // log
-                  // refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host))); // log
-
-                  // linear prediction
-                  // if(iter < 2) refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::pow(tol / error_final_out_host, 1) * refactored_metadata.metadata[id].requested_tol);
-                  // else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, ((ebs[id]-last_ebs[id]) - last_maximal_error * ebs[id] + error_final_out_host * last_ebs[id]) / (error_final_out_host - last_maximal_error)); // linear prediction
-                  
-                  // log linear prediction
-                  // if(iter < 2) refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp(std::log(tol) * std::log(ebs[id]) / std::log(error_final_out_host)));
-                  // else refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].requested_tol / 10, std::exp((std::log(ebs[id]) * std::log(tol / last_maximal_error) + std::log(last_ebs[id]) * std::log(error_final_out_host / tol)) / std::log(error_final_out_host / last_maximal_error))); // linear prediction
-
                   std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
                   reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
                 }
@@ -347,6 +335,27 @@ void reconstruct_pipeline_qoi(
             } else if (refactored_metadata.decrease_method == 2) {
                 for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
                   reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
+                }
+            } else if (refactored_metadata.decrease_method == 3){
+                // hybrid: linear + segmented
+                if (error_final_out_host / tol > 2) {
+                  std::cout << "new ebs : ";
+                  for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
+                    refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
+                    std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+                    reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
+                  }
+                  std::cout << std::endl;
+                } else {
+                  std::cout << "Switch to Segmented ..." << std::endl;
+                  for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
+                    if(refactored_metadata.metadata[id].corresponding_error_return) {
+                      refactored_metadata.metadata[id].corresponding_error_return = false;
+                      refactored_metadata.metadata[id].segmented = true;
+                      refactored_metadata.metadata[id].requested_size = 1;
+                    }
+                    reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
+                  }
                 }
             }
             
