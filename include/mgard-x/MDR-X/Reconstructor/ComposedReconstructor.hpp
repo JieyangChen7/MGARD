@@ -370,12 +370,12 @@ public:
       timer.start();
     }
 
-    // for (int i = 1; i <= 32; i++) {
+    for (int i = 1; i <= 32; i++) {
     // std::cout << "i = " << i << ": ";
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // level_num_bitplanes[level_idx] = i;
+      level_num_bitplanes[level_idx] = i;
       Timer timer_iter; timer_iter.start();
       encoder.progressive_decode(
           level_data_subarray[level_idx].shape(0),
@@ -386,10 +386,10 @@ public:
           level_data_subarray[level_idx], queue_idx);
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer_iter.end(); 
-      // printf("%.6f, ", timer_iter.get()); //timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      printf("%.6f, ", timer_iter.get()); //timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
     }
-    // std::cout << "\n";
-    // }
+    std::cout << "\n";
+    }
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       if (level_num_bitplanes[level_idx] == 0) {

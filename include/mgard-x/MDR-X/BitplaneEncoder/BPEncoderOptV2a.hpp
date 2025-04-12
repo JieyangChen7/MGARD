@@ -131,7 +131,7 @@ public:
     frexp(*abs_max((IDX)0), &exp);
 
     
-    SIZE actual_batch_per_warp = min(M, num_batches - warp_id * M);
+    SIZE actual_batch_per_warp = std::min(M, num_batches - warp_id * M);
 
     #pragma unroll
     for (int i = 0; i < M; i++) {
@@ -217,7 +217,7 @@ public:
     SIZE tid = FunctorBase<DeviceType>::GetThreadIdX();
 
     SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
-    SIZE num_batches_this_warp = min(num_batches - global_batch_start, max_batches_per_warp);
+    SIZE num_batches_this_warp = std::min(num_batches - global_batch_start, max_batches_per_warp);
     T_data data;
     T_data shifted_data;
     T_fp fp_data;
@@ -408,7 +408,7 @@ public:
 
     int ending_bitplane = starting_bitplane + num_bitplanes;
 
-    SIZE actual_batch_per_warp = min(M, num_batches - warp_id * M);
+    SIZE actual_batch_per_warp = std::min(M, num_batches - warp_id * M);
 
     if (lane_id < actual_batch_per_warp) {
       #pragma unroll

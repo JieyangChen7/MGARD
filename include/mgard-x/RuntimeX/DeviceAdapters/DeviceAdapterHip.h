@@ -2292,7 +2292,7 @@ struct AbsMaxOp {
   }
 };
 
-struct AbsMaxOp {
+struct AbsMinOp {
   template <typename T>
   __device__ __forceinline__ T operator()(const T &a, const T &b) const {
     return (fabs(b) > fabs(a)) ? fabs(a) : fabs(b);
