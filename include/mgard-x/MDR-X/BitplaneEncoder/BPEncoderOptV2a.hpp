@@ -290,7 +290,7 @@ public:
 
   MGARDX_CONT size_t shared_memory_size() {
     size_t size = 0;
-    size += sizeof(T_fp) * BATCH_SIZE * (256/32);
+    // size += sizeof(T_fp) * BATCH_SIZE * (256/32);
     return size;
   }
 
@@ -377,9 +377,9 @@ public:
   MGARDX_EXEC void decode_batch(T_fp *v, T_bitplane *encoded) {
     for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_fp buffer = 0;
-      for (int bp_idx = 0; bp_idx < MAX_BITPLANES; bp_idx++) {
+      for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & 1u;
-        buffer += bit << (MAX_BITPLANES - 1 - bp_idx);
+        buffer += bit << (num_bitplanes - 1 - bp_idx);
       }
       v[data_idx] = buffer;
     }
@@ -412,8 +412,8 @@ public:
 
     if (lane_id < actual_batch_per_warp) {
       #pragma unroll
-      for (int bp_idx = 0; bp_idx < MAX_BITPLANES; bp_idx++) {
-        encoded_data[bp_idx] = *encoded_bitplanes(bp_idx, warp_id * M + lane_id);
+      for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
+        encoded_data[bp_idx] = *encoded_bitplanes(starting_bitplane + bp_idx, warp_id * M + lane_id);
       }
       encoded_sign = *encoded_bitplanes(0, num_batches + warp_id * M + lane_id);
 
@@ -551,7 +551,7 @@ public:
     SIZE num_batches = n / BATCH_SIZE;
     tbz = 1;
     tby = 1;
-    tbx = 256;
+    tbx = 32;
     gridz = 1;
     gridy = 1;
     // gridx = num_batches  / ((tbx/32)*32);

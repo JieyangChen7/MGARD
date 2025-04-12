@@ -35,10 +35,10 @@ public:
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // // DeviceType>;
-  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
-                                 CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                                CONTROL_L2, DeviceType>;
     // using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
-    //  using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
+     using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
@@ -371,7 +371,7 @@ public:
     }
 
     for (int i = 1; i <= 32; i++) {
-    // std::cout << "i = " << i << ": ";
+    std::cout << "[";
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -385,10 +385,15 @@ public:
           level_signs_subarray[level_idx], level_idx,
           level_data_subarray[level_idx], queue_idx);
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer_iter.end(); 
-      printf("%.6f, ", timer_iter.get()); //timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      timer_iter.end(); //timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+
+      if (level_idx < curr_final_level) {
+        printf("%.6f, ", timer_iter.get()); 
+      } else {
+        printf("%.6f", timer_iter.get()); 
+      }
     }
-    std::cout << "\n";
+    std::cout << "],\n";
     }
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
