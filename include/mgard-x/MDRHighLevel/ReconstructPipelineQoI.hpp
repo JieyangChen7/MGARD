@@ -150,7 +150,7 @@ void reconstruct_pipeline_qoi(
   SIZE total_size = 0;
   uint32_t max_iter;
   if(refactored_metadata.decrease_method == 2) max_iter = 500;
-  else max_iter = 20;
+  else max_iter = 500;
   uint32_t iter = 0;
   int buffer_for_variable[3];
   std::vector<double> ebs(3);
@@ -289,9 +289,6 @@ void reconstruct_pipeline_qoi(
         // reconstructed_data.qoi_in_progress = error_final_out_host ? true : false;
         std::cout << "==== maximal est error = " << error_final_out_host << " ====" << std::endl;
         reconstructed_data.qoi_in_progress = (error_final_out_host > tol) ? true : false;
-        refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
-                                    + refactored_metadata.metadata[1].retrieved_size
-                                    + refactored_metadata.metadata[2].retrieved_size;    
         if(reconstructed_data.qoi_in_progress){   
             // CPU version
             if(refactored_metadata.decrease_method == 0) {
@@ -347,9 +344,9 @@ void reconstruct_pipeline_qoi(
                   }
                   std::cout << std::endl;
                 } else {
-                  std::cout << "Switch to Segmented ..." << std::endl;
                   for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
                     if(refactored_metadata.metadata[id].corresponding_error_return) {
+                      std::cout << "Switch to Segmented ..." << std::endl;
                       refactored_metadata.metadata[id].corresponding_error_return = false;
                       refactored_metadata.metadata[id].segmented = true;
                       refactored_metadata.metadata[id].requested_size = 1;
@@ -376,6 +373,7 @@ void reconstruct_pipeline_qoi(
       last_ebs[2] = ebs[2];
     }
   }
+
 
   refactored_metadata.metadata[0].requested_tol = ebs[0];
   refactored_metadata.metadata[1].requested_tol = ebs[1];
