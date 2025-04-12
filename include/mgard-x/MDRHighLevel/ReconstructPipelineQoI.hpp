@@ -202,7 +202,8 @@ void reconstruct_pipeline_qoi(
         // uint32_t usr_def_requested_size = read_file_tmp();
         std::cout << "current ebs : ";
         for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-          std::cout << refactored_metadata.metadata[id].corresponding_error << ", ";
+          if (refactored_metadata.decrease_method) std::cout << refactored_metadata.metadata[id].corresponding_error << ", ";
+          else std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
           // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
           
         }
