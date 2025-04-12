@@ -649,7 +649,7 @@
    }
    // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
    // std::cout << "in_size = " << in_size << std::endl;
-   std::cout << "Bitrate = " << bitrate << std::endl;
+   std::cout << "Bitrate = " << bitrate << std::endl; // MPI_REDUCE SUM
    // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ", Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] << std::endl;
    std::cout << "Requested Tau = " << tau << std::endl;
    std::cout << "Real max error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
