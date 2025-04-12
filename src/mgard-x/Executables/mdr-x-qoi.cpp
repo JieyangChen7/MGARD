@@ -529,9 +529,9 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
     compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
     tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
-    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0] * 10);
-    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0] * 10);
-    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0] * 10);
+    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
   } else if (dtype == mgard_x::data_type::Double){
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
     compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);

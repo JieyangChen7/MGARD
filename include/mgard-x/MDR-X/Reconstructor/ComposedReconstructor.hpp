@@ -225,7 +225,6 @@ public:
               mdr_metadata.requested_level_num_bitplanes);
         }
       }
-      mdr_metadata.retrieved_size = std::accumulate(retrieve_sizes.begin(), retrieve_sizes.end(), 0);
       // SignExcludeGreedyBasedSizeInterpreter interpreter(estimator);
       // RoundRobinSizeInterpreter interpreter(estimator);
       // InorderSizeInterpreter interpreter(estimator);
