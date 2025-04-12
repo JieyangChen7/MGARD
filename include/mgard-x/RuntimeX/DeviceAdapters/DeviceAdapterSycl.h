@@ -1841,7 +1841,7 @@ public:
         T *res = result.data();
         T *input = v.data();
         h.parallel_for(
-            sycl::range{n}, sycl::reduction(res, (T)0, AbsMinOp<T>()),
+            sycl::range{n}, sycl::reduction(res, std::numeric_limits<T>::max(), AbsMinOp<T>()),
             [=](sycl::id<1> i, auto &res) { res.combine(input[i]); });
       });
       DeviceRuntime<SYCL>::SyncDevice();

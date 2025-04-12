@@ -2533,7 +2533,7 @@ public:
     AbsMinOp absMinOp;
     cudaStream_t stream = DeviceRuntime<CUDA>::GetQueue(queue_idx);
     cub::DeviceReduce::Reduce(d_temp_storage, temp_storage_bytes, v.data(),
-                              result.data(), n, absMinOp, static_cast<T>(0),
+                              result.data(), n, absMinOp, std::numeric_limits<T>::max(),
                               stream);
     ErrorAsyncCheck(cudaGetLastError(), "DeviceCollective<CUDA>::AbsMin");
     if (DeviceRuntime<CUDA>::SyncAllKernelsAndCheckErrors) {
