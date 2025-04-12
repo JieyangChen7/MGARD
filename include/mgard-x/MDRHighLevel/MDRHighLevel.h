@@ -26,34 +26,34 @@
 namespace mgard_x {
 namespace MDR {
 
-template <typename DeviceType>
-void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
-                const void *original_data,
+template <DIM D, typename T, typename DeviceType>
+void MDRefactor(std::vector<SIZE> shape, const void *original_data,
                 RefactoredMetadata &refactored_metadata,
                 RefactoredData &refactored_data, Config config,
                 bool output_pre_allocated);
 
-template <typename DeviceType>
-void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
-                const void *original_data, std::vector<const Byte *> coords,
+template <DIM D, typename T, typename DeviceType>
+void MDRefactor(std::vector<SIZE> shape, const void *original_data,
+                std::vector<T *> coords,
                 RefactoredMetadata &refactored_metadata,
                 RefactoredData &refactored_data, Config config,
                 bool output_pre_allocated);
 
-template <typename DeviceType>
-void MDRequest(RefactoredMetadata &refactored_metadata, Config config);
+template <DIM D, typename T, typename DeviceType>
+void MDRequest(std::vector<SIZE> shape, RefactoredMetadata &refactored_metadata,
+               Config config);
 
-template <typename DeviceType>
-SIZE MDRMaxOutputDataSize(DIM D, data_type dtype, std::vector<SIZE> shape,
-                          Config config);
+template <DIM D, typename T, typename DeviceType>
+SIZE MDRMaxOutputDataSize(std::vector<SIZE> shape, Config config);
 
-template <typename DeviceType>
-void MDReconstruct(RefactoredMetadata &refactored_metadata,
+template <DIM D, typename T, typename DeviceType>
+void MDReconstruct(std::vector<SIZE> shape,
+                   RefactoredMetadata &refactored_metadata,
                    RefactoredData &refactored_data,
                    ReconstructedData &reconstructed_data, Config config,
                    bool output_pre_allocated);
 
-template <typename DeviceType> void release_cache();
+template <DIM D, typename T, typename DeviceType> void release_cache();
 } // namespace MDR
 } // namespace mgard_x
 

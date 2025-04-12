@@ -1444,7 +1444,7 @@ public:
                                  bool workspace_allocated, int queue_idx) {
 
     if (workspace_allocated) {
-      T max_result = 0;
+      T max_result = std::numeric_limits<T>::max();
       for (SIZE i = 0; i < n; ++i) {
         max_result = std::min((T)fabs(*v(i)), max_result);
       }

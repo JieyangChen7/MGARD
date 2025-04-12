@@ -21,20 +21,6 @@ template void MDRefactor<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@>(std::vector<SIZE
                 RefactoredData &refactored_data, Config config,
                 bool output_pre_allocated);
 
-template void MDRequest<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@>(std::vector<SIZE> shape, RefactoredMetadata &refactored_metadata,
-               Config config);
-
-template SIZE MDRMaxOutputDataSize<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@>(std::vector<SIZE> shape, Config config);
-
-template void MDReconstruct<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@>(std::vector<SIZE> shape,
-                   RefactoredMetadata &refactored_metadata,
-                   RefactoredData &refactored_data,
-                   ReconstructedData &reconstructed_data, Config config,
-                   bool output_pre_allocated);
-
-template void release_cache<@NUM_DIM@, @DATA_TYPE@, @DEVICE_TYPE@>();
-
-
 }
 } // namespace mgard_x
 // clang-format on
