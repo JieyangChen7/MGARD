@@ -529,9 +529,9 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
     compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
     tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
-    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
-    ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
-    ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0] * 10);
+    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0] * 10);
+    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0] * 10);
   } else if (dtype == mgard_x::data_type::Double){
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
     compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
@@ -562,10 +562,13 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     } else if(decrease_method == 3) {
       refactored_metadata.metadata[i].corresponding_error_return = true;
       refactored_metadata.metadata[i].requested_tol = ebs[i];
+      // refactored_metadata.metadata[i].segmented = true;
+      // refactored_metadata.metadata[i].requested_size = 1;
     }
     refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;
   }
+  std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
   mgard_x::MDR::MDRequest(refactored_metadata, config);
   // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
   //                                   + refactored_metadata.metadata[1].retrieved_size
@@ -613,6 +616,9 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   }
   std::vector<mgard_x::SIZE> var_shape = shape;
   var_shape[0] /= config.mdr_qoi_num_variables;
+  for (auto &metadata : refactored_metadata.metadata) {
+    refactored_metadata.total_size += metadata.GetLoadedBitPlaneSizes();
+  }
   if (dtype == mgard_x::data_type::Float) {
     print_statistics<float>(s, mode, var_shape, (float *) V_TOT_ori,
                             (float *) V_TOT_rec, tau,
@@ -624,8 +630,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
                             config.normalize_coordinates);
     bitrate = 64 / ((double) in_size / refactored_metadata.total_size);
   }
-  // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
-  // std::cout << "in_size = " << in_size << std::endl;
+  std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
+  std::cout << "in_size = " << in_size << std::endl;
   std::cout << "Bitrate = " << bitrate << std::endl;
   // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ", Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] << std::endl;
   std::cout << "Requested Tau = " << tau << std::endl;

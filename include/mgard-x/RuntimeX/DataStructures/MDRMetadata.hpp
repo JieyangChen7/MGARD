@@ -76,6 +76,19 @@ public:
     }
   }
 
+  uint32_t GetLoadedBitPlaneSizes() {
+    uint32_t bitplanes_size = 0;
+    for (int level_idx = 0; level_idx < num_levels; level_idx++) {
+      // std::cout << "level[" << level_idx << "]" << ", loaded bitplanes: " << (int)loaded_level_num_bitplanes[level_idx] <<  ":" << std::endl;
+      for (int bitplane_idx = 0; bitplane_idx < loaded_level_num_bitplanes[level_idx]; bitplane_idx++) {
+        // std::cout << (int)level_sizes[level_idx][bitplane_idx] << " ";
+        bitplanes_size += level_sizes[level_idx][bitplane_idx];
+      }
+      // std::cout << "\n";
+    }
+    return bitplanes_size;
+  }
+
   void PrintStatus() {
     printf("Request size: %u, s: %f\n", requested_size, requested_s);
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
