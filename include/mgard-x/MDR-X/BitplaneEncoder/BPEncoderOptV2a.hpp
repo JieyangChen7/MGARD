@@ -337,7 +337,7 @@ public:
     SIZE num_batches = n / BATCH_SIZE;
     tbz = 1;
     tby = 1;
-    tbx = 256;
+    tbx = 32;
     gridz = 1;
     gridy = 1;
     // gridx = num_batches  / ((tbx/32)*32);
