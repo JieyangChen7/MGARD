@@ -18,6 +18,7 @@
 #include <string>
 #include <utility> // std::pair
 #include <vector>
+#include <stdint.h>
 
 // #include "MemoryManagement.h"
 
@@ -70,7 +71,7 @@ void PrintSubarray(std::string name, SubArrayType subArray) {
     for (int j = 0; j < ncol; j++) {
       for (int k = 0; k < nfib; k++) {
         // std::cout << "[ " << j << ", " << k <<" ]: ";
-        if (std::is_same<T, std::uint8_t>::value) {
+        if (std::is_same<T, uint8_t>::value) {
           std::cout << std::setw(8)
                     << (unsigned int)v[nfib * ncol * i + nfib * j + k] << " ";
         } else {
@@ -146,7 +147,7 @@ void CompareSubarray(std::string name, SubArrayType subArray1,
         } else {
           std::cout << ANSI_GREEN;
         }
-        if (std::is_same<T, std::uint8_t>::value) {
+        if (std::is_same<T, uint8_t>::value) {
           std::cout << std::setw(8)
                     << (unsigned int)v2[nfib * ncol * i + nfib * j + k] << ", ";
         } else {
@@ -231,7 +232,7 @@ void CompareSubarray(std::string name, SubArrayType1 subArray1,
           if (print)
             std::cout << ANSI_GREEN;
         }
-        if (std::is_same<T, std::uint8_t>::value) {
+        if (std::is_same<T, uint8_t>::value) {
           if (print)
             std::cout << std::setw(8)
                       << (unsigned int)v2[nfib * ncol * i + nfib * j + k]
