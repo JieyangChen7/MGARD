@@ -166,9 +166,7 @@ public:
           // buffer = __shfl_sync(FULL_MASK, buffer, 0);
 
           // option 4
-          // buffer = __ballot_sync(FULL_MASK, bit);
-          int v = 0;
-          v = __ballot(v);
+          buffer = __ballot_sync(FULL_MASK, bit);
 
           // Save to mine registers
           if (lane_id == i) {
@@ -192,8 +190,7 @@ public:
         // encoded_sign = __reduce_add_sync(FULL_MASK, encoded_sign);
 
         // option 3
-        // buffer = __ballot_sync(FULL_MASK, fp_sign);
-        buffer = __ballot(fp_sign);
+        buffer = __ballot_sync(FULL_MASK, fp_sign);
 
         if (lane_id == i) {
           encoded_sign = buffer;

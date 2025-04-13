@@ -73,7 +73,7 @@ public:
   void Compress(Array<1, T, DeviceType> &original_data,
                 Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
 
-    huffman.CompressPrimary(original_data, compressed_data, queue_idx);
+    huffman.CompressPrimary(original_data, compressed_data, 0.0, queue_idx);
 
     if (config.lossless == lossless_type::Huffman_LZ4) {
       huffman.Serialize(compressed_data, queue_idx);

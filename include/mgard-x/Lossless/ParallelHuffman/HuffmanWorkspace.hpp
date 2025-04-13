@@ -104,6 +104,7 @@ public:
         {(SIZE)(primary_count * estimated_outlier_ratio)});
 
     freq_array = Array<1, unsigned int, DeviceType>({dict_size});
+    freq_array.hostAllocate(false);
     codebook_array = Array<1, H, DeviceType>({dict_size});
     size_t type_bw = sizeof(H) * 8;
     size_t decodebook_size = sizeof(H) * (2 * type_bw) + sizeof(Q) * dict_size;
@@ -125,6 +126,7 @@ public:
     _d_freq_copy_array = Array<1, unsigned int, DeviceType>({(SIZE)dict_size});
     _d_qcode_copy_array = Array<1, Q, DeviceType>({(SIZE)dict_size});
     CL_array = Array<1, unsigned int, DeviceType>({dict_size});
+    CL_array.hostAllocate(false);
     lNodesLeader_array = Array<1, int, DeviceType>({dict_size});
     iNodesFreq_array = Array<1, unsigned int, DeviceType>({dict_size});
     iNodesLeader_array = Array<1, int, DeviceType>({dict_size});
@@ -161,6 +163,7 @@ public:
                          queue_idx);
 
     freq_array.resize({dict_size}, queue_idx);
+    freq_array.hostAllocate(false);
     codebook_array.resize({dict_size}, queue_idx);
     size_t type_bw = sizeof(H) * 8;
     size_t decodebook_size = sizeof(H) * (2 * type_bw) + sizeof(Q) * dict_size;
@@ -182,6 +185,7 @@ public:
     _d_freq_copy_array.resize({(SIZE)dict_size}, queue_idx);
     _d_qcode_copy_array.resize({(SIZE)dict_size}, queue_idx);
     CL_array.resize({dict_size}, queue_idx);
+    CL_array.hostAllocate(false);
     lNodesLeader_array.resize({dict_size}, queue_idx);
     iNodesFreq_array.resize({dict_size}, queue_idx);
     iNodesLeader_array.resize({dict_size}, queue_idx);
