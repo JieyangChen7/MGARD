@@ -29,7 +29,7 @@ using namespace std::chrono;
 namespace mgard_x {
 
 template <typename Q, typename S, typename H, typename DeviceType>
-class Huffman : public LosslessCompressorInterface<S, DeviceType> {
+class Huffman {
 public:
   Huffman() : initialized(false) {}
 
@@ -154,9 +154,9 @@ public:
     return CR;
   }
 
-  void CompressPrimary(Array<1, Q, DeviceType> &primary_data,
+  bool CompressPrimary(Array<1, Q, DeviceType> &primary_data,
                        Array<1, Byte, DeviceType> &compressed_data,
-                       int queue_idx) {
+                       float target_cr, int queue_idx) {
 
     Timer timer;
     if (log::level & log::TIME) {
@@ -177,8 +177,27 @@ public:
       PrintSubarray("Histogram::freq_subarray", workspace.freq_subarray);
     }
 
-    GetCodebook(dict_size, workspace.freq_subarray, workspace.codebook_subarray,
-                workspace.decodebook_subarray, workspace, queue_idx);
+    GetCodebook(dict_size, workspace.freq_subarray, workspace.codebook_subarray, workspace.decodebook_subarray, workspace, queue_idx);
+
+    if (target_cr > 1.0) {
+      workspace.freq_array.hostCopy(false, queue_idx);
+      workspace.CL_array.hostCopy(false, queue_idx);
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      unsigned int *_freq = workspace.freq_array.dataHost();
+      unsigned int *_cl = workspace.CL_array.dataHost();
+      double LC = 0;
+      for (SIZE i = 0; i < dict_size; i++) {
+        LC += (double)_freq[i] * _cl[i];
+      }
+      double estimated_cr = (double)(sizeof(Q) * primary_count) / (LC / 8 + 2000);
+      log::info("Huffman estimated CR: " +
+                std::to_string(estimated_cr) + " (target: " +
+                std::to_string(target_cr) + ")");
+      if (estimated_cr < target_cr) {
+        return false;
+      }
+    }
+
     if (debug_print_huffman) {
       PrintSubarray("GetCodebook::codebook_subarray",
                     workspace.codebook_subarray);
@@ -214,6 +233,7 @@ public:
       timer.print("Huffman compress", primary_count * sizeof(Q));
       timer.clear();
     }
+    return true;
   }
 
   void Serialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
@@ -471,8 +491,8 @@ public:
     }
   }
 
-  void Compress(Array<1, S, DeviceType> &original_data,
-                Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+  bool Compress(Array<1, S, DeviceType> &original_data,
+                Array<1, Byte, DeviceType> &compressed_data, float target_cr, int queue_idx) {
 
     Timer timer;
     if (log::level & log::TIME) {
@@ -519,7 +539,7 @@ public:
     // Cast to unsigned type
     Array<1, Q, DeviceType> primary_data({original_data.shape(0)},
                                          (Q *)original_data.data());
-    CompressPrimary(primary_data, compressed_data, queue_idx);
+    return CompressPrimary(primary_data, compressed_data, target_cr, queue_idx);
   }
 
   void Decompress(Array<1, Byte, DeviceType> &compressed_data,

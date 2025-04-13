@@ -96,6 +96,7 @@ public:
                  int level_idx, int queue_idx) {
 
     std::vector<float> cr, time;
+    bool huffman_success, rle_success;
     for (SIZE bitplane_idx = 0; bitplane_idx < encoded_bitplanes.shape(0);
          bitplane_idx++) {
       if (bitplane_idx % num_merged_bitplanes == 0) {
@@ -109,8 +110,10 @@ public:
             {merged_bitplane_size}, bitplane);
         int old_log_level = log::level;
         log::level = 0;
-        if (merged_bitplane_size > size_threshold &&
-            huffman.EstimateCR(encoded_bitplane, queue_idx) > cr_threshold) {
+        huffman_success = false;
+        rle_success = false;
+
+        if (merged_bitplane_size > size_threshold) {
           // double est_cr = huffman.EstimateCR(encoded_bitplane, queue_idx);
           // printf("Estimated CR: %f\n", est_cr);
           ATOMIC_IDX zero = 0;
@@ -120,18 +123,20 @@ public:
           MemoryManager<DeviceType>::Copy1D(
               &huffman.outlier_count,
               huffman.workspace.outlier_count_subarray.data(), 1, queue_idx);
-          huffman.CompressPrimary(
-              encoded_bitplane, compressed_bitplanes[bitplane_idx], queue_idx);
-          huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
-          // RLE
-        } else if (merged_bitplane_size > size_threshold &&
-                   rle.EstimateCR(encoded_bitplane, queue_idx) > cr_threshold) {
-          // double est_cr = rle.EstimateCR(encoded_bitplane, queue_idx);
-          // printf("Estimated CR: %f\n", est_cr);
-          rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
-                       queue_idx);
-          rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
-        } else {
+          huffman_success = huffman.CompressPrimary(
+              encoded_bitplane, compressed_bitplanes[bitplane_idx], cr_threshold, queue_idx);
+          if (huffman_success) {
+            huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
+          } else {
+            rle_success = rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
+                       cr_threshold, queue_idx);
+            if (rle_success) {
+              rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
+            }
+          }
+        }
+
+        if (huffman_success == false && rle_success == false) {
           // direct copy
           compressed_bitplanes[bitplane_idx].resize({merged_bitplane_size});
           MemoryManager<DeviceType>::Copy1D(

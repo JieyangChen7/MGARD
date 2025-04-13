@@ -21,8 +21,7 @@ namespace parallel_rle {
 
 template <typename T_symbol, typename C_run, typename C_global,
           typename DeviceType>
-class RunLengthEncoding
-    : public LosslessCompressorInterface<T_symbol, DeviceType> {
+class RunLengthEncoding {
 public:
   RunLengthEncoding() : initialized(false) {}
 
@@ -105,8 +104,9 @@ public:
            (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
   }
 
-  void Compress(Array<1, T_symbol, DeviceType> &original_data,
-                Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+  bool Compress(Array<1, T_symbol, DeviceType> &original_data,
+                Array<1, Byte, DeviceType> &compressed_data, 
+                float target_cr, int queue_idx) {
     Timer timer;
     // Timer timer_each;
     if (log::level & log::TIME) {
@@ -147,6 +147,16 @@ public:
     MemoryManager<DeviceType>::Copy1D(
         &_total_run_length, scanned_start_marks.data() + original_length - 1, 1,
         queue_idx);
+
+    if (target_cr > 0) {
+      double est_cr = (double)(original_length * sizeof(T_symbol)) /
+           (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
+      log::info("RLE estimated CR: " + std::to_string(est_cr) + " (target: " +
+                std::to_string(target_cr) + ")");
+      if (est_cr < target_cr) {
+        return false;
+      }
+    }
 
     // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     // PrintSubarray("scanned_start_marks", SubArray(scanned_start_marks));
@@ -217,6 +227,8 @@ public:
       timer.print("RLE compress", original_length * sizeof(T_symbol));
       timer.clear();
     }
+
+    return true;
 
     // C_run * counts_host = new C_run[total_run_length];
     // MemoryManager<DeviceType>::Copy1D(counts_host, counts.data(),
