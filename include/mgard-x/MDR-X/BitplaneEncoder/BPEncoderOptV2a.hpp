@@ -166,7 +166,9 @@ public:
           // buffer = __shfl_sync(FULL_MASK, buffer, 0);
 
           // option 4
-          buffer = __ballot_sync(FULL_MASK, bit);
+          // buffer = __ballot_sync(FULL_MASK, bit);
+          int v = 0;
+          v = __ballot(v);
 
           // Save to mine registers
           if (lane_id == i) {
@@ -190,7 +192,8 @@ public:
         // encoded_sign = __reduce_add_sync(FULL_MASK, encoded_sign);
 
         // option 3
-        buffer = __ballot_sync(FULL_MASK, fp_sign);
+        // buffer = __ballot_sync(FULL_MASK, fp_sign);
+        buffer = __ballot(fp_sign);
 
         if (lane_id == i) {
           encoded_sign = buffer;
@@ -245,6 +248,7 @@ public:
       fp_data =
             Math<DeviceType>::binary2negabinary((T_sfp)shifted_data);
       #define FULL_MASK 0xffffffff
+      unsigned long long full_mask = 0xffffffff;
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         // T_bitplane bit = (fp_data >> (num_bitplanes - 1 - bp_idx)) & 1u;
         T_bitplane bit = 1u;
@@ -261,7 +265,8 @@ public:
         // if (!bit) buffer ^= FULL_MASK;
 
         // option 4
-        buffer = __ballot_sync(FULL_MASK, bit);
+        // buffer = __ballot_sync(FULL_MASK, bit);
+        buffer = __ballot_sync(full_mask, bit);
 
         // buffer = __shfl_sync(FULL_MASK, buffer, 0);
         if (my_batch_idx == local_batch_idx) {
@@ -440,8 +445,9 @@ public:
 
     for (u_int32_t mask = 0; mask < BATCH_SIZE; mask++) {
       // printf("lane_id: %d, mask: %u, lane_id^mask: %d\n", lane_id, mask, lane_id^mask);
-      #define FULL_MASK 0xffffffff
-      T_data buffer = __shfl_xor_sync(FULL_MASK, shifted_data[lane_id^mask], mask);
+      // #define FULL_MASK 0xffffffff
+      unsigned long long full_mask = 0xFFFFFFFF;
+      T_data buffer = __shfl_xor_sync(full_mask, shifted_data[lane_id^mask], mask);
       shifted_data[lane_id^mask] = buffer;
     }
 
