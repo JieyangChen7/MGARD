@@ -33,7 +33,7 @@ public:
     for (int bp_idx = 0; bp_idx < NUM_BITPLANES; bp_idx++) {
       T_bitplane buffer = 0;
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane bit = (v[data_idx] >> (NUM_BITPLANES - 1 - bp_idx)) & 1u;
+        T_bitplane bit = (v[data_idx] >> (NUM_BITPLANES - 1 - bp_idx)) & (T_bitplane)1;
         buffer |= bit << BATCH_SIZE - 1 - data_idx;
       }
       encoded[bp_idx] = buffer;
@@ -103,7 +103,7 @@ public:
     }
 
     for (int bp_idx = 0; bp_idx < NUM_BITPLANES + 1; bp_idx++) {
-      errors[bp_idx] = ldexp(errors[bp_idx], 2 * (-(int)NUM_BITPLANES + exp));
+      errors[bp_idx] = ldexp(errors[bp_idx], 2 * (-NUM_BITPLANES + exp));
     }
   }
 
@@ -126,15 +126,28 @@ public:
     if (batch_idx >= num_full_batches) {
       return;
     }
-  
-    #pragma unroll
-    for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-      T_data data = *v(data_idx * num_full_batches + batch_idx);
-      shifted_data[data_idx] = data * (1u << NUM_BITPLANES - exp);
-      // ldexp without constant argument is slow
-      // shifted_data[data_idx] = ldexp(data, NUM_BITPLANES - exp);
-      fp_data[data_idx] = (T_fp)fabs(shifted_data[data_idx]);
-    }
+
+    if (exp > 0) {
+      #pragma unroll
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
+        T_data data = *v(data_idx * num_full_batches + batch_idx);
+        // this can cause overflow
+        shifted_data[data_idx] = data * ((T_fp)1 << NUM_BITPLANES - exp);
+        // ldexp without constant argument is slow
+        // shifted_data[data_idx] = ldexp(data, NUM_BITPLANES - exp);
+        fp_data[data_idx] = (T_fp)fabs(shifted_data[data_idx]);
+        
+        // if (num_full_batches == 1) printf("data: %f * %d %d, shifted_data: %f fp_data: %llu \n", data, NUM_BITPLANES, exp, shifted_data[data_idx], fp_data[data_idx]);
+      }
+    } else {
+      #pragma unroll
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
+        T_data data = *v(data_idx * num_full_batches + batch_idx);
+        shifted_data[data_idx] = data * pow(2, NUM_BITPLANES - exp);
+        fp_data[data_idx] = (T_fp)fabs(shifted_data[data_idx]);
+      }
+    } 
+
     // encode sign
     for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       encoded_sign += (T_fp)(signbit(shifted_data[data_idx]) == 0 ? 0 : 1) << (BATCH_SIZE - 1 - data_idx);
@@ -144,6 +157,7 @@ public:
     // store data
     #pragma unroll
     for (int bp_idx = 0; bp_idx < NUM_BITPLANES; bp_idx++) {
+      // if (num_full_batches == 1) printf("encoded_data: %u\n", encoded_data[bp_idx]);
       *encoded_bitplanes(bp_idx, batch_idx) = encoded_data[bp_idx];
     }
     // store sign
@@ -181,16 +195,31 @@ public:
       return;
     }
     
-    #pragma unroll
-    for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-      T_data data = 0;
-        data = *v(data_idx * num_full_batches + batch_idx);
-        // ldexp without constant argument is slow
-        shifted_data[data_idx] = data * (1u << NUM_BITPLANES - exp);
-        // shifted_data[data_idx] = ldexp(data, NUM_BITPLANES - exp);
-        fp_data[data_idx] =
-            Math<DeviceType>::binary2negabinary((T_sfp)shifted_data[data_idx]);
+    if (exp > 0) {
+      #pragma unroll
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
+        T_data data = 0;
+          data = *v(data_idx * num_full_batches + batch_idx);
+          // This can cause overflow
+          shifted_data[data_idx] = data * ((T_fp)1 << NUM_BITPLANES - exp);
+          // ldexp without constant argument is slow
+          // shifted_data[data_idx] = ldexp(data, NUM_BITPLANES - exp);
+          fp_data[data_idx] =
+              Math<DeviceType>::binary2negabinary((T_sfp)shifted_data[data_idx]);
+      }
+    } else {
+      #pragma unroll
+      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
+        T_data data = 0;
+          data = *v(data_idx * num_full_batches + batch_idx);
+          shifted_data[data_idx] = data * pow(2, NUM_BITPLANES - exp);   
+          // ldexp without constant argument is slow
+          // shifted_data[data_idx] = ldexp(data, NUM_BITPLANES - exp);
+          fp_data[data_idx] =
+              Math<DeviceType>::binary2negabinary((T_sfp)shifted_data[data_idx]);
+      }
     }
+    
     // encode data
     encode_batch(fp_data, encoded_data);
     // store data
@@ -300,8 +329,9 @@ public:
     for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_fp buffer = 0;
       for (int bp_idx = 0; bp_idx < NUM_BITPLANES; bp_idx++) {
-        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & 1u;
+        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & (T_fp)1;
         buffer += bit << (NUM_BITPLANES - 1 - bp_idx);
+        // printf("bit: %llu, buffer: %llu\n", bit, buffer);
       }
       v[data_idx] = buffer;
     }
@@ -333,6 +363,7 @@ public:
     for (int bp_idx = 0; bp_idx < NUM_BITPLANES; bp_idx++) {
       encoded_data[bp_idx] =
           *encoded_bitplanes(starting_bitplane + bp_idx, batch_idx);
+      // if (num_full_batches == 1) printf("encoded_data: %u\n", encoded_data[bp_idx]);
     }
     // decode data
     decode_batch(fp_data, encoded_data);
@@ -342,7 +373,7 @@ public:
       encoded_sign = *encoded_bitplanes(0, num_full_batches + batch_idx);
       #pragma unroll
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        fp_sign[data_idx] = (encoded_sign >> (BATCH_SIZE - 1 - data_idx)) & 1u;
+        fp_sign[data_idx] = (encoded_sign >> (BATCH_SIZE - 1 - data_idx)) & (T_fp)1;
         *signs(data_idx * num_full_batches + batch_idx) = fp_sign[data_idx];
       }
     } else {
@@ -359,6 +390,8 @@ public:
       // T_data data = ldexp(shifted_data[data_idx], -ending_bitplane + exp);
       data = fp_sign[data_idx] ? -data : data;
       *v(data_idx * num_full_batches + batch_idx) = data;
+
+      // if (num_full_batches == 1) printf("%llu %f %f\n", fp_data[data_idx], shifted_data[data_idx], data);
     }
   }
 
@@ -617,22 +650,22 @@ public:
                                              level_signs, v), \
             queue_idx); \
       }
-    V1B_DECODE(1); V1B_DECODE(2); V1B_DECODE(3); 
-    V1B_DECODE(4); V1B_DECODE(5);  V1B_DECODE(6); V1B_DECODE(7);
-    V1B_DECODE(8); V1B_DECODE(9); V1B_DECODE(10); V1B_DECODE(11);
-    V1B_DECODE(12); V1B_DECODE(13); V1B_DECODE(14); V1B_DECODE(15);
-    V1B_DECODE(16); V1B_DECODE(17); V1B_DECODE(18); V1B_DECODE(19);
-    V1B_DECODE(20); V1B_DECODE(21); V1B_DECODE(22); V1B_DECODE(23);
-    V1B_DECODE(24); V1B_DECODE(25); V1B_DECODE(26); V1B_DECODE(27);
-    V1B_DECODE(28); V1B_DECODE(29); V1B_DECODE(30); V1B_DECODE(31);
-    V1B_DECODE(32); V1B_DECODE(33); V1B_DECODE(34); V1B_DECODE(35);
-    V1B_DECODE(36); V1B_DECODE(37); V1B_DECODE(38); V1B_DECODE(39);
-    V1B_DECODE(40); V1B_DECODE(41); V1B_DECODE(42); V1B_DECODE(43);
-    V1B_DECODE(44); V1B_DECODE(45); V1B_DECODE(46); V1B_DECODE(47);
-    V1B_DECODE(48); V1B_DECODE(49); V1B_DECODE(50); V1B_DECODE(51);
-    V1B_DECODE(52); V1B_DECODE(53); V1B_DECODE(54); V1B_DECODE(55);
-    V1B_DECODE(56); V1B_DECODE(57); V1B_DECODE(58); V1B_DECODE(59);
-    V1B_DECODE(60); V1B_DECODE(61); V1B_DECODE(62); V1B_DECODE(63);
+    V1B_DECODE(1); V1B_DECODE(2); V1B_DECODE(3);  V1B_DECODE(4); 
+    V1B_DECODE(5);  V1B_DECODE(6); V1B_DECODE(7); V1B_DECODE(8); 
+    V1B_DECODE(9); V1B_DECODE(10); V1B_DECODE(11); V1B_DECODE(12); 
+    V1B_DECODE(13); V1B_DECODE(14); V1B_DECODE(15); V1B_DECODE(16);
+    V1B_DECODE(17); V1B_DECODE(18); V1B_DECODE(19); V1B_DECODE(20);
+    V1B_DECODE(21); V1B_DECODE(22); V1B_DECODE(23); V1B_DECODE(24);
+    V1B_DECODE(25); V1B_DECODE(26); V1B_DECODE(27); V1B_DECODE(28);
+    V1B_DECODE(29); V1B_DECODE(30); V1B_DECODE(31); V1B_DECODE(32);
+    V1B_DECODE(33); V1B_DECODE(34); V1B_DECODE(35); V1B_DECODE(36);
+    V1B_DECODE(37); V1B_DECODE(38); V1B_DECODE(39); V1B_DECODE(40);
+    V1B_DECODE(41); V1B_DECODE(42); V1B_DECODE(43); V1B_DECODE(44);
+    V1B_DECODE(45); V1B_DECODE(46); V1B_DECODE(47); V1B_DECODE(48);
+    V1B_DECODE(49); V1B_DECODE(50); V1B_DECODE(51); V1B_DECODE(52);
+    V1B_DECODE(53); V1B_DECODE(54); V1B_DECODE(55); V1B_DECODE(56); 
+    V1B_DECODE(57); V1B_DECODE(58); V1B_DECODE(59); V1B_DECODE(60); 
+    V1B_DECODE(61); V1B_DECODE(62); V1B_DECODE(63); V1B_DECODE(64); 
 
   }
 

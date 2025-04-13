@@ -35,9 +35,9 @@ public:
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // // DeviceType>;
-  // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
-  //                                CONTROL_L2, DeviceType>;
-    using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
+  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
+                                 CONTROL_L2, DeviceType>;
+    // using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
     //  using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;

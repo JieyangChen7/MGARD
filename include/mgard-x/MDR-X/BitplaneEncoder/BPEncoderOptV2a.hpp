@@ -32,7 +32,7 @@ public:
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
       T_bitplane buffer = 0;
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
+        T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
         buffer += bit << BATCH_SIZE - 1 - data_idx;
       }
       encoded[bp_idx] = buffer;
@@ -146,7 +146,7 @@ public:
 
         #pragma unroll
         for (int bp_idx = 0; bp_idx < NUM_BITPLANES; bp_idx++) {
-          T_bitplane bit = (fp_data >> (NUM_BITPLANES - 1 - bp_idx)) & 1u;
+          T_bitplane bit = (fp_data >> (NUM_BITPLANES - 1 - bp_idx)) & (T_bitplane)1;
 
           // option 1
           // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - data_idx;
@@ -248,7 +248,7 @@ public:
       unsigned long long full_mask = 0xffffffff;
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         // T_bitplane bit = (fp_data >> (num_bitplanes - 1 - bp_idx)) & 1u;
-        T_bitplane bit = 1u;
+        T_bitplane bit = (T_bitplane)1;
         // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - data_idx;
         // option 1
         // for (int offset = 16; offset > 0; offset /= 2) {
@@ -380,7 +380,7 @@ public:
     for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_fp buffer = 0;
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & 1u;
+        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & (T_fp)1;
         buffer += bit << (num_bitplanes - 1 - bp_idx);
       }
       v[data_idx] = buffer;
@@ -427,7 +427,7 @@ public:
       decode_batch(fp_data, encoded_data);
       #pragma unroll
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        fp_sign[data_idx] = (encoded_sign >> (BATCH_SIZE - 1 - data_idx)) & 1u;
+        fp_sign[data_idx] = (encoded_sign >> (BATCH_SIZE - 1 - data_idx)) & (T_fp)1;
       }
       #pragma unroll
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
