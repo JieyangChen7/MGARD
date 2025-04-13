@@ -32,7 +32,7 @@ public:
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
       T_bitplane buffer = 0;
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
+        T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
         buffer += bit << BATCH_SIZE - 1 - data_idx;
       }
       encoded[bp_idx] = buffer;
@@ -48,7 +48,7 @@ public:
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
       T_bitplane buffer = 0;
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane cur_bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & 1u;
+        T_bitplane cur_bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
         if (bp_idx == 0) {
           buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
         } else {
@@ -67,7 +67,7 @@ public:
               pred_bit = 1;
             }
             if (pred_bit != cur_bit) {
-              buffer += 1u << BATCH_SIZE - 1 - data_idx;
+              buffer += (T_bitplane)1 << BATCH_SIZE - 1 - data_idx;
             }
           } else {
             buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
@@ -368,7 +368,7 @@ public:
     for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
       T_fp buffer = 0;
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & 1u;
+        T_fp bit = (encoded[bp_idx] >> (BATCH_SIZE - 1 - data_idx)) & (T_fp)1;
         buffer += bit << (num_bitplanes - 1 - bp_idx);
       }
       v[data_idx] = buffer;
