@@ -16,9 +16,6 @@ void refactor_pipeline(
     DomainDecomposer<D, T, RefactorType, DeviceType> &domain_decomposer,
     Config &config, RefactoredMetadata &refactored_metadata,
     RefactoredData &refactored_data) {
-  Timer timer_series;
-  if (log::level & log::TIME)
-    timer_series.start();
 
   using Cache = RefactorCache<D, T, DeviceType, RefactorType>;
   using HierarchyType = typename RefactorType::HierarchyType;
@@ -55,6 +52,9 @@ void refactor_pipeline(
   mdr_data[1].Resize(refactor, hierarchy, 0);
   DeviceRuntime<DeviceType>::SyncDevice();
 
+  Timer timer_series;
+  if (log::level & log::TIME)
+    timer_series.start();
   // Prefetch the first subdomain to one buffer
   int current_buffer = 0;
   int current_queue = 0;
@@ -104,6 +104,7 @@ void refactor_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
+    log::csv("time.csv", timer_series.get());
     timer_series.print("Refactor pipeline", total_size);
     timer_series.clear();
   }

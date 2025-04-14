@@ -16,9 +16,6 @@ void reconstruct_pipeline(
     DomainDecomposer<D, T, ReconstructorType, DeviceType> &domain_decomposer,
     Config &config, RefactoredMetadata &refactored_metadata,
     RefactoredData &refactored_data, ReconstructedData &reconstructed_data) {
-  Timer timer_series;
-  if (log::level & log::TIME)
-    timer_series.start();
 
   using Cache = ReconstructorCache<D, T, DeviceType, ReconstructorType>;
   using HierarchyType = typename ReconstructorType::HierarchyType;
@@ -53,6 +50,9 @@ void reconstruct_pipeline(
   device_subdomain_buffer[2].resize(
       domain_decomposer.subdomain_shape(0), 0);
 
+  Timer timer_series;
+  if (log::level & log::TIME)
+    timer_series.start();
   // Prefetch the first subdomain
   int current_buffer = 0;
   int current_queue = 0;
@@ -177,6 +177,7 @@ void reconstruct_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
   if (log::level & log::TIME) {
     timer_series.end();
+    log::csv("time.csv", timer_series.get());
     timer_series.print("Reconstruct pipeline", total_size);
     timer_series.clear();
   }
