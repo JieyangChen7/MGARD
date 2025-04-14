@@ -313,9 +313,12 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
     config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   }
 
-  // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
-  // config.domain_decomposition_dim = 0;
-  // config.domain_decomposition_sizes = {512, 512, 512};
+  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  config.domain_decomposition_dim = 0;
+  // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512, 512};
+  // config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
+  // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 256);
+  config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
@@ -374,6 +377,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   return 0;
 }
 
+template <typename T>
 int launch_reconstruct(std::string input_file, std::string output_file,
                        std::string original_file, enum mgard_x::data_type dtype,
                        std::vector<mgard_x::SIZE> shape,
@@ -388,53 +392,41 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.dev_type = dev_type;
   config.mdr_adaptive_resolution = adaptive_resolution;
 
-  // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
-  // config.domain_decomposition_dim = 0;
-  // config.domain_decomposition_sizes = {512, 512, 512};
+  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  config.domain_decomposition_dim = 0;
+  // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512, 512};
+  // config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
+  // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 256);
+  config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
-  mgard_x::Byte *original_data;
+  size_t original_size = 1;
+  for (mgard_x::DIM i = 0; i < shape.size(); i++)
+    original_size *= shape[i];
+  T *original_data = (T *)malloc(original_size * sizeof(T));
   size_t in_size = 0;
-  if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
-    size_t original_size = 1;
-    for (mgard_x::DIM i = 0; i < shape.size(); i++)
-      original_size *= shape[i];
-    if (original_file.compare("random") == 0) {
-      if (dtype == mgard_x::data_type::Float) {
-        in_size = original_size * sizeof(float);
-        original_data = (mgard_x::Byte *)new float[original_size];
-        srand(7117);
-        for (size_t i = 0; i < original_size; i++) {
-          ((float *)original_data)[i] = rand() % 10 + 1;
-        }
-      } else if (dtype == mgard_x::data_type::Double) {
-        in_size = original_size * sizeof(double);
-        original_data = (mgard_x::Byte *)new double[original_size];
-        srand(7117);
-        for (size_t i = 0; i < original_size; i++) {
-          ((double *)original_data)[i] = rand() % 10 + 1;
-        }
-      }
-    } else {
-      mgard_x::Byte *file_data;
-      in_size = readfile<mgard_x::Byte>(original_file, file_data);
-
-      if (dtype == mgard_x::data_type::Float) {
-        original_size *= sizeof(float);
-      } else if (dtype == mgard_x::data_type::Double) {
-        original_size *= sizeof(double);
-      }
-
-      original_data = (mgard_x::Byte *)malloc(original_size);
-
-      size_t loaded_size = 0;
-      while (loaded_size < original_size) {
-
-        std::memcpy(original_data + loaded_size, file_data,
-                    std::min(in_size, original_size - loaded_size));
-        loaded_size += std::min(in_size, original_size - loaded_size);
-      }
-      in_size = loaded_size;
+  if (std::string(original_file).compare("random") == 0) {
+    in_size = original_size * sizeof(T);
+    srand(7117);
+    T c = 0;
+    for (size_t i = 0; i < original_size; i++) {
+      original_data[i] = rand() % 10 + 1;
     }
+  } else {
+    T *file_data;
+    in_size = readfile(original_file, file_data);
+
+    size_t loaded_size = 0;
+    while (loaded_size < original_size) {
+      std::memcpy(original_data + loaded_size, file_data,
+                  std::min(in_size / sizeof(T), original_size - loaded_size) *
+                      sizeof(T));
+      loaded_size += std::min(in_size / sizeof(T), original_size - loaded_size);
+    }
+    in_size = loaded_size * sizeof(T);
+  }  
+  if (in_size != original_size * sizeof(T)) {
+    std::cout << mgard_x::log::log_warn << "input file size mismatch "
+              << in_size << " vs. " << original_size * sizeof(T) << "!\n";
   }
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
@@ -574,8 +566,14 @@ bool try_reconstruction(int argc, char *argv[]) {
   }
   if (verbose)
     std::cout << mgard_x::log::log_info << "verbose: enabled.\n";
-  launch_reconstruct(input_file, output_file, original_file, dtype, shape, tols,
+  if (dtype == mgard_x::data_type::Double) {
+    launch_reconstruct<double>(input_file, output_file, original_file, dtype, shape, tols,
                      s, mode, adaptive_resolution, dev_type, verbose);
+  } else if (dtype == mgard_x::data_type::Float) {
+    launch_reconstruct<float>(input_file, output_file, original_file, dtype, shape, tols,
+                     s, mode, adaptive_resolution, dev_type, verbose);
+  }
+  
   return true;
 }
 

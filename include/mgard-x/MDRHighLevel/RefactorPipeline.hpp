@@ -53,7 +53,7 @@ void refactor_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
 
   Timer timer_series;
-  if (log::level & log::TIME)
+  // if (log::level & log::TIME)
     timer_series.start();
   // Prefetch the first subdomain to one buffer
   int current_buffer = 0;
@@ -102,12 +102,12 @@ void refactor_pipeline(
     current_queue = next_queue;
   }
   DeviceRuntime<DeviceType>::SyncDevice();
-  if (log::level & log::TIME) {
+  // if (log::level & log::TIME) {
     timer_series.end();
     log::csv("time.csv", timer_series.get());
     timer_series.print("Refactor pipeline", total_size);
     timer_series.clear();
-  }
+  // }
 }
 
 } // namespace MDR
