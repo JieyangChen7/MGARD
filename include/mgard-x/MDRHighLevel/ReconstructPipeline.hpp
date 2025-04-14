@@ -51,7 +51,7 @@ void reconstruct_pipeline(
       domain_decomposer.subdomain_shape(0), 0);
 
   Timer timer_series;
-  if (log::level & log::TIME)
+  // if (log::level & log::TIME)
     timer_series.start();
   // Prefetch the first subdomain
   int current_buffer = 0;
@@ -117,8 +117,8 @@ void reconstruct_pipeline(
     if (curr_subdomain_id > 0) {
       // We delay D2H since since it can delay the D2H in lossless decompession
       // and dequantization
-      int previous_buffer = std::abs((current_buffer - 1) % 3);
-      int previous_queue = std::abs((current_queue - 1) % 3);
+      int previous_buffer = std::abs((current_buffer + 3 - 1) % 3);
+      int previous_queue = std::abs((current_queue + 3 - 1) % 3);
       SIZE prev_subdomain_id = curr_subdomain_id - 1;
       // Update level signs for future progressive reconstruction
       mdr_data[previous_buffer].CopyToRefactoredSigns(
@@ -175,12 +175,12 @@ void reconstruct_pipeline(
       subdomain_copy_direction::SubdomainToOriginal, previous_queue);
 
   DeviceRuntime<DeviceType>::SyncDevice();
-  if (log::level & log::TIME) {
+  // if (log::level & log::TIME) {
     timer_series.end();
     log::csv("time.csv", timer_series.get());
     timer_series.print("Reconstruct pipeline", total_size);
     timer_series.clear();
-  }
+  // }
 }
 
 } // namespace MDR
