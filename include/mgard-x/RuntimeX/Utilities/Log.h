@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
 
 using std::string;
 
@@ -38,6 +39,14 @@ template <typename T, typename... Args>
 void build(std::ostream &o, T t, Args... args);
 
 template <typename... Args> void print(string log_head, Args... args);
+
+template<typename T>
+void csv(std::string file, T v) {
+  std::ofstream myfile;
+  myfile.open(file, std::ios_base::app);
+  myfile << v << ", ";
+  myfile.close();
+}
 
 } // namespace log
 
