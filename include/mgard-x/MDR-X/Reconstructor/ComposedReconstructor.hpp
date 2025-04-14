@@ -25,7 +25,7 @@ class ComposedReconstructor
     : public concepts::ReconstructorInterface<D, T_data, DeviceType> {
 public:
   constexpr static bool CONTROL_L2 = false;
-  constexpr static bool NegaBinary = false;
+  constexpr static bool NegaBinary = true;
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
@@ -183,14 +183,28 @@ public:
       level_errors = level_abs_errors;
 
       if constexpr (std::is_same<Basis, Orthogonal>::value) {
-        MaxErrorEstimatorOB<T_data> estimator(D);
-        GreedyBasedSizeInterpreter interpreter(estimator);
+        using Estimator = MaxErrorEstimatorOB<T_data>;
+        Estimator estimator(D);
+        using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
+        using NegaBinaryInterp =
+            NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
+        using Interpreter =
+            typename std::conditional<NegaBinary, NegaBinaryInterp,
+                                      BinaryInterp>::type;
+        Interpreter interpreter(estimator);
         retrieve_sizes = interpreter.interpret_retrieve_size(
             mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
             mdr_metadata.requested_level_num_bitplanes);
       } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
-        MaxErrorEstimatorHB<T_data> estimator;
-        GreedyBasedSizeInterpreter interpreter(estimator);
+        using Estimator = MaxErrorEstimatorHB<T_data>;
+        Estimator estimator;
+        using BinaryInterp = GreedyBasedSizeInterpreter<Estimator>;
+        using NegaBinaryInterp =
+            NegaBinaryGreedyBasedSizeInterpreter<Estimator>;
+        using Interpreter =
+            typename std::conditional<NegaBinary, NegaBinaryInterp,
+                                      BinaryInterp>::type;
+        Interpreter interpreter(estimator);
         retrieve_sizes = interpreter.interpret_retrieve_size(
             mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
             mdr_metadata.requested_level_num_bitplanes);
@@ -376,7 +390,7 @@ public:
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       // level_num_bitplanes[level_idx] = i;
-      Timer timer_iter; timer_iter.start();
+      // Timer timer_iter; timer_iter.start();
       encoder.progressive_decode(
           level_data_subarray[level_idx].shape(0),
           mdr_metadata.prev_used_level_num_bitplanes[level_idx],
@@ -384,8 +398,8 @@ public:
           encoded_bitplanes_subarray[level_idx],
           level_signs_subarray[level_idx], level_idx,
           level_data_subarray[level_idx], queue_idx);
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      // timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
 
       // if (level_idx < curr_final_level) {
       //   printf("%.6f, ", timer_iter.get()); 
@@ -454,7 +468,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer_all.end();
-      timer_all.print("Low-level recontruct",
+      timer_all.print("Decoding + Reposition + Recompose",
                       hierarchy->total_num_elems() * sizeof(T_data));
       timer_all.clear();
     }

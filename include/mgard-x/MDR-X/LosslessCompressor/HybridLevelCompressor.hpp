@@ -24,8 +24,8 @@ public:
   static constexpr int _huff_block_size = 1024;
   static constexpr int num_merged_bitplanes = 4;
 
-  static constexpr SIZE size_threshold = 1e6;
-  static constexpr SIZE cr_threshold = 2.0;
+  SIZE size_threshold = 1e6;
+  float cr_threshold = 2.0;
 
   static constexpr int C = 0; // direct copy
   static constexpr int H = 1; // Huffman
@@ -112,29 +112,26 @@ public:
         log::level = 0;
         huffman_success = false;
         rle_success = false;
-
+        cr_threshold = 2.0;
         if (merged_bitplane_size > size_threshold) {
-          // double est_cr = huffman.EstimateCR(encoded_bitplane, queue_idx);
-          // printf("Estimated CR: %f\n", est_cr);
-          ATOMIC_IDX zero = 0;
-          MemoryManager<DeviceType>::Copy1D(
-              huffman.workspace.outlier_count_subarray.data(), &zero, 1,
-              queue_idx);
-          MemoryManager<DeviceType>::Copy1D(
-              &huffman.outlier_count,
-              huffman.workspace.outlier_count_subarray.data(), 1, queue_idx);
-          huffman_success = huffman.CompressPrimary(
-              encoded_bitplane, compressed_bitplanes[bitplane_idx], cr_threshold, queue_idx);
-          if (huffman_success) {
-            huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
+          rle_success = rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx], cr_threshold, queue_idx);
+          if (rle_success) {
+            rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
           } else {
-            rle_success = rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
-                       cr_threshold, queue_idx);
-            if (rle_success) {
-              rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
+            ATOMIC_IDX zero = 0;
+            MemoryManager<DeviceType>::Copy1D(
+                huffman.workspace.outlier_count_subarray.data(), &zero, 1,
+                queue_idx);
+            MemoryManager<DeviceType>::Copy1D(
+                &huffman.outlier_count,
+                huffman.workspace.outlier_count_subarray.data(), 1, queue_idx);
+            huffman_success = huffman.CompressPrimary(
+                encoded_bitplane, compressed_bitplanes[bitplane_idx], cr_threshold, queue_idx);
+            if (huffman_success) {
+              huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
             }
           }
-        }
+        } 
 
         if (huffman_success == false && rle_success == false) {
           // direct copy
@@ -157,17 +154,17 @@ public:
         compressed_bitplanes[bitplane_idx].resize({1}, queue_idx);
       }
     }
-    std::string cr_string = "";
-    for (auto x : cr) {
-      cr_string += std::to_string(x) + ", ";
-    }
-    log::info("CR: " + cr_string);
+    // std::string cr_string = "";
+    // for (auto x : cr) {
+    //   cr_string += std::to_string(x) + ", ";
+    // }
+    // log::info("CR: " + cr_string);
 
-    std::string time_string = "";
-    for (auto x : time) {
-      time_string += std::to_string(x) + " ";
-    }
-    log::info("Time: " + time_string);
+    // std::string time_string = "";
+    // for (auto x : time) {
+    //   time_string += std::to_string(x) + " ";
+    // }
+    // log::info("Time: " + time_string);
   }
 
   // decompress level, create new buffer and overwrite original streams; will
@@ -215,11 +212,11 @@ public:
         timer.clear();
       }
     }
-    std::string time_string = "";
-    for (auto x : time) {
-      time_string += std::to_string(x) + " ";
-    }
-    log::info("Time: " + time_string);
+    // std::string time_string = "";
+    // for (auto x : time) {
+    //   time_string += std::to_string(x) + " ";
+    // }
+    // log::info("Time: " + time_string);
   }
 
   // release the buffer created

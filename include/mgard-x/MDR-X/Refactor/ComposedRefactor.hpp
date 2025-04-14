@@ -21,7 +21,7 @@ class ComposedRefactor
     : public concepts::RefactorInterface<D, T_data, DeviceType> {
 public:
   constexpr static bool CONTROL_L2 = false;
-  constexpr static bool NegaBinary = false;
+  constexpr static bool NegaBinary = true;
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
@@ -168,6 +168,8 @@ public:
           estimation[level_idx][bitplane_idx] =
               Encoder::bitplane_length(hierarchy.level_num_elems(level_idx)) *
               sizeof(T_bitplane) * Compressor::num_merged_bitplanes;
+          // estimation[level_idx][bitplane_idx] += 1e6;
+          // estimation[level_idx][bitplane_idx] *= 8;
         } else {
           estimation[level_idx][bitplane_idx] = 1;
         }
@@ -203,15 +205,15 @@ public:
         Array<2, T_bitplane, DeviceType> encoded_data(
           {(SIZE)Encoder::MAX_BITPLANES, encoder.bitplane_length(N)}, queue_idx);
 
-        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        Timer timer_iter; timer_iter.start();
+        // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        // Timer timer_iter; timer_iter.start();
         encoder.encode(test_data.shape(0),
                         Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
                         SubArray(test_data),
                         encoded_bitplanes_subarray[level_idx],
                         level_errors_subarray[level_idx], queue_idx);
-        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        timer_iter.end(); timer_iter.print("Encoding level", test_data.shape(0) * sizeof(T_data));
+        // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        // timer_iter.end(); timer_iter.print("Encoding level", test_data.shape(0) * sizeof(T_data));
       }
       // exit(0);
     }
@@ -310,15 +312,15 @@ public:
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
 
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      Timer timer_iter; timer_iter.start();
+      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      // Timer timer_iter; timer_iter.start();
       encoder.encode(level_data_subarray[level_idx].shape(0),
                      Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
                      level_data_subarray[level_idx],
                      encoded_bitplanes_subarray[level_idx],
                      level_errors_subarray[level_idx], queue_idx);
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      // timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
     }
 
     if (log::level & log::TIME) {
@@ -371,7 +373,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer_all.end();
-      timer_all.print("Low-level refactoring",
+      timer_all.print("Decompose + Interleave + Encoding",
                       hierarchy->total_num_elems() * sizeof(T_data));
       timer_all.clear();
     }

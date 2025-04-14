@@ -87,7 +87,7 @@ public:
     SIZE repeat_factor = 8;
     tbz = 1;
     tby = 1;
-    tbx = std::max((SIZE)512, data.shape(0) / symbols.shape(0));
+    tbx = 256;
     gridz = 1;
     gridy = 1;
     gridx = counts.shape(0);
