@@ -149,15 +149,15 @@ public:
           T_bitplane bit = (fp_data >> (NUM_BITPLANES - 1 - bp_idx)) & (T_bitplane)1;
 
           // option 1
-          // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - data_idx;
+          // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - lane_id;
           // for (int offset = 16; offset > 0; offset /= 2) {
           //   buffer |= __shfl_down_sync(FULL_MASK, shifted_bit, offset);
           // }
           // buffer = __shfl_sync(FULL_MASK, buffer, 0);
 
           // option 2
-          // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - data_idx;
-          // buffer = __reduce_add_sync(FULL_MASK, shifted_bit);
+          T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - lane_id;
+          buffer = __reduce_add_sync(FULL_MASK, shifted_bit);
           // buffer = __shfl_sync(FULL_MASK, buffer, 0);
 
           // option 3
@@ -166,7 +166,7 @@ public:
           // buffer = __shfl_sync(FULL_MASK, buffer, 0);
 
           // option 4
-          buffer = __ballot_sync(FULL_MASK, bit);
+          // buffer = __ballot_sync(FULL_MASK, bit);
 
           // Save to mine registers
           if (lane_id == i) {
@@ -190,7 +190,7 @@ public:
         // encoded_sign = __reduce_add_sync(FULL_MASK, encoded_sign);
 
         // option 3
-        buffer = __ballot_sync(FULL_MASK, fp_sign);
+        // buffer = __ballot_sync(FULL_MASK, fp_sign);
 
         if (lane_id == i) {
           encoded_sign = buffer;
@@ -482,7 +482,7 @@ public:
         // print_bits(encoded_data[bp_idx], batch_size);
       }
       // encode data
-      decode_batch(fp_data, encoded_data, num_bitplanes);
+      decode_batch(fp_data, encoded_data);
 
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
         T_data data = ldexp(
