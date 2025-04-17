@@ -313,12 +313,12 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
     config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   }
 
-  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
-  config.domain_decomposition_dim = 0;
+  // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  // config.domain_decomposition_dim = 0;
   // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512, 512};
   // config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 256);
-  config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
+  // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
@@ -392,12 +392,12 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.dev_type = dev_type;
   config.mdr_adaptive_resolution = adaptive_resolution;
 
-  config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
-  config.domain_decomposition_dim = 0;
+  // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
+  // config.domain_decomposition_dim = 0;
   // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512, 512};
   // config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 256);
-  config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
+  // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
   size_t original_size = 1;
   for (mgard_x::DIM i = 0; i < shape.size(); i++)
