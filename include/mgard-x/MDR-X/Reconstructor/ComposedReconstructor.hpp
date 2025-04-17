@@ -25,7 +25,7 @@ class ComposedReconstructor
     : public concepts::ReconstructorInterface<D, T_data, DeviceType> {
 public:
   constexpr static bool CONTROL_L2 = false;
-  constexpr static bool NegaBinary = true;
+  constexpr static bool NegaBinary = false;
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
@@ -35,9 +35,9 @@ public:
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
   // // DeviceType>;
-  using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
-                                 CONTROL_L2, DeviceType>;
-    // using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                                CONTROL_L2, DeviceType>;
+    using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
     //  using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
