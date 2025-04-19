@@ -3,7 +3,7 @@
 
 #include "../../RuntimeX/RuntimeX.h"
 
-#include "../../Linearization/LevelLinearizer.hpp"
+#include "LevelLinearizer.hpp"
 
 #include "InterleaverInterface.hpp"
 
