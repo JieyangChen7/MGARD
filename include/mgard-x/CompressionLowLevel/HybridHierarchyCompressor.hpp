@@ -139,9 +139,9 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Quantize(
 template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::LosslessCompress(
     Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
-  Array<1, QUANTIZED_UNSIGNED_INT, DeviceType> hybrid_quantized_liearized_array(
+  Array<1, QUANTIZED_INT, DeviceType> hybrid_quantized_liearized_array(
       {hierarchy->total_num_elems()},
-      (QUANTIZED_UNSIGNED_INT *)hybrid_quantized_array.data());
+      (QUANTIZED_INT *)hybrid_quantized_array.data());
 
   // SIZE ori_size = 512*512*512;
   // SIZE coarse_size = 320*320*320;
@@ -217,9 +217,9 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Dequantize(
 template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::LosslessDecompress(
     Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
-  Array<1, QUANTIZED_UNSIGNED_INT, DeviceType> quantized_liearized_data(
+  Array<1, QUANTIZED_INT, DeviceType> quantized_liearized_data(
       {hierarchy->total_num_elems()},
-      (QUANTIZED_UNSIGNED_INT *)quantized_array.data());
+      (QUANTIZED_INT *)quantized_array.data());
   lossless_compressor.Decompress(compressed_data, quantized_liearized_data,
                                  queue_idx);
 }
