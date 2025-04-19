@@ -532,7 +532,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman outlier", outlier_count * sizeof(Q));
+      timer.print("Huffman outlier", original_data.shape(0) * sizeof(S));
       timer.clear();
     }
 
@@ -571,7 +571,7 @@ public:
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Huffman outlier", outlier_count * sizeof(Q));
+      timer.print("Huffman outlier", decompressed_data.shape(0) * sizeof(S));
       timer.clear();
     }
   }
