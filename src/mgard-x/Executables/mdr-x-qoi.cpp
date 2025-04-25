@@ -444,6 +444,16 @@ T compute_value_range(const T * vec, size_t n){
 }
 
 template <class T>
+T compute_max_abs_value(const T * data, size_t n){
+  T max_val = 0;
+  for(int i=0; i<n; i++){
+      T val = fabs(data[i]);
+      if(val > max_val) max_val = val;
+  }
+  return max_val;
+}
+
+template <class T>
 void compute_VTOT(const T * Vx, const T * Vy, const T * Vz, size_t n, T * V_TOT_){
 	for(int i=0; i<n; i++){
 		double V_TOT_2 = Vx[i]*Vx[i] + Vy[i]*Vy[i] + Vz[i]*Vz[i];
@@ -529,16 +539,36 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
     compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
     tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
-    ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
-    ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
-    ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+    if (decrease_method < 4) {
+      ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
+      ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
+      ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+    } else {
+      std::vector<float> var_value_range;
+      var_value_range.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+      for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+        ebs.push_back(*std::min_element(var_value_range.begin(), var_value_range.end()));
+      }
+    }
   } else if (dtype == mgard_x::data_type::Double){
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
     compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
     tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
-    ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
-    ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
-    ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+    if (decrease_method < 2) {
+      ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
+      ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
+      ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+    } else {
+      std::vector<double> var_value_range;
+      var_value_range.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+      for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+        ebs.push_back(*std::min_element(var_value_range.begin(), var_value_range.end()));
+      }
+    }
   }
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
@@ -554,21 +584,16 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     if (decrease_method == 0) {
       refactored_metadata.metadata[i].requested_tol = ebs[i];
     } else if(decrease_method == 1) {
-      refactored_metadata.metadata[i].corresponding_error_return = true;
-      refactored_metadata.metadata[i].requested_tol = ebs[i];
-    } else if(decrease_method == 2) {
       refactored_metadata.metadata[i].requested_size = 1;
       refactored_metadata.metadata[i].segmented = true;
-    } else if(decrease_method == 3) {
-      refactored_metadata.metadata[i].corresponding_error_return = true;
+    } else if(decrease_method >= 2) {
       refactored_metadata.metadata[i].requested_tol = ebs[i];
-      // refactored_metadata.metadata[i].segmented = true;
-      // refactored_metadata.metadata[i].requested_size = 1;
+      refactored_metadata.metadata[i].corresponding_error_return = true;
     }
     refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;
   }
-  std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
+  // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
   mgard_x::MDR::MDRequest(refactored_metadata, config);
   // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
   //                                   + refactored_metadata.metadata[1].retrieved_size
@@ -585,8 +610,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
   // we can check reconstructed_data.qoi_in_progress here
 
-  std::cout << mgard_x::log::log_info << "Additional " << size_read
-            << " bytes read for reconstruction\n";
+  // std::cout << mgard_x::log::log_info << "Additional " << size_read
+  //           << " bytes read for reconstruction\n";
 
   std::vector<mgard_x::Byte*> rec_var_ptrs;
   if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
@@ -596,15 +621,15 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       mgard_x::Byte* org_var_ptr = original_data + original_size/3 * i;
       mgard_x::Byte* rec_var_ptr = reconstructed_data.data[0] + original_size/3 * i;
       rec_var_ptrs.push_back(rec_var_ptr);
-      if (dtype == mgard_x::data_type::Float) {
-        print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
-                                (float *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
-                                config.normalize_coordinates);
-      } else if (dtype == mgard_x::data_type::Double) {
-        print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
-                                (double *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
-                                config.normalize_coordinates);
-      }
+      // if (dtype == mgard_x::data_type::Float) {
+      //   print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
+      //                           (float *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
+      //                           config.normalize_coordinates);
+      // } else if (dtype == mgard_x::data_type::Double) {
+      //   print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
+      //                           (double *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
+      //                           config.normalize_coordinates);
+      // }
     }
   }
   mgard_x::Byte* V_TOT_rec;
@@ -620,22 +645,23 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     refactored_metadata.total_size += metadata.GetLoadedBitPlaneSizes();
   }
   if (dtype == mgard_x::data_type::Float) {
-    print_statistics<float>(s, mode, var_shape, (float *) V_TOT_ori,
-                            (float *) V_TOT_rec, tau,
-                            config.normalize_coordinates);
+    // print_statistics<float>(s, mode, var_shape, (float *) V_TOT_ori,
+    //                         (float *) V_TOT_rec, tau,
+    //                         config.normalize_coordinates);
     bitrate = 32 / ((double) in_size / refactored_metadata.total_size);
   } else if (dtype == mgard_x::data_type::Double) {
-    print_statistics<double>(s, mode, var_shape, (double *) V_TOT_ori,
-                            (double *) V_TOT_rec, tau,
-                            config.normalize_coordinates);
+    // print_statistics<double>(s, mode, var_shape, (double *) V_TOT_ori,
+    //                         (double *) V_TOT_rec, tau,
+    //                         config.normalize_coordinates);
     bitrate = 64 / ((double) in_size / refactored_metadata.total_size);
   }
-  std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
-  std::cout << "in_size = " << in_size << std::endl;
+  // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
+  // std::cout << "in_size = " << in_size << std::endl;
   std::cout << "Bitrate = " << bitrate << std::endl;
   // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ", Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] << std::endl;
-  std::cout << "Requested Tau = " << tau << std::endl;
-  std::cout << "Real max error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
+  std::cout << "Requested_Tau = " << tau << std::endl;
+  std::cout << "Est_max_error = " << refactored_metadata.max_est_error << std::endl;
+  std::cout << "Real_max_error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
   return 0;
 }
 

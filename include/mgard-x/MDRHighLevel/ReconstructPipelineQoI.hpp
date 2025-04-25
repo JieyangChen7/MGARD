@@ -34,6 +34,68 @@ inline uint32_t read_file_tmp(){
   return value;
 }
 
+// template <typename T> size_t readfile(std::string input_file, T *&in_buff) {
+//   // std::cout << mgard_x::log::log_info << "Loading file: " << input_file <<
+//   // "\n";
+
+//   FILE *pFile;
+//   pFile = fopen(input_file.c_str(), "rb");
+//   if (pFile == NULL) {
+//     std::cout << mgard_x::log::log_err << "file open error!\n";
+//     exit(1);
+//   }
+//   fseek(pFile, 0, SEEK_END);
+//   size_t lSize = ftell(pFile);
+//   rewind(pFile);
+//   in_buff = (T *)malloc(lSize);
+//   lSize = fread(in_buff, 1, lSize, pFile);
+//   fclose(pFile);
+//   // min_max(lSize/sizeof(T), in_buff);
+//   return lSize;
+// }
+
+// inline size_t read_mdrx(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
+//                mgard_x::MDR::RefactoredData &refactored_data,
+//                bool initialize_signs, mgard_x::Config config) {
+//    std::string input = refactored_metadata.input_path;
+//    size_t size_read = 0;
+//    int num_subdomains = refactored_metadata.metadata.size();
+//    for (int subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
+//      mgard_x::MDR::MDRMetadata metadata =
+//          refactored_metadata.metadata[subdomain_id];
+//      int num_levels = metadata.level_sizes.size();
+//      for (int level_idx = 0; level_idx < num_levels; level_idx++) {
+//        int num_bitplanes = metadata.level_sizes[level_idx].size();
+//        int loaded_bitplanes = metadata.loaded_level_num_bitplanes[level_idx];
+//        int reqested_bitplanes =
+//            metadata.requested_level_num_bitplanes[level_idx];
+//        for (int bitplane_idx = loaded_bitplanes;
+//             bitplane_idx < reqested_bitplanes; bitplane_idx++) {
+//          std::string filename = "component_" + std::to_string(subdomain_id) +
+//                                 "_" + std::to_string(level_idx) + "_" +
+//                                 std::to_string(bitplane_idx);
+//          mgard_x::SIZE level_size = readfile(
+//              input + "/" + filename,
+//              refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
+//          if (level_size != refactored_metadata.metadata[subdomain_id]
+//                                .level_sizes[level_idx][bitplane_idx]) {
+//            std::cout << "mdr component size mismatch.";
+//            exit(-1);
+//          }
+//          size_read += level_size;
+//        }
+//        if (initialize_signs) {
+//          // level sign
+//          refactored_data.level_signs[subdomain_id][level_idx] =
+//              (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
+//          memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
+//                 sizeof(bool) * metadata.level_num_elems[level_idx]);
+//        }
+//      }
+//    }
+//    return size_read;
+//  }
+
 // f(x) = x^2
 template <typename T>
 inline double compute_bound_x_square(T x, T eb){
@@ -64,7 +126,7 @@ inline void error_bound_uniform_decrease(T vx, T vy, T vz, double tau, double ma
   {
     double e_V_TOT_2 = compute_bound_x_square((double) vx, eb_vx) + compute_bound_x_square((double) vy, eb_vy) + compute_bound_x_square((double) vz, eb_vz);
     estimate_error = compute_bound_square_root_x(V_TOT_2, e_V_TOT_2);
-    std::cout << "validation of max error = " << estimate_error << std::endl;
+    // std::cout << "validation of max error = " << estimate_error << std::endl;
   }
   while(estimate_error > tau){
     eb_vx = eb_vx / 1.5;
@@ -85,8 +147,6 @@ void reconstruct_pipeline_qoi(
     Config &config, RefactoredMetadata &refactored_metadata,
     RefactoredData &refactored_data, ReconstructedData &reconstructed_data) {
   Timer timer_series, qoi_timer;
-  if (log::level & log::TIME)
-    timer_series.start();
 
   using Cache = ReconstructorCache<D, T, DeviceType, ReconstructorType>;
   using HierarchyType = typename ReconstructorType::HierarchyType;
@@ -142,16 +202,17 @@ void reconstruct_pipeline_qoi(
  
   int current_buffer = 0;
   int current_queue = 0;
-
+  
+  DeviceRuntime<DeviceType>::SyncDevice();
+  timer_series.start();
   // Prefetch the first subdomain
   mdr_data[current_buffer].CopyFromRefactoredData(
       refactored_metadata.metadata[0], refactored_data.data[0], current_queue);
 
   SIZE total_size = 0;
-  uint32_t max_iter;
-  if(refactored_metadata.decrease_method == 2) max_iter = 500;
-  else max_iter = 500;
+  uint32_t max_iter = 500;
   uint32_t iter = 0;
+  double error_final_out_host;
   int buffer_for_variable[3];
   std::vector<double> ebs(3);
   std::vector<double> last_ebs(3);
@@ -162,7 +223,7 @@ void reconstruct_pipeline_qoi(
 
   while((reconstructed_data.qoi_in_progress) && (iter < max_iter) ){
     iter++;
-    std::cout << "======= Iteration " << iter << " =======" << std::endl;
+    // std::cout << "======= Iteration " << iter << " =======" << std::endl;
     for (SIZE curr_subdomain_id = 0;
           curr_subdomain_id < domain_decomposer.num_subdomains();
           curr_subdomain_id++) {
@@ -200,14 +261,15 @@ void reconstruct_pipeline_qoi(
           ebs[2] = refactored_metadata.metadata[2].requested_tol;
         }
         // uint32_t usr_def_requested_size = read_file_tmp();
-        std::cout << "current ebs : ";
-        for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-          if (refactored_metadata.decrease_method) std::cout << refactored_metadata.metadata[id].corresponding_error << ", ";
-          else std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
-          // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
+        // std::cout << "current ebs : ";
+        // for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
+        //   if (refactored_metadata.decrease_method) std::cout << refactored_metadata.metadata[id].corresponding_error << ", ";
+        //   else std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+        //   // refactored_metadata.metadata[id].requested_size = usr_def_requested_size; //new tolerance
           
-        }
-        std::cout << std::endl;
+        // }
+        // std::cout << std::endl;
+
         // for (auto &metadata : refactored_metadata.metadata) {
         //   metadata.PrintStatus();
         // }
@@ -283,12 +345,11 @@ void reconstruct_pipeline_qoi(
           qoi_timer.print("QoI error estimation: ", total_size / 3);
           qoi_timer.clear();
         }
-        double error_final_out_host;
         MemoryManager<DeviceType>::Copy1D(&error_final_out_host, error_final_out.data(), 1,
                                           current_queue);
         DeviceRuntime<DeviceType>::SyncQueue(current_queue);
         // reconstructed_data.qoi_in_progress = error_final_out_host ? true : false;
-        std::cout << "==== maximal est error = " << error_final_out_host << " ====" << std::endl;
+        // std::cout << "==== maximal est error = " << error_final_out_host << " ====" << std::endl;
         reconstructed_data.qoi_in_progress = (error_final_out_host > tol) ? true : false;
         if(reconstructed_data.qoi_in_progress){   
             // CPU version
@@ -314,40 +375,32 @@ void reconstruct_pipeline_qoi(
                 
                 error_bound_uniform_decrease<T>(vx, vy, vz, tol, error_final_out_host, new_ebs);
                 
-                std::cout << "new ebs : ";
+                // std::cout << "new ebs : ";
                 for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
                   refactored_metadata.metadata[id].requested_tol = new_ebs[id];
-                  std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+                  // std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
                   reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
                 }
-                std::cout << std::endl;
+                // std::cout << std::endl;
             } else if (refactored_metadata.decrease_method == 1) {
-                // linear
-                std::cout << "new ebs : ";
+                // Segmented
                 for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-                  refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
-                  std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
                   reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
                 }
-                std::cout << std::endl;
             } else if (refactored_metadata.decrease_method == 2) {
-                for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
-                  reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
-                }
-            } else if (refactored_metadata.decrease_method == 3){
-                // hybrid: linear + segmented
+                // Hybrid Threshold = 2
                 if (error_final_out_host / tol > 2 && (refactored_metadata.metadata[0].corresponding_error_return)) {
-                  std::cout << "new ebs : ";
+                  // std::cout << "new ebs : ";
                   for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
                     refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
-                    std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+                    // std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
                     reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
                   }
-                  std::cout << std::endl;
+                  // std::cout << std::endl;
                 } else {
                   for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
                     if(refactored_metadata.metadata[id].corresponding_error_return) {
-                      std::cout << "Switch to Segmented ..." << std::endl;
+                      // std::cout << "Switch to Segmented ..." << std::endl;
                       refactored_metadata.metadata[id].corresponding_error_return = false;
                       refactored_metadata.metadata[id].segmented = true;
                       refactored_metadata.metadata[id].requested_size = 1;
@@ -355,6 +408,31 @@ void reconstruct_pipeline_qoi(
                     reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
                   }
                 }
+            } else if (refactored_metadata.decrease_method >= 3){
+                // Hybrid Threshold = 10 with relative or uniform value range eb
+                if (error_final_out_host / tol > 10 && (refactored_metadata.metadata[0].corresponding_error_return)) {
+                  // std::cout << "new ebs : ";
+                  for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
+                    refactored_metadata.metadata[id].requested_tol = std::max(refactored_metadata.metadata[id].corresponding_error / 4, tol / error_final_out_host * refactored_metadata.metadata[id].corresponding_error);
+                    // std::cout << refactored_metadata.metadata[id].requested_tol << ", ";
+                    reconstructor.GenerateRequest(refactored_metadata.metadata[id]);
+                  }
+                  // std::cout << std::endl;
+                } else {
+                  for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++){
+                    if(refactored_metadata.metadata[id].corresponding_error_return) {
+                      // std::cout << "Switch to Segmented ..." << std::endl;
+                      refactored_metadata.metadata[id].corresponding_error_return = false;
+                      refactored_metadata.metadata[id].segmented = true;
+                      refactored_metadata.metadata[id].requested_size = 1;
+                    }
+                    reconstructor.GenerateRequest(refactored_metadata.metadata[id]); 
+                  }
+                }
+                // IO_timer.start();
+                // size_t size_read = read_mdrx(refactored_metadata, refactored_data, false, config);
+                // IO_timer.end();
+                // refactored_metadata.IO_time += IO_timer.get();
             }
             
             mdr_data[0].CopyFromRefactoredData(
@@ -390,13 +468,20 @@ void reconstruct_pipeline_qoi(
   }
 
   DeviceRuntime<DeviceType>::SyncDevice();
-  if (log::level || log::TIME) {
-    timer_series.end();
-    timer_series.print("Reconstruct pipeline", total_size);
-    timer_series.clear();
+  timer_series.end();
+  timer_series.print("Reconstruct pipeline", total_size);
+  if(!refactored_metadata.MPI_enabled){
+    std::cout << "Reconstruct pipeline: " 
+      << timer_series.get() << "s (" 
+      << (double) total_size / timer_series.get() / 1e9 << " GB/s)" << std::endl;
+  } else{
+    refactored_metadata.kernel_time = timer_series.get();
   }
+  timer_series.clear();
   
-  std::cout << "Iterations = " << iter << std::endl;
+  // std::cout << "Iterations = " << iter << std::endl;
+  // std::cout << "Est_max_error = " << error_final_out_host << std::endl;
+  refactored_metadata.max_est_error = error_final_out_host;
 }
 
 } // namespace MDR
