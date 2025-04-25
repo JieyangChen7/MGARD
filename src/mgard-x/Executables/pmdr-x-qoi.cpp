@@ -234,53 +234,53 @@
    return metadata_size;
  }
  
- // size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
- //               mgard_x::MDR::RefactoredData &refactored_data, std::string input,
- //               bool initialize_signs, mgard_x::Config config) {
+//  size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
+//                mgard_x::MDR::RefactoredData &refactored_data, std::string input,
+//                bool initialize_signs, mgard_x::Config config) {
  
- //   size_t size_read = 0;
- //   int num_subdomains = refactored_metadata.metadata.size();
- //   for (int subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
- //     mgard_x::MDR::MDRMetadata metadata =
- //         refactored_metadata.metadata[subdomain_id];
- //     int num_levels = metadata.level_sizes.size();
- //     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
- //       int num_bitplanes = metadata.level_sizes[level_idx].size();
- //       int loaded_bitplanes = metadata.loaded_level_num_bitplanes[level_idx];
- //       int reqested_bitplanes =
- //           metadata.requested_level_num_bitplanes[level_idx];
- //       for (int bitplane_idx = loaded_bitplanes;
- //            bitplane_idx < reqested_bitplanes; bitplane_idx++) {
- //         std::string filename = "component_" + std::to_string(subdomain_id) +
- //                                "_" + std::to_string(level_idx) + "_" +
- //                                std::to_string(bitplane_idx);
- //         mgard_x::SIZE level_size = readfile(
- //             input + "/" + filename,
- //             refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
- //         mgard_x::pin_memory(
- //             refactored_data.data[subdomain_id][level_idx][bitplane_idx],
- //             level_size, config);
- //         if (level_size != refactored_metadata.metadata[subdomain_id]
- //                               .level_sizes[level_idx][bitplane_idx]) {
- //           std::cout << "mdr component size mismatch.";
- //           exit(-1);
- //         }
- //         size_read += level_size;
- //       }
- //       if (initialize_signs) {
- //         // level sign
- //         refactored_data.level_signs[subdomain_id][level_idx] =
- //             (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
- //         memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
- //                sizeof(bool) * metadata.level_num_elems[level_idx]);
- //         mgard_x::pin_memory(
- //             refactored_data.level_signs[subdomain_id][level_idx],
- //             sizeof(bool) * metadata.level_num_elems[level_idx], config);
- //       }
- //     }
- //   }
- //   return size_read;
- // }
+//    size_t size_read = 0;
+//    int num_subdomains = refactored_metadata.metadata.size();
+//    for (int subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
+//      mgard_x::MDR::MDRMetadata metadata =
+//          refactored_metadata.metadata[subdomain_id];
+//      int num_levels = metadata.level_sizes.size();
+//      for (int level_idx = 0; level_idx < num_levels; level_idx++) {
+//        int num_bitplanes = metadata.level_sizes[level_idx].size();
+//        int loaded_bitplanes = metadata.loaded_level_num_bitplanes[level_idx];
+//        int reqested_bitplanes =
+//            metadata.requested_level_num_bitplanes[level_idx];
+//        for (int bitplane_idx = loaded_bitplanes;
+//             bitplane_idx < reqested_bitplanes; bitplane_idx++) {
+//          std::string filename = "component_" + std::to_string(subdomain_id) +
+//                                 "_" + std::to_string(level_idx) + "_" +
+//                                 std::to_string(bitplane_idx);
+//          mgard_x::SIZE level_size = readfile(
+//              input + "/" + filename,
+//              refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
+//          mgard_x::pin_memory(
+//              refactored_data.data[subdomain_id][level_idx][bitplane_idx],
+//              level_size, config);
+//          if (level_size != refactored_metadata.metadata[subdomain_id]
+//                                .level_sizes[level_idx][bitplane_idx]) {
+//            std::cout << "mdr component size mismatch.";
+//            exit(-1);
+//          }
+//          size_read += level_size;
+//        }
+//        if (initialize_signs) {
+//          // level sign
+//          refactored_data.level_signs[subdomain_id][level_idx] =
+//              (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
+//          memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
+//                 sizeof(bool) * metadata.level_num_elems[level_idx]);
+//          mgard_x::pin_memory(
+//              refactored_data.level_signs[subdomain_id][level_idx],
+//              sizeof(bool) * metadata.level_num_elems[level_idx], config);
+//        }
+//      }
+//    }
+//    return size_read;
+//  }
  
  size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
                mgard_x::MDR::RefactoredData &refactored_data, std::string input,
@@ -326,6 +326,234 @@
    }
    return size_read;
  }
+
+// void posterior_bp_request(mgard_x::MDR::RefactoredMetadata &refactored_metadata, double tol, int rank){
+// 	if (tol == 1e-1) {
+// 		switch (rank) {
+// 			case 0:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				break;
+// 			case 1:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
+// 				break;
+// 			case 2:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {28, 28, 24, 20, 20, 16, 12, 12, 8, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {28, 28, 24, 20, 20, 16, 12, 12, 8, 8};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
+// 				break;
+// 			case 3:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
+// 				break;
+// 			case 4:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
+// 				break;
+// 			case 5:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {28, 28, 24, 24, 20, 16, 12, 12, 8, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				break;
+// 			case 6:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				break;
+// 			case 7:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 12, 8, 8};
+// 				break;
+// 			default:
+// 				break;
+// 		}
+// 	}	else if (tol == 1e-2) {
+// 		switch (rank) {
+// 			case 0:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 12, 12};
+// 				break;
+// 			case 1:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
+// 				break;
+// 			case 2:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				break;
+// 			case 3:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				break;
+// 			case 4:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
+// 				break;
+// 			case 5:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// 				break;
+// 			case 6:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// 				break;
+// 			case 7:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 28, 28, 24, 24, 20, 16, 16, 12, 8};
+// 				break;
+// 			default:
+// 				break;
+// 		}
+// 	}	else if (tol == 1e-3) {
+// 		switch (rank) {
+// 			case 0:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				break;
+// 			case 1:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				break;
+// 			case 2:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 12, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				break;
+// 			case 3:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				break;
+// 			case 4:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// 				break;
+// 			case 5:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				break;
+// 			case 6:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// 				break;
+// 			case 7:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12};
+// 				break;
+// 			default:
+// 				break;
+// 		}
+// 	}	else if (tol == 1e-4) {
+// 		switch (rank) {
+// 			case 0:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 1:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 24, 24, 20, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 2:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 20, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 3:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 4:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 5:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 6:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// 				break;
+// 			case 7:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 20, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 28, 24, 20, 20, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12};
+// 				break;
+// 			default:
+// 				break;
+// 		}
+// 	}	else if (tol == 1e-5) {
+// 		switch (rank) {
+// 			case 0:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 28, 28, 20, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 28, 24, 20, 20};
+// 				break;
+// 			case 1:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 32, 28, 24, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				break;
+// 			case 2:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 28, 24, 20, 16};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				break;
+// 			case 3:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				break;
+// 			case 4:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				break;
+// 			case 5:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 32, 32, 28, 24, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				break;
+// 			case 6:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				break;
+// 			case 7:
+// 				refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// 				refactored_metadata.metadata[2].requested_level_num_bitplanes = {32, 32, 32, 32, 32, 28, 28, 24, 20, 16};
+// 				break;
+// 			default:
+// 				break;
+// 		}
+// 	}}
  
  int verbose_to_log_level(int verbose) {
    if (verbose == 0) {
@@ -345,7 +573,7 @@
                      std::vector<mgard_x::SIZE> shape,
                      std::string domain_decomposition, mgard_x::SIZE block_size,
                      enum mgard_x::device_type dev_type, int verbose,
-                     mgard_x::SIZE max_memory_footprint) {
+                     mgard_x::SIZE max_memory_footprint, int rank) {
  
    mgard_x::Config config;
    config.normalize_coordinates = false;
@@ -362,7 +590,7 @@
  
    config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
    config.domain_decomposition_dim = 0;
-   config.domain_decomposition_sizes = {shape[0] / 3, shape[1], shape[2]};
+   config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3, shape[0] / 3};
  
    config.dev_type = dev_type;
    config.max_memory_footprint = max_memory_footprint;
@@ -409,10 +637,13 @@
    mgard_x::MDR::RefactoredMetadata refactored_metadata;
    mgard_x::MDR::RefactoredData refactored_data;
    mgard_x::pin_memory(original_data, original_size * sizeof(T), config);
- 
+   double local_elapsed_time = 0, max_time = 0;
+   local_elapsed_time = -MPI_Wtime();
    mgard_x::MDR::MDRefactor(D, dtype, shape, original_data, refactored_metadata,
                             refactored_data, config, false);
- 
+   local_elapsed_time += MPI_Wtime();
+   MPI_Reduce(&local_elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   if(!rank) std::cout << "max_elapsed_time = " << max_time << std::endl;
    write_mdr(refactored_metadata, refactored_data, output_file);
  
    mgard_x::unpin_memory(original_data, config);
@@ -471,7 +702,7 @@
    config.mdr_qoi_num_variables = shape.size();
    config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
    config.domain_decomposition_dim = 0;
-   config.domain_decomposition_sizes = {shape[0] / 3, shape[1], shape[2]};
+   config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3, shape[0] / 3};
  
    mgard_x::Byte *original_data;
    size_t in_size = 0;
@@ -528,10 +759,20 @@
    if (dtype == mgard_x::data_type::Float){
      num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
      compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
-    //  tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
-     ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
-     ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
-     ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+     //  tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
+     if (decrease_method < 4) {
+       ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
+       ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
+       ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+     } else {
+       std::vector<float> var_value_range;
+       var_value_range.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
+       var_value_range.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
+       var_value_range.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+       for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+         ebs.push_back(*std::min_element(var_value_range.begin(), var_value_range.end()));
+       }
+     }
      float local_max = -std::numeric_limits<float>::max();
      float local_min = std::numeric_limits<float>::max();
      float global_max = 0, global_min = 0;
@@ -540,17 +781,27 @@
       if(V_TOT[i] > local_max) local_max = V_TOT[i];
       if(V_TOT[i] < local_min) local_min = V_TOT[i];
      }
-     std::cout << "local_min = " << local_min << ", local_max = " << local_max << std::endl;
+    //  std::cout << "local_min = " << local_min << ", local_max = " << local_max << std::endl;
       MPI_Allreduce(&local_min, &global_min, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
       MPI_Allreduce(&local_max, &global_max, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
       tau = (double) (global_max - global_min) * tols[0];
    } else if (dtype == mgard_x::data_type::Double){
      num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
      compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
-    //  tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
-     ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
-     ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
-     ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+     //  tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
+     if (decrease_method < 4) {
+       ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
+       ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
+       ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+     } else {
+       std::vector<double> var_value_range;
+       var_value_range.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
+       var_value_range.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
+       var_value_range.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+       for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
+         ebs.push_back(*std::min_element(var_value_range.begin(), var_value_range.end()));
+       }
+     }
      double local_min = -std::numeric_limits<double>::max();
      double local_max = std::numeric_limits<double>::max();
      double global_max = 0, global_min = 0;
@@ -572,29 +823,35 @@
  
    refactored_metadata.relative_eb = tols[0];
    refactored_metadata.decrease_method = decrease_method;
+   refactored_metadata.MPI_enabled = true;
+   refactored_metadata.input_path = input_file;
    for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
     refactored_metadata.metadata[i].num_elements = num_elements;
     if (decrease_method == 0) {
       refactored_metadata.metadata[i].requested_tol = ebs[i];
     } else if(decrease_method == 1) {
-      refactored_metadata.metadata[i].corresponding_error_return = true;
-      refactored_metadata.metadata[i].requested_tol = ebs[i];
-    } else if(decrease_method == 2) {
       refactored_metadata.metadata[i].requested_size = 1;
       refactored_metadata.metadata[i].segmented = true;
+    } else if(decrease_method >= 2) {
+      refactored_metadata.metadata[i].requested_tol = ebs[i];
+      refactored_metadata.metadata[i].corresponding_error_return = true;
     }
     refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;
-   }
+  }
    mgard_x::MDR::MDRequest(refactored_metadata, config);
-   // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
-   //                                   + refactored_metadata.metadata[1].retrieved_size
-   //                                   + refactored_metadata.metadata[2].retrieved_size;
-   // for (auto &metadata : refactored_metadata.metadata) {
-   //   metadata.PrintStatus();
-   // }
+   
+  //  posterior_bp_request(refactored_metadata, tols[0], rank);
+  //  double local_IO_time = 0, global_IO_time = 0;
+  //  MPI_Barrier(MPI_COMM_WORLD);
+  //  local_IO_time = -MPI_Wtime();
    size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
              true, config);
+  //  MPI_Barrier(MPI_COMM_WORLD);
+  //  local_IO_time += MPI_Wtime();
+  //  MPI_Reduce(&local_IO_time, &global_IO_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  //  if(!rank) std::cout << "IO_time = " << global_IO_time << std::endl;
+    
    // refactored_metadata.total_size += size_read;
    double local_elapsed_time = 0, max_time = 0;
    local_elapsed_time = -MPI_Wtime();
@@ -602,11 +859,22 @@
                                reconstructed_data, config, false);
    local_elapsed_time += MPI_Wtime();
    MPI_Reduce(&local_elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-   if(rank == 0) std::cout << "max_elpased_time = " << max_time << std::endl;
+   if(!rank) std::cout << "max_elapsed_time = " << max_time << std::endl;
+   double local_kernel_time = 0, global_kernel_time = 0;
+   local_kernel_time = refactored_metadata.kernel_time;
+   MPI_Reduce(&local_kernel_time, &global_kernel_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   if(!rank) std::cout << "max_kernel_time = " << global_kernel_time << std::endl;
+   for (int i = 0; i < 8; ++i) {
+     MPI_Barrier(MPI_COMM_WORLD);
+     if (rank == i) {
+        std::cout << "From Rank " << i << ": " << "kernel_time = " << local_kernel_time << std::endl;
+     }
+   }
+
    // we can check reconstructed_data.qoi_in_progress here
  
-   std::cout << mgard_x::log::log_info << "Additional " << size_read
-             << " bytes read for reconstruction\n";
+  //  std::cout << mgard_x::log::log_info << "Additional " << size_read
+  //            << " bytes read for reconstruction\n";
  
    std::vector<mgard_x::Byte*> rec_var_ptrs;
    if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
@@ -616,15 +884,6 @@
        mgard_x::Byte* org_var_ptr = original_data + original_size/3 * i;
        mgard_x::Byte* rec_var_ptr = reconstructed_data.data[0] + original_size/3 * i;
        rec_var_ptrs.push_back(rec_var_ptr);
-       if (dtype == mgard_x::data_type::Float) {
-         print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
-                                 (float *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
-                                 config.normalize_coordinates);
-       } else if (dtype == mgard_x::data_type::Double) {
-         print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
-                                 (double *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
-                                 config.normalize_coordinates);
-       }
      }
    }
    mgard_x::Byte* V_TOT_rec;
@@ -634,25 +893,55 @@
    } else if (dtype == mgard_x::data_type::Double){
      compute_VTOT<double>((double *) rec_var_ptrs[0], (double *) rec_var_ptrs[1], (double *) rec_var_ptrs[2], num_elements, (double *) V_TOT_rec);
    }
-   std::vector<mgard_x::SIZE> var_shape = shape;
-   var_shape[0] /= config.mdr_qoi_num_variables;
-   if (dtype == mgard_x::data_type::Float) {
-     print_statistics<float>(s, mode, var_shape, (float *) V_TOT_ori,
-                             (float *) V_TOT_rec, tau,
-                             config.normalize_coordinates);
-     bitrate = 32 / ((double) in_size / refactored_metadata.total_size);
-   } else if (dtype == mgard_x::data_type::Double) {
-     print_statistics<double>(s, mode, var_shape, (double *) V_TOT_ori,
-                             (double *) V_TOT_rec, tau,
-                             config.normalize_coordinates);
-     bitrate = 64 / ((double) in_size / refactored_metadata.total_size);
+   for (auto &metadata : refactored_metadata.metadata) {
+    refactored_metadata.total_size += metadata.GetLoadedBitPlaneSizes();
    }
-   // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
-   // std::cout << "in_size = " << in_size << std::endl;
-   std::cout << "Bitrate = " << bitrate << std::endl; // MPI_REDUCE SUM
+
+   // Bitrate
+   unsigned long long int local_total_size = refactored_metadata.total_size;
+   unsigned long long int global_total_size = 0;
+   MPI_Reduce(&local_total_size, &global_total_size, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+   unsigned long long int local_in_size = in_size;
+   unsigned long long int global_in_size = 0;
+   MPI_Reduce(&local_in_size, &global_in_size, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+   if (dtype == mgard_x::data_type::Float) {
+    bitrate = 32 / ((double) global_in_size / global_total_size);
+   } else if (dtype == mgard_x::data_type::Double){
+    bitrate = 64 / ((double) global_in_size / global_total_size);
+   }
+   if(!rank) std::cout << "Bitrate = " << bitrate << std::endl; // MPI_REDUCE SUM
+
    // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ", Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] << std::endl;
-   std::cout << "Requested Tau = " << tau << std::endl;
-   std::cout << "Real max error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
+   if(!rank) std::cout << "Requested_Tau = " << tau << std::endl;
+   
+   // Max_est_error
+   double local_max_est_error = refactored_metadata.max_est_error;
+   double global_max_est_error = 0;
+   MPI_Reduce(&local_max_est_error, &global_max_est_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   if(!rank) std::cout << "Est_max_error = " << global_max_est_error << std::endl;
+
+   // Max_real_error
+   double local_real_max_error = (double) compute_max_abs_error((float*) V_TOT_ori, (float*) V_TOT_rec, num_elements);
+   double global_real_max_error = 0;
+   MPI_Reduce(&local_real_max_error, &global_real_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   if(!rank) std::cout << "Real_max_error = " << global_real_max_error << std::endl;
+  //  for (int i = 0; i < 8; ++i) {
+  //   MPI_Barrier(MPI_COMM_WORLD);
+  //   if (rank == i) {
+  //       std::cout << "From Rank " << i << ": " << std::endl;
+  //       int count = 0;
+  //       for (auto &metadata : refactored_metadata.metadata){
+  //         if (count == 0) std::cout << "Vx:" << std::endl;
+  //         else if (count == 1) std::cout << "Vy:" << std::endl;
+  //         else if (count == 2) std::cout << "Vz:" << std::endl;
+  //         for (size_t i = 0; i < metadata.loaded_level_num_bitplanes.size(); ++i) {
+  //           std::cout << "Level " << i << ": bitplane = " 
+  //                     << static_cast<int>(metadata.loaded_level_num_bitplanes[i]) << std::endl;
+  //         }
+  //         count ++;
+  //       }
+  //   }
+  //  }
 
    return 0;
  }
@@ -674,7 +963,7 @@
    std::string output_file =
        get_arg<std::string>(argc, argv, "Refactored data", "-o", "--output");
    output_file += oss.str();
-  //  output_file += oss.str();
+  //  std::cout << output_file << std::endl;
    enum mgard_x::data_type dtype = get_data_type(argc, argv);
    std::vector<mgard_x::SIZE> shape =
        get_args<mgard_x::SIZE>(argc, argv, "Dimensions", "-dim", "--dimension");
@@ -705,11 +994,11 @@
      launch_refactor<double>(shape.size(), dtype, input_file.c_str(),
                              output_file.c_str(), shape, domain_decomposition,
                              block_size, dev_type, verbose,
-                             max_memory_footprint);
+                             max_memory_footprint, rank);
    } else if (dtype == mgard_x::data_type::Float) {
      launch_refactor<float>(shape.size(), dtype, input_file.c_str(),
                             output_file.c_str(), shape, domain_decomposition,
-                            block_size, dev_type, verbose, max_memory_footprint);
+                            block_size, dev_type, verbose, max_memory_footprint, rank);
    }
    return true;
  }
@@ -730,6 +1019,7 @@
    // if (!input_file.empty() && input_file.back() == '/') input_file += oss.str();
    // else input_file += "/" + oss.str();
    input_file += oss.str();
+  //  std::cout << input_file << std::endl;
    std::string output_file =
        get_arg<std::string>(argc, argv, "Reconstructed data", "-o", "--output");
    // default is none (means original data not provided)
@@ -742,6 +1032,7 @@
      // if (!original_file.empty() && original_file.back() == '/') original_file += oss.str() + ".dat";
      // else original_file += "/" + oss.str() + ".dat";
      original_file += oss.str() + ".dat";
+    //  std::cout << original_file << std::endl;
      dtype = get_data_type(argc, argv);
      shape = get_args<mgard_x::SIZE>(argc, argv, "Dimensions", "-dim",
                                      "--dimension");
