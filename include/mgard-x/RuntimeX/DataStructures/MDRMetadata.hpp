@@ -42,11 +42,18 @@ public:
   std::vector<std::vector<T_error>> level_squared_errors;
   std::vector<std::vector<SIZE>> level_sizes;
   std::vector<SIZE> level_num_elems;
+  bool segmented = false;
+  bool corresponding_error_return = false;
+  size_t retrieved_size = 0;
 
   // For progressive reconstruction
   T_error loaded_tol, loaded_s;
   T_error requested_tol, requested_s;
   T_error prev_tol, prev_s;
+  T_error tau;
+  uint32_t requested_size;
+  size_t num_elements;
+  double corresponding_error;
   std::vector<uint8_t> loaded_level_num_bitplanes;
   std::vector<uint8_t> requested_level_num_bitplanes;
   std::vector<uint8_t> prev_used_level_num_bitplanes;
@@ -69,8 +76,21 @@ public:
     }
   }
 
+  uint32_t GetLoadedBitPlaneSizes() {
+    uint32_t bitplanes_size = 0;
+    for (int level_idx = 0; level_idx < num_levels; level_idx++) {
+      // std::cout << "level[" << level_idx << "]" << ", loaded bitplanes: " << (int)loaded_level_num_bitplanes[level_idx] <<  ":" << std::endl;
+      for (int bitplane_idx = 0; bitplane_idx < loaded_level_num_bitplanes[level_idx]; bitplane_idx++) {
+        // std::cout << (int)level_sizes[level_idx][bitplane_idx] << " ";
+        bitplanes_size += level_sizes[level_idx][bitplane_idx];
+      }
+      // std::cout << "\n";
+    }
+    return bitplanes_size;
+  }
+
   void PrintStatus() {
-    printf("Request tol: %f, s: %f\n", requested_tol, requested_s);
+    printf("Request size: %u, s: %f\n", requested_size, requested_s);
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
       printf("Level %d bitplanes: used [%2d] loaded [%2d] requested [%2d]\n",
              level_idx, prev_used_level_num_bitplanes[level_idx],

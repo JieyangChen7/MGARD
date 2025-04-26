@@ -31,6 +31,14 @@ public:
   std::vector<Byte> header;
   std::vector<MDRMetadata> metadata;
   SIZE num_subdomains;
+  size_t total_size = 0;
+  double relative_eb = 0;
+  int decrease_method = 0;
+  double max_est_error = 0;
+  bool MPI_enabled = false;
+  double IO_time = 0;
+  double kernel_time = 0;
+  std::string input_path;
 
   template <typename T> void Serialize(Byte *&ptr, T *data, SIZE bytes) {
     memcpy(ptr, (Byte *)data, bytes);
