@@ -16,86 +16,6 @@
 namespace mgard_x {
 namespace MDR {
 
-inline uint32_t read_file_tmp(){
-  std::string path = "/home/linusli037/Polaris/MGARD/build-cuda-turing/mgard/miniNYX/requested_size.txt";
-  FILE *pFile;
-  pFile = fopen(path.c_str(), "r");
-  if (pFile == NULL) {
-    std::cout << mgard_x::log::log_err << "file open error!\n";
-    exit(1);
-  }
-  uint32_t value;
-  if (fscanf(pFile, "%u", &value) != 1) {
-    std::cout << mgard_x::log::log_err << "file read error!\n";
-    fclose(pFile);
-    exit(1);
-  }
-  fclose(pFile);
-  return value;
-}
-
-// template <typename T> size_t readfile(std::string input_file, T *&in_buff) {
-//   // std::cout << mgard_x::log::log_info << "Loading file: " << input_file <<
-//   // "\n";
-
-//   FILE *pFile;
-//   pFile = fopen(input_file.c_str(), "rb");
-//   if (pFile == NULL) {
-//     std::cout << mgard_x::log::log_err << "file open error!\n";
-//     exit(1);
-//   }
-//   fseek(pFile, 0, SEEK_END);
-//   size_t lSize = ftell(pFile);
-//   rewind(pFile);
-//   in_buff = (T *)malloc(lSize);
-//   lSize = fread(in_buff, 1, lSize, pFile);
-//   fclose(pFile);
-//   // min_max(lSize/sizeof(T), in_buff);
-//   return lSize;
-// }
-
-// inline size_t read_mdrx(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
-//                mgard_x::MDR::RefactoredData &refactored_data,
-//                bool initialize_signs, mgard_x::Config config) {
-//    std::string input = refactored_metadata.input_path;
-//    size_t size_read = 0;
-//    int num_subdomains = refactored_metadata.metadata.size();
-//    for (int subdomain_id = 0; subdomain_id < num_subdomains; subdomain_id++) {
-//      mgard_x::MDR::MDRMetadata metadata =
-//          refactored_metadata.metadata[subdomain_id];
-//      int num_levels = metadata.level_sizes.size();
-//      for (int level_idx = 0; level_idx < num_levels; level_idx++) {
-//        int num_bitplanes = metadata.level_sizes[level_idx].size();
-//        int loaded_bitplanes = metadata.loaded_level_num_bitplanes[level_idx];
-//        int reqested_bitplanes =
-//            metadata.requested_level_num_bitplanes[level_idx];
-//        for (int bitplane_idx = loaded_bitplanes;
-//             bitplane_idx < reqested_bitplanes; bitplane_idx++) {
-//          std::string filename = "component_" + std::to_string(subdomain_id) +
-//                                 "_" + std::to_string(level_idx) + "_" +
-//                                 std::to_string(bitplane_idx);
-//          mgard_x::SIZE level_size = readfile(
-//              input + "/" + filename,
-//              refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
-//          if (level_size != refactored_metadata.metadata[subdomain_id]
-//                                .level_sizes[level_idx][bitplane_idx]) {
-//            std::cout << "mdr component size mismatch.";
-//            exit(-1);
-//          }
-//          size_read += level_size;
-//        }
-//        if (initialize_signs) {
-//          // level sign
-//          refactored_data.level_signs[subdomain_id][level_idx] =
-//              (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
-//          memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
-//                 sizeof(bool) * metadata.level_num_elems[level_idx]);
-//        }
-//      }
-//    }
-//    return size_read;
-//  }
-
 // f(x) = x^2
 template <typename T>
 inline double compute_bound_x_square(T x, T eb){
@@ -235,7 +155,7 @@ void reconstruct_pipeline_qoi(
           domain_decomposer.subdomain_shape(curr_subdomain_id));
       log::info("Adapt Refactor to hierarchy");
       reconstructor.Adapt(hierarchy, config, current_queue);
-      total_size += hierarchy.total_num_elems() * sizeof(T);
+      if(iter == 1) total_size += hierarchy.total_num_elems() * sizeof(T);
       reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
       reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
       if (curr_subdomain_id + 1 < domain_decomposer.num_subdomains()) {
@@ -260,7 +180,6 @@ void reconstruct_pipeline_qoi(
           ebs[1] = refactored_metadata.metadata[1].requested_tol;
           ebs[2] = refactored_metadata.metadata[2].requested_tol;
         }
-        // uint32_t usr_def_requested_size = read_file_tmp();
         // std::cout << "current ebs : ";
         // for (SIZE id = 0; id < domain_decomposer.num_subdomains(); id++) {
         //   if (refactored_metadata.decrease_method) std::cout << refactored_metadata.metadata[id].corresponding_error << ", ";
