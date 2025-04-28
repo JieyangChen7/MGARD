@@ -105,10 +105,10 @@ void refactor_pipeline(
   }
   DeviceRuntime<DeviceType>::SyncDevice();
   // if (log::level & log::TIME) {
-  timer_series.end();
-  log::csv("time.csv", timer_series.get());
-  timer_series.print("Refactor pipeline", total_size);
-  timer_series.clear();
+    timer_series.end();
+    // log::csv("time.csv", timer_series.get());
+    timer_series.print("Refactor pipeline", total_size);
+    timer_series.clear();
   // }
 }
 

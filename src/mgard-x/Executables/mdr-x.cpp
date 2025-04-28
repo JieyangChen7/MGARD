@@ -453,8 +453,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
     std::cout << mgard_x::log::log_info << "Additional " << size_read
               << " bytes read for reconstruction\n";
-
-    mgard_x::log::csv("size.csv", size_read);
+    
+    // mgard_x::log::csv("size.csv", size_read);
 
     if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
       if (dtype == mgard_x::data_type::Float) {
