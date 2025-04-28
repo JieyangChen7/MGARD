@@ -4,6 +4,8 @@
  * Author: Jieyang Chen (chenj3@ornl.gov)
  * Date: Jan. 15, 2023
  */
+#ifndef MGARD_X_INDEX_TABLE_5X5X5_HPP
+#define MGARD_X_INDEX_TABLE_5X5X5_HPP
 
 namespace mgard_x {
 // clang-format off
@@ -784,3 +786,5 @@ MGARDX_EXEC int Coarse_Offset_5x5x5(SIZE i) {
 
 // clang-format on
 } // namespace mgard_x
+
+#endif
