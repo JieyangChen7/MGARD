@@ -175,7 +175,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   config.log_level = verbose_to_log_level(verbose);
   config.decomposition = mgard_x::decomposition_type::MultiDim;
   // config.decomposition = mgard_x::decomposition_type::Hybrid;
-  // config.num_local_refactoring_level = 1;
+  config.num_local_refactoring_level = 1;
 
   // config.max_larget_level = 1;
 

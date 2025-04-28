@@ -10,7 +10,8 @@
 
 #include "Autocorrelation8x8x8.hpp"
 #include "DataRefactoring.h"
-#include "MultiDimension8x8x8.hpp"
+#include "Decompose8x8x8.hpp"
+#include "Recompose8x8x8.hpp"
 
 #include <iostream>
 
@@ -28,8 +29,7 @@ void decompose(SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
                SubArray<1, T, DeviceType> coeff, int queue_idx) {
   if constexpr (D <= 3) {
     DeviceLauncher<DeviceType>::Execute(
-        MultiDimension8x8x8Kernel<D, T, DECOMPOSE, DeviceType>(v, coarse,
-                                                               coeff),
+        Decompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff),
         queue_idx);
 
     // Array<D, T, DeviceType> ac_x({(v.shape(0)-1)/8+1, (v.shape(1)-1)/8+1,
@@ -58,6 +58,11 @@ void recompose(SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
                SubArray<1, T, DeviceType> coeff, int queue_idx) {
 
   if constexpr (D <= 3) {
+    std::cout << "recompose start\n";
+    DeviceLauncher<DeviceType>::Execute(
+        Recompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff),
+        queue_idx);
+    std::cout << "recompose end\n";
   }
 }
 
