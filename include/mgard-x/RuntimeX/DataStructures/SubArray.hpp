@@ -41,8 +41,7 @@ public:
   MGARDX_CONT
   T *dataHost() {
     if (!has_host_pointer) {
-      std::cerr << log::log_err << "Host pointer not initialized!\n";
-      exit(-1);
+      throw std::runtime_error("Host pointer not initialized!");
     }
     return v;
   }
@@ -270,9 +269,7 @@ SubArray<D, T, DeviceType, Pitched, Managed>::Linearize() {
       subArray.setDataHost(dataHost());
     }
   } else {
-    std::cout << log::log_err
-              << "Linearized pitched SubArray not implemented!\n";
-    exit(-1);
+    throw std::runtime_error("Linearized pitched SubArray not implemented!");
   }
   return subArray;
 }
@@ -283,9 +280,8 @@ SubArray<D, T, DeviceType, Pitched, Managed>::Slice3D(DIM d2, DIM d1, DIM d0) {
   // d2 is slowest dim.
   // d0 is fastest dim.
   if (D < 3) {
-    std::cout << log::log_err << "calling Slice3D on SubArray with " << D
-              << "D data.\n";
-    exit(-1);
+    throw std::runtime_error("calling Slice3D on SubArray with " +
+                             std::to_string(D) + "D data.");
   }
   SubArray<3, T, DeviceType> subArray;
   subArray.setShape(2, __shape[d0]);

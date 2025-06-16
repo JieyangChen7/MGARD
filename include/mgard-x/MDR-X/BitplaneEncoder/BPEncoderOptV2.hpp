@@ -130,7 +130,7 @@ public:
       shifted_data = ldexp(data, num_bitplanes - exp);
       fp_data = (T_fp)fabs(shifted_data);
       fp_sign = (T_fp)(signbit(data) == 0 ? 0 : 1);
-      #define FULL_MASK 0xffffffff
+#define FULL_MASK 0xffffffff
       for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
         T_bitplane bit = (fp_data >> (num_bitplanes - 1 - bp_idx)) & 1u;
         T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - data_idx;
@@ -147,13 +147,14 @@ public:
         // if (!bit) buffer ^= FULL_MASK;
 
         buffer = __shfl_sync(FULL_MASK, buffer, 0);
-        if (my_bp_idx == bp_idx ) {
+        if (my_bp_idx == bp_idx) {
           encoded_data = buffer;
         }
       }
 
       // if (batch_idx == 0) {
-      //   printf("thread %llu, fp_data %u, encoded_data: %u\n", tid, fp_data, encoded_data);
+      //   printf("thread %llu, fp_data %u, encoded_data: %u\n", tid, fp_data,
+      //   encoded_data);
       // }
 
       encoded_sign = fp_sign << BATCH_SIZE - 1 - data_idx;
@@ -168,11 +169,10 @@ public:
       //   if (my_bp_idx == 0)
       //     printf("thread %llu, encoded_sign %u, \n", tid, encoded_sign);
       // }
-      
+
       *encoded_bitplanes(my_bp_idx, batch_idx) = encoded_data;
-      *encoded_bitplanes(my_bp_idx, num_batches + batch_idx) = my_bp_idx == 0
-                                                                  ? encoded_sign
-                                                                  : (T_bitplane)0;
+      *encoded_bitplanes(my_bp_idx, num_batches + batch_idx) =
+          my_bp_idx == 0 ? encoded_sign : (T_bitplane)0;
     }
   }
 

@@ -17,7 +17,8 @@ public:
   MGARDX_CONT
   BPEncoderOptV1Functor() {}
   MGARDX_CONT
-  BPEncoderOptV1Functor(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderOptV1Functor(SIZE n, int num_bitplanes,
+                        SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<1, T_data, DeviceType> v,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -32,7 +33,8 @@ public:
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
       T_bitplane buffer = 0;
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
+        T_bitplane bit =
+            (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
         buffer += bit << BATCH_SIZE - 1 - data_idx;
       }
       encoded[bp_idx] = buffer;
@@ -48,7 +50,8 @@ public:
     for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
       T_bitplane buffer = 0;
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane cur_bit = (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
+        T_bitplane cur_bit =
+            (v[data_idx] >> (num_bitplanes - 1 - bp_idx)) & (T_bitplane)1;
         if (bp_idx == 0) {
           buffer += cur_bit << BATCH_SIZE - 1 - data_idx;
         } else {
@@ -164,7 +167,7 @@ public:
     T_error errors[MAX_BITPLANES + 1];
 
     int exp;
-    frexp(*abs_max((IDX)0), &exp);  
+    frexp(*abs_max((IDX)0), &exp);
 
     for (SIZE batch_idx = gid; batch_idx < num_batches;
          batch_idx += grid_size) {
@@ -237,7 +240,7 @@ public:
     T_error errors[MAX_BITPLANES + 1];
 
     int exp;
-    frexp(*abs_max((IDX)0), &exp);  
+    frexp(*abs_max((IDX)0), &exp);
 
     exp += 2;
 
@@ -305,7 +308,8 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   MGARDX_CONT
-  BPEncoderOptV1Kernel(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderOptV1Kernel(SIZE n, int num_bitplanes,
+                       SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<1, T_data, DeviceType> v,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -390,7 +394,7 @@ public:
     T_bitplane encoded_sign[MAX_BITPLANES];
 
     int exp;
-    frexp(*abs_max((IDX)0), &exp); 
+    frexp(*abs_max((IDX)0), &exp);
 
     int ending_bitplane = starting_bitplane + num_bitplanes;
 
@@ -444,7 +448,7 @@ public:
     T_bitplane encoded_data[MAX_BITPLANES];
 
     int exp;
-    frexp(*abs_max((IDX)0), &exp);  
+    frexp(*abs_max((IDX)0), &exp);
 
     exp += 2;
 
@@ -604,7 +608,8 @@ public:
   void Adapt(Hierarchy<D, T_data, DeviceType> &hierarchy, int queue_idx) {
     this->initialized = true;
     this->hierarchy = &hierarchy;
-    SIZE max_level_num_elems = round_up(hierarchy.level_num_elems(hierarchy.l_target()), BATCH_SIZE);
+    SIZE max_level_num_elems =
+        round_up(hierarchy.level_num_elems(hierarchy.l_target()), BATCH_SIZE);
 
     level_errors_work_array.resize(
         {MAX_BITPLANES + 1, num_blocks(max_level_num_elems)}, queue_idx);
@@ -627,7 +632,8 @@ public:
     return size;
   }
 
-  void encode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  void encode(SIZE n, int num_bitplanes,
+              SubArray<1, T_data, DeviceType> abs_max,
               SubArray<1, T_data, DeviceType> v,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
               SubArray<1, T_error, DeviceType> level_errors, int queue_idx) {
@@ -653,7 +659,8 @@ public:
     }
   }
 
-  void decode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  void decode(SIZE n, int num_bitplanes,
+              SubArray<1, T_data, DeviceType> abs_max,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes, int level,
               SubArray<1, T_data, DeviceType> v, int queue_idx) {}
 
@@ -668,8 +675,8 @@ public:
       DeviceLauncher<DeviceType>::Execute(
           BPDecoderOptV1Kernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
                                DeviceType>(n, starting_bitplane, num_bitplanes,
-                                           abs_max, encoded_bitplanes, level_signs,
-                                           v),
+                                           abs_max, encoded_bitplanes,
+                                           level_signs, v),
           queue_idx);
     }
   }

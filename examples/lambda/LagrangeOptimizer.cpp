@@ -156,7 +156,7 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
   for (int i = 0; i < myPlaneCount; i++) {
 #pragma omp parallel for default(none)                                         \
     shared(i, myPlaneCount, myNodeCount, myVxCount, myVyCount, reconData,      \
-           i_g) private(lindex, rindex)
+               i_g) private(lindex, rindex)
     for (int k = 0; k < myNodeCount; k++) {
       for (int j = 0; j < myVxCount; j++) {
         for (int l = 0; l < myVyCount; l++) {
@@ -180,7 +180,7 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
   std::vector<double> V4(myNodeCount * myVxCount * myVyCount, 0);
 #pragma omp parallel for default(none)                                         \
     shared(myNodeCount, myVxCount, myVyCount, myVolume, myVth, myVp, myMuQoi,  \
-           myVth2, myParticleMass, V2, V3, V4) private(i, j, l, m)
+               myVth2, myParticleMass, V2, V3, V4) private(i, j, l, m)
   for (k = 0; k < myNodeCount * myVxCount * myVyCount; ++k) {
     i = int(k / (myVxCount * myVyCount));
     j = int(k % myVyCount);
@@ -210,8 +210,8 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
     std::vector<double> Tperp(myNodeCount, 0);
 #pragma omp parallel for default(none)                                         \
     shared(myNodeCount, myVxCount, myVyCount, myVolume, myVth, myVp, f0_f,     \
-           myMuQoi, myVth2, myParticleMass, mySmallElectronCharge, D, U,       \
-           Tperp) private(i, j, l, m)
+               myMuQoi, myVth2, myParticleMass, mySmallElectronCharge, D, U,   \
+               Tperp) private(i, j, l, m)
     for (k = 0; k < myNodeCount * myVxCount * myVyCount; ++k) {
       i = int(k / (myVxCount * myVyCount));
       j = int(k % myVyCount);
@@ -225,9 +225,10 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
     std::vector<double> Tpara(myNodeCount, 0);
     std::vector<double> Rpara(myNodeCount, 0);
     double en;
-#pragma omp parallel for default(none) shared(                                 \
-    myNodeCount, myVxCount, myVyCount, myVolume, myVth, myVp, f0_f, myVth2,    \
-    myParticleMass, mySmallElectronCharge, D, U, Tpara) private(i, j, en)
+#pragma omp parallel for default(none)                                         \
+    shared(myNodeCount, myVxCount, myVyCount, myVolume, myVth, myVp, f0_f,     \
+               myVth2, myParticleMass, mySmallElectronCharge, D, U,            \
+               Tpara) private(i, j, en)
     for (k = 0; k < myNodeCount * myVxCount * myVyCount; ++k) {
       i = int(k / (myVxCount * myVyCount));
       j = int(k % myVyCount);
@@ -236,9 +237,9 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
                   (f0_f[k] * myVolume[k] * en * myVth2[i] * myParticleMass) /
                   D[i] / mySmallElectronCharge;
     }
-#pragma omp parallel for default(none)                                         \
-    shared(myNodeCount, myVxCount, myVyCount, myVolume, myVth, myVth2,         \
-           myParticleMass, mySmallElectronCharge, U, Tpara, Rpara) private(i)
+#pragma omp parallel for default(none) shared(                                 \
+        myNodeCount, myVxCount, myVyCount, myVolume, myVth, myVth2,            \
+            myParticleMass, mySmallElectronCharge, U, Tpara, Rpara) private(i)
     for (k = 0; k < myNodeCount * myVxCount * myVyCount; ++k) {
       i = int(k / (myVxCount * myVyCount));
       Rpara[i] = mySmallElectronCharge * Tpara[i] +
@@ -282,8 +283,8 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
     int maxIter = 50;
 #pragma omp parallel for default(none)                                         \
     shared(reconData, iphi, D, U, V2, V3, V4, f0_f, Tperp, Rpara, DeB, UeB,    \
-           TperpEB, TparaEB, PDeB, maxIter, node_unconv,                       \
-           my_rank) private(count_unLag, breg_recon)
+               TperpEB, TparaEB, PDeB, maxIter, node_unconv,                   \
+               my_rank) private(count_unLag, breg_recon)
     for (idx = 0; idx < myNodeCount; ++idx) {
       int count = 0;
       double gradients[4] = {0.0, 0.0, 0.0, 0.0};
@@ -409,7 +410,9 @@ double *LagrangeOptimizer::computeLagrangeParameters(const double *reconData) {
             printf("Node %d did not converge\n", idx);
             count_unLag = count_unLag + 1;
 #pragma omp critical
-            { node_unconv.push_back(idx); }
+            {
+              node_unconv.push_back(idx);
+            }
             break;
           }
         }

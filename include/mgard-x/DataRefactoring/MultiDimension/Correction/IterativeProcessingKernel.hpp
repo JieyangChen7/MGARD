@@ -200,7 +200,7 @@ public:
           tridiag_forward2(prev_vec_sm, am_sm[0], bm_sm[0],
                            vec_sm[get_idx(ldsm1, ldsm2, r_sm, c_sm, 0)]);
 
-      //#pragma unroll 32
+      // #pragma unroll 32
       for (SIZE i = 1; i < F; i++) {
         // if (debug) printf("forward %f <- %f %f %f %f\n",
         //           tridiag_forward2(
@@ -401,7 +401,7 @@ public:
       vec_sm[get_idx(ldsm1, ldsm2, r_sm, c_sm, 0)] =
           tridiag_backward2(prev_vec_sm, am_sm[0], bm_sm[0],
                             vec_sm[get_idx(ldsm1, ldsm2, r_sm, c_sm, 0)]);
-      //#pragma unroll 32
+      // #pragma unroll 32
       for (SIZE i = 1; i < F; i++) {
 
         // if (debug) printf("backward %f <- %f %f %f %f\n",

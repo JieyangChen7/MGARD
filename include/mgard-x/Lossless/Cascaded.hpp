@@ -43,10 +43,9 @@ CascadedCompress(SubArray<1, C, DeviceType> &input_data, int n_rle, int n_de,
   DeviceRuntime<DeviceType>::SyncQueue(0);
   return output_data;
 #else
-  log::err(
+  throw std::runtime_error(
       "Cascaded for is only available on CUDA devices. Portable version is "
       "in development.");
-  exit(-1);
 #endif
 }
 
@@ -66,10 +65,9 @@ CascadedDecompress(SubArray<1, Byte, DeviceType> &input_data) {
   DeviceRuntime<DeviceType>::SyncQueue(0);
   return output_data;
 #else
-  log::err(
+  throw std::runtime_error(
       "Cascaded for is only available on CUDA devices. Portable version is "
       "in development.");
-  exit(-1);
 #endif
 }
 } // namespace mgard_x

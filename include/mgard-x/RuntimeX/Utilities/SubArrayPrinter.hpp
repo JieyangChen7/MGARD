@@ -15,10 +15,10 @@
 #include <numeric>
 #include <sstream>   // std::stringstream
 #include <stdexcept> // std::runtime_error
+#include <stdint.h>
 #include <string>
 #include <utility> // std::pair
 #include <vector>
-#include <stdint.h>
 
 // #include "MemoryManagement.h"
 
@@ -108,8 +108,7 @@ void CompareSubarray(std::string name, SubArrayType subArray1,
   if (subArray1.shape(D - 1) != subArray2.shape(D - 1) ||
       subArray1.shape(D - 2) != subArray2.shape(D - 2) ||
       subArray1.shape(D - 3) != subArray2.shape(D - 3)) {
-    std::cout << log::log_err << "CompareSubarray: shape mismatch!\n";
-    exit(-1);
+    throw std::runtime_error("CompareSubarray: shape mismatch!");
   }
 
   using T = typename SubArrayType::DataType;
@@ -190,8 +189,7 @@ void CompareSubarray(std::string name, SubArrayType1 subArray1,
        subArray1.shape(D - 2) != subArray2.shape[1]) ||
       (SubArrayType1::NumDims >= 3 &&
        subArray1.shape(D - 3) != subArray2.shape[2])) {
-    std::cout << log::log_err << "CompareSubarray: shape mismatch!\n";
-    exit(-1);
+    throw std::runtime_error("CompareSubarray: shape mismatch!");
   }
 
   using T = typename SubArrayType1::DataType;
@@ -262,16 +260,13 @@ void CompareSubarray(std::string name, SubArrayType1 subArray1,
 template <typename SubArrayType>
 void CompareSubarray4D(SubArrayType subArray1, SubArrayType subArray2) {
   if (SubArrayType::NumDims != 4) {
-    std::cout << log::log_err
-              << "CompareSubarray4D expects 4D subarray type.\n";
-    exit(-1);
+    throw std::runtime_error("CompareSubarray4D expects 4D subarray type.");
   }
 
   DIM D = SubArrayType::NumDims;
 
   if (subArray1.shape(D - 4) != subArray2.shape(D - 4)) {
-    std::cout << log::log_err << "CompareSubarray4D mismatch 4D size.\n";
-    exit(-1);
+    throw std::runtime_error("CompareSubarray4D mismatch 4D size.");
   }
 
   using T = typename SubArrayType::DataType;
@@ -292,8 +287,7 @@ void CompareSubarray4D(SubArrayType subArray1, SubArrayType subArray2) {
 template <typename SubArrayType>
 void PrintSubarray4D(std::string name, SubArrayType subArray1) {
   if (SubArrayType::NumDims != 4) {
-    std::cout << log::log_err << "PrintSubarray4D expects 4D subarray type.\n";
-    exit(-1);
+    throw std::runtime_error("PrintSubarray4D expects 4D subarray type.");
   }
 
   DIM D = SubArrayType::NumDims;
@@ -362,7 +356,7 @@ void verify_matrix(SIZE nrow, SIZE ncol, SIZE nfib, T *v, SIZE ldv1, SIZE ldv2,
 
     delete[] v2;
     if (mismatch)
-      exit(-1);
+      throw std::runtime_error("verify_matrix: mismatch");
   }
 }
 

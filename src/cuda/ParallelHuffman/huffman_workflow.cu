@@ -557,11 +557,11 @@ template void PrintChunkHuffmanCoding<uint64_t>(size_t *, size_t *, size_t, int,
 #define KERNELS(D, T, S, Q, H)                                                 \
   template void HuffmanEncode<D, T, S, Q, H>(                                  \
       mgard_cuda::Handle<D, T> & handle, S * dqv, size_t n,                    \
-      std::vector<size_t> & outlier_idx, H * &dmeta, size_t & dmeta_size,      \
-      H * &ddata, size_t & ddata_size, int chunk_size, int dict_size);         \
+      std::vector<size_t> &outlier_idx, H *&dmeta, size_t &dmeta_size,         \
+      H *&ddata, size_t &ddata_size, int chunk_size, int dict_size);           \
   template void HuffmanDecode<D, T, S, Q, H>(                                  \
-      mgard_cuda::Handle<D, T> & handle, S * &dqv, size_t & n, H * dmeta,      \
-      size_t dmeta_size, H * ddata, size_t ddata_size);
+      mgard_cuda::Handle<D, T> & handle, S * &dqv, size_t &n, H *dmeta,        \
+      size_t dmeta_size, H *ddata, size_t ddata_size);
 
 KERNELS(1, double, int, uint32_t, uint32_t)
 KERNELS(1, float, int, uint32_t, uint32_t)

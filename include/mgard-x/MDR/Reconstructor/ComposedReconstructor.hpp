@@ -51,8 +51,7 @@ public:
                    "level squared error directly"
                 << std::endl;
     } else {
-      std::cerr << "Customized error estimator not supported yet" << std::endl;
-      exit(-1);
+      throw std::runtime_error("Customized error estimator not supported yet");
     }
     timer.end();
     timer.print("Preprocessing");

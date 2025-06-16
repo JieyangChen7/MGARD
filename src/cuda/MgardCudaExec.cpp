@@ -321,7 +321,7 @@ int launch_compress(mgard_cuda::DIM D, enum mgard_cuda::data_type dtype,
                         (T *)decompressed_data);
   }
 
-  delete[](T *) original_data;
+  delete[] (T *)original_data;
   return 0;
 }
 

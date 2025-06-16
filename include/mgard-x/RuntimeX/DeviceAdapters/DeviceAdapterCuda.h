@@ -115,8 +115,9 @@ template <typename TaskType>
 inline void ErrorAsyncCheckTask(cudaError_t code, TaskType &task,
                                 bool abort = true) {
   if (code != cudaSuccess) {
-    log::err(std::string(cudaGetErrorString(code)) + " while executing " +
-             task.GetFunctorName().c_str() + " with CUDA (Async-check)");
+    throw std::runtime_error(
+        std::string(cudaGetErrorString(code)) + " while executing " +
+        task.GetFunctorName().c_str() + " with CUDA (Async-check)");
     if (abort)
       exit(code);
   }
@@ -126,8 +127,9 @@ template <typename TaskType>
 inline void ErrorSyncCheckTask(cudaError_t code, TaskType &task,
                                bool abort = true) {
   if (code != cudaSuccess) {
-    log::err(std::string(cudaGetErrorString(code)) + " while executing " +
-             task.GetFunctorName().c_str() + " with CUDA (Sync-check)");
+    throw std::runtime_error(
+        std::string(cudaGetErrorString(code)) + " while executing " +
+        task.GetFunctorName().c_str() + " with CUDA (Sync-check)");
     if (abort)
       exit(code);
   }
@@ -136,8 +138,9 @@ inline void ErrorSyncCheckTask(cudaError_t code, TaskType &task,
 inline void ErrorAsyncCheck(cudaError_t code, std::string task,
                             bool abort = true) {
   if (code != cudaSuccess) {
-    log::err(std::string(cudaGetErrorString(code)) + " while executing " +
-             task.c_str() + " with CUDA (Async-check)");
+    throw std::runtime_error(std::string(cudaGetErrorString(code)) +
+                             " while executing " + task.c_str() +
+                             " with CUDA (Async-check)");
     if (abort)
       exit(code);
   }
@@ -146,15 +149,18 @@ inline void ErrorAsyncCheck(cudaError_t code, std::string task,
 inline void ErrorSyncCheck(cudaError_t code, std::string task,
                            bool abort = true) {
   if (code != cudaSuccess) {
-    log::err(std::string(cudaGetErrorString(code)) + " while executing " +
-             task.c_str() + " with CUDA (Sync-check)");
+    throw std::runtime_error(std::string(cudaGetErrorString(code)) +
+                             " while executing " + task.c_str() +
+                             " with CUDA (Sync-check)");
     if (abort)
       exit(code);
   }
 }
 
 #define gpuErrchk(ans)                                                         \
-  { gpuAssert((ans), __FILE__, __LINE__); }
+  {                                                                            \
+    gpuAssert((ans), __FILE__, __LINE__);                                      \
+  }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
@@ -753,7 +759,7 @@ public:
           &numBlocks, CudaHuffmanCWCustomizedKernel<Task<FunctorType>>,
           blockSize, dynamicSMemSize));
     } else {
-      log::err("GetOccupancyMaxActiveBlocksPerSM Error!");
+      throw std::runtime_error("GetOccupancyMaxActiveBlocksPerSM Error!");
     }
     return numBlocks;
   }
@@ -782,7 +788,7 @@ public:
           CudaHuffmanCWCustomizedKernel<Task<FunctorType>>,
           cudaFuncAttributeMaxDynamicSharedMemorySize, maxbytes));
     } else {
-      log::err("SetPreferredSharedMemoryCarveout Error!");
+      throw std::runtime_error("SetPreferredSharedMemoryCarveout Error!");
     }
   }
 
@@ -799,7 +805,7 @@ public:
 template <> class MemoryManager<CUDA> {
 public:
   MGARDX_CONT
-  MemoryManager(){};
+  MemoryManager() {};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -2423,8 +2429,7 @@ public:
                          CUDA>(std::string(KernelType::Name), min_config);
     }
 #else
-    log::err("MGARD is not built with auto tuning enabled.");
-    exit(-1);
+    throw std::runtime_error("MGARD is not built with auto tuning enabled.");
 #endif
   }
 
@@ -2478,7 +2483,7 @@ struct SquareOp {
 template <> class DeviceCollective<CUDA> {
 public:
   MGARDX_CONT
-  DeviceCollective(){};
+  DeviceCollective() {};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, CUDA> v,
@@ -2533,8 +2538,8 @@ public:
     AbsMinOp absMinOp;
     cudaStream_t stream = DeviceRuntime<CUDA>::GetQueue(queue_idx);
     cub::DeviceReduce::Reduce(d_temp_storage, temp_storage_bytes, v.data(),
-                              result.data(), n, absMinOp, std::numeric_limits<T>::max(),
-                              stream);
+                              result.data(), n, absMinOp,
+                              std::numeric_limits<T>::max(), stream);
     ErrorAsyncCheck(cudaGetLastError(), "DeviceCollective<CUDA>::AbsMin");
     if (DeviceRuntime<CUDA>::SyncAllKernelsAndCheckErrors) {
       ErrorSyncCheck(cudaDeviceSynchronize(), "DeviceCollective<CUDA>::AbsMin");

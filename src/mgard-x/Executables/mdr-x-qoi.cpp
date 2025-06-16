@@ -172,7 +172,7 @@ void print_statistics(double s, enum mgard_x::error_bound_type mode,
             << "\n";
 
   if (actual_error > tol)
-    exit(-1);
+    throw std::runtime_error("Error tolerance exceeded");
 }
 
 void create_dir(std::string name) {
@@ -232,8 +232,9 @@ void read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 }
 
 size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
-              mgard_x::MDR::RefactoredData &refactored_data, std::string input,
-              bool initialize_signs, mgard_x::Config config) {
+                mgard_x::MDR::RefactoredData &refactored_data,
+                std::string input, bool initialize_signs,
+                mgard_x::Config config) {
 
   size_t size_read = 0;
   int num_subdomains = refactored_metadata.metadata.size();
@@ -259,8 +260,7 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
             level_size, config);
         if (level_size != refactored_metadata.metadata[subdomain_id]
                               .level_sizes[level_idx][bitplane_idx]) {
-          std::cout << "mdr component size mismatch.";
-          exit(-1);
+          throw std::runtime_error("mdr component size mismatch.");
         }
         size_read += level_size;
       }
@@ -368,7 +368,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   write_mdr(refactored_metadata, refactored_data, output_file);
 
   mgard_x::unpin_memory(original_data, config);
-  delete[](T *) original_data;
+  delete[] (T *)original_data;
 
   return 0;
 }
@@ -445,9 +445,9 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   bool first_reconstruction = true;
 
   // testing only
-  std::vector<std::vector<double>> qoi_tols = {{15672.8, 10043.9, 7232.42}, 
-                                                {1741.427200, 4463.934933, 3214.410667}};
-  
+  std::vector<std::vector<double>> qoi_tols = {
+      {15672.8, 10043.9, 7232.42}, {1741.427200, 4463.934933, 3214.410667}};
+
   for (int iter = 0; iter < 2; iter++) {
     for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
       refactored_metadata.metadata[i].requested_tol = qoi_tols[iter][i];
@@ -457,8 +457,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     for (auto &metadata : refactored_metadata.metadata) {
       metadata.PrintStatus();
     }
-    size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
-             first_reconstruction, config);
+    size_t size_read = read_mdr(refactored_metadata, refactored_data,
+                                input_file, first_reconstruction, config);
 
     mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
                                 reconstructed_data, config, false);
@@ -474,16 +474,17 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
         std::vector<mgard_x::SIZE> var_shape = shape;
         var_shape[0] /= config.mdr_qoi_num_variables;
-        mgard_x::Byte* org_var_ptr = original_data + original_size/3 * i;
-        mgard_x::Byte* rec_var_ptr = reconstructed_data.data[0] + original_size/3 * i;
+        mgard_x::Byte *org_var_ptr = original_data + original_size / 3 * i;
+        mgard_x::Byte *rec_var_ptr =
+            reconstructed_data.data[0] + original_size / 3 * i;
         if (dtype == mgard_x::data_type::Float) {
           print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
                                   (float *)rec_var_ptr, qoi_tols[iter][i],
                                   config.normalize_coordinates);
         } else if (dtype == mgard_x::data_type::Double) {
           print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
-                                  (double *)rec_var_ptr, qoi_tols[iter][i],
-                                  config.normalize_coordinates);
+                                   (double *)rec_var_ptr, qoi_tols[iter][i],
+                                   config.normalize_coordinates);
         }
       }
     }

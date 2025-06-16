@@ -1,13 +1,13 @@
 #ifndef MGARD_X_ZFP_SHARED_H
 #define MGARD_X_ZFP_SHARED_H
 
-//#define CUDA_ZFP_RATE_PRINT 1
+// #define CUDA_ZFP_RATE_PRINT 1
 typedef unsigned long long ZFPWord;
 typedef unsigned int uint;
 #define ZFPWsize ((uint)(CHAR_BIT * sizeof(ZFPWord)))
 
 #include "type_info.h"
-//#include "zfp.h"
+// #include "zfp.h"
 #include "constants.h"
 #include <stdio.h>
 
