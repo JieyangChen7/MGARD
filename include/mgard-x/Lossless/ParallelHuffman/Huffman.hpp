@@ -47,7 +47,8 @@ public:
     this->max_size = max_size;
     this->dict_size = dict_size;
     this->chunk_size = chunk_size;
-    MemoryManager<DeviceType>::MallocHost(signature_verify, 7 * sizeof(char), queue_idx);
+    MemoryManager<DeviceType>::MallocHost(signature_verify, 7 * sizeof(char),
+                                          queue_idx);
     workspace.resize(max_size, dict_size, chunk_size, estimated_outlier_ratio,
                      queue_idx);
   }
@@ -177,7 +178,8 @@ public:
       PrintSubarray("Histogram::freq_subarray", workspace.freq_subarray);
     }
 
-    GetCodebook(dict_size, workspace.freq_subarray, workspace.codebook_subarray, workspace.decodebook_subarray, workspace, queue_idx);
+    GetCodebook(dict_size, workspace.freq_subarray, workspace.codebook_subarray,
+                workspace.decodebook_subarray, workspace, queue_idx);
 
     if (target_cr > 1.0) {
       workspace.freq_array.hostCopy(false, queue_idx);
@@ -189,10 +191,10 @@ public:
       for (SIZE i = 0; i < dict_size; i++) {
         LC += (double)_freq[i] * _cl[i];
       }
-      double estimated_cr = (double)(sizeof(Q) * primary_count) / (LC / 8 + 2000);
-      log::info("Huffman estimated CR: " +
-                std::to_string(estimated_cr) + " (target: " +
-                std::to_string(target_cr) + ")");
+      double estimated_cr =
+          (double)(sizeof(Q) * primary_count) / (LC / 8 + 2000);
+      log::info("Huffman estimated CR: " + std::to_string(estimated_cr) +
+                " (target: " + std::to_string(target_cr) + ")");
       if (estimated_cr < target_cr) {
         return false;
       }
@@ -379,8 +381,8 @@ public:
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_verify, 7, byte_offset,
-                           false, queue_idx);
+    DeserializeArray<Byte>(compressed_subarray, signature_verify, 7,
+                           byte_offset, false, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     for (int i = 0; i < 7; i++) {
       if (signature[i] != signature_verify[i]) {
@@ -397,8 +399,7 @@ public:
       timer.start();
     }
     if (!Verify(compressed_data, queue_idx)) {
-      log::err("Huffman signature mismatch.");
-      exit(-1);
+      throw std::runtime_error("Huffman signature mismatch.");
     }
 
     SubArray compressed_subarray(compressed_data);
@@ -492,7 +493,8 @@ public:
   }
 
   bool Compress(Array<1, S, DeviceType> &original_data,
-                Array<1, Byte, DeviceType> &compressed_data, float target_cr, int queue_idx) {
+                Array<1, Byte, DeviceType> &compressed_data, float target_cr,
+                int queue_idx) {
 
     Timer timer;
     if (log::level & log::TIME) {
@@ -517,16 +519,14 @@ public:
     MemoryManager<DeviceType>::Copy1D(
         &outlier_count, workspace.outlier_count_subarray.data(), 1, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    if (outlier_count <= workspace.outlier_subarray.shape(0)) {
-      // outlier buffer has sufficient size
-      log::info(
-          "Outlier ratio: " + std::to_string(outlier_count) + "/" +
-          std::to_string(original_data.shape(0)) + " (" +
-          std::to_string((double)100 * outlier_count / original_data.shape(0)) +
-          "%)");
-    } else {
-      log::err("Not enough workspace for outliers.");
-      exit(-1);
+
+    log::info(
+        "Outlier ratio: " + std::to_string(outlier_count) + "/" +
+        std::to_string(original_data.shape(0)) + " (" +
+        std::to_string((double)100 * outlier_count / original_data.shape(0)) +
+        "%)");
+    if (outlier_count > workspace.outlier_subarray.shape(0)) {
+      throw std::runtime_error("Not enough workspace for outliers.");
     }
 
     if (log::level & log::TIME) {
@@ -591,7 +591,7 @@ public:
   S *outlier;
   H *ddata;
   Byte signature[7] = {'M', 'G', 'X', 'H', 'U', 'F', 'F'};
-  Byte * signature_verify = nullptr;
+  Byte *signature_verify = nullptr;
   HuffmanWorkspace<Q, S, H, DeviceType> workspace;
 };
 

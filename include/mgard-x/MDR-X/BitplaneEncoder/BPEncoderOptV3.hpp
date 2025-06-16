@@ -110,11 +110,9 @@ public:
   MGARDX_EXEC void EncodeBinary() {
 
     int8_t *sm_p = (int8_t *)FunctorBase<DeviceType>::GetSharedMemory();
-    
 
     SIZE bid = FunctorBase<DeviceType>::GetBlockIdX();
-    SIZE num_warps_per_block =
-        FunctorBase<DeviceType>::GetBlockDimX() / 32;
+    SIZE num_warps_per_block = FunctorBase<DeviceType>::GetBlockDimX() / 32;
 
     SIZE tid = FunctorBase<DeviceType>::GetThreadIdX();
     SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX();
@@ -124,8 +122,8 @@ public:
     T_fp *fp_data = (T_fp *)(sm_p + BATCH_SIZE * sizeof(T_fp) * warp_id);
     sm_p += BATCH_SIZE * sizeof(T_fp) * num_warps_per_block;
 
-    T_bitplane * encoded_data = (T_bitplane *) (sm_p + (MAX_BITPLANES * sizeof(T_bitplane) * warp_id)); 
-
+    T_bitplane *encoded_data =
+        (T_bitplane *)(sm_p + (MAX_BITPLANES * sizeof(T_bitplane) * warp_id));
 
     SIZE batch_idx_start = bid * num_warps_per_block + warp_id;
     SIZE batch_step_size = grid_size * num_warps_per_block;
@@ -151,15 +149,16 @@ public:
       // fp_sign = (T_fp)(signbit(data) == 0 ? 0 : 1);
       __syncthreads();
 
-      
       for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_bitplane bit = (fp_data[data_idx] >> (num_bitplanes - 1 - my_bp_idx)) & 1u;
+        T_bitplane bit =
+            (fp_data[data_idx] >> (num_bitplanes - 1 - my_bp_idx)) & 1u;
         encoded_data[data_idx] |= bit << BATCH_SIZE - 1 - data_idx;
       }
       __syncthreads();
 
       // if (batch_idx == 0) {
-      //   printf("thread %llu, fp_data %u, encoded_data: %u\n", tid, fp_data, encoded_data);
+      //   printf("thread %llu, fp_data %u, encoded_data: %u\n", tid, fp_data,
+      //   encoded_data);
       // }
 
       // encoded_sign = fp_sign << BATCH_SIZE - 1 - data_idx;
@@ -174,15 +173,18 @@ public:
       //   if (my_bp_idx == 0)
       //     printf("thread %llu, encoded_sign %u, \n", tid, encoded_sign);
       // }
-      
+
       int bp_idx2 = tid / 8;
       int batch_idx2 = tid % 8;
-      T_bitplane * encoded_data2 = (T_bitplane *) (sm_p + (bp_idx2 * sizeof(T_bitplane) * batch_idx2));
+      T_bitplane *encoded_data2 =
+          (T_bitplane *)(sm_p + (bp_idx2 * sizeof(T_bitplane) * batch_idx2));
       *encoded_bitplanes(bp_idx2, batch_idx2) = *encoded_data2;
-      
+
       // *encoded_bitplanes(my_bp_idx, num_batches + batch_idx) = my_bp_idx == 0
-      //                                                             ? encoded_sign
-      //                                                             : (T_bitplane)0;
+      //                                                             ?
+      //                                                             encoded_sign
+      //                                                             :
+      //                                                             (T_bitplane)0;
     }
   }
 

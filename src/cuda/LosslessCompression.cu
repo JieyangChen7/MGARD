@@ -512,17 +512,17 @@ void CombineOutlierAndPrimary(Handle<D, T> &handle, S *dqv, size_t n,
 
 #define KERNELS(D, T, S, Q)                                                    \
   template void SeparateOutlierAndPrimary<D, T, S, Q>(                         \
-      Handle<D, T> & handle, S * dqv, size_t n, size_t * outlier_idx,\ 
+      Handle<D, T> & handle, S * dqv, size_t n, size_t *outlier_idx,\ 
           size_t outlier_count,                                                \
       size_t primary_count,\ 
-          S * doutlier,                                                        \
-      Q * dprimary, int queue_idx);                                            \
+          S *doutlier,                                                         \
+      Q *dprimary, int queue_idx);                                             \
   template void CombineOutlierAndPrimary<D, T, S, Q>(                          \
-      Handle<D, T> & handle, S * dqv, size_t n, size_t * outlier_idx,\ 
+      Handle<D, T> & handle, S * dqv, size_t n, size_t *outlier_idx,\ 
           size_t outlier_count,                                                \
       size_t primary_count,\ 
-          S * doutlier,                                                        \
-      Q * dprimary, int queue_idx);
+          S *doutlier,                                                         \
+      Q *dprimary, int queue_idx);
 
 KERNELS(1, double, int, uint32_t)
 KERNELS(1, float, int, uint32_t)
@@ -559,12 +559,12 @@ void huffman_decompress(Handle<D, T> &handle, H *in_meta, size_t in_meta_size,
 #define KERNELS(D, T, S, Q, H)                                                 \
   template void huffman_compress<D, T, S, Q, H>(                               \
       Handle<D, T> & handle, S * input_data, size_t input_count,               \
-      std::vector<size_t> & outlier_idx, H * &out_meta,                        \
-      size_t & out_meta_size, H * &out_data, size_t & out_data_size,           \
-      int chunk_size, int dict_size, int queue_idx);                           \
+      std::vector<size_t> &outlier_idx, H *&out_meta, size_t &out_meta_size,   \
+      H *&out_data, size_t &out_data_size, int chunk_size, int dict_size,      \
+      int queue_idx);                                                          \
   template void huffman_decompress<D, T, S, Q, H>(                             \
-      Handle<D, T> & handle, H * in_meta, size_t in_meta_size, H * in_data,    \
-      size_t in_data_size, S * &output_data, size_t & output_count,            \
+      Handle<D, T> & handle, H * in_meta, size_t in_meta_size, H *in_data,     \
+      size_t in_data_size, S *&output_data, size_t &output_count,              \
       int queue_idx);
 
 KERNELS(1, double, int, uint32_t, uint32_t)
@@ -659,11 +659,11 @@ void cpu_lossless_decompression(Handle<D, T> &handle, H *input_data,
 
 #define KERNELS(D, T, S, H)                                                    \
   template void cpu_lossless_compression<D, T, S, H>(                          \
-      Handle<D, T> & handle, S * input_data, size_t input_count,               \
-      H * &out_data, size_t & out_data_size);                                  \
+      Handle<D, T> & handle, S * input_data, size_t input_count, H *&out_data, \
+      size_t &out_data_size);                                                  \
   template void cpu_lossless_decompression<D, T, S, H>(                        \
-      Handle<D, T> & handle, H * input_data, size_t input_count,               \
-      S * &out_data, size_t output_count);
+      Handle<D, T> & handle, H * input_data, size_t input_count, S *&out_data, \
+      size_t output_count);
 
 KERNELS(1, double, int, unsigned char)
 KERNELS(1, float, int, unsigned char)

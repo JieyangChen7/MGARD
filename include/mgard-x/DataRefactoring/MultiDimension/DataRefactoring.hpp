@@ -28,13 +28,11 @@ void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
                bool orthogonal_projection, int queue_idx) {
 
   if (start_level < 0 || start_level > hierarchy.l_target()) {
-    std::cout << log::log_err << "decompose: start_level out of bound.\n";
-    exit(-1);
+    throw std::runtime_error("decompose: start_level out of bound.");
   }
 
   if (stop_level < 0 || stop_level > hierarchy.l_target()) {
-    std::cout << log::log_err << "decompose: stop_level out of bound.\n";
-    exit(-1);
+    throw std::runtime_error("decompose: stop_level out of bound.");
   }
 
   std::string prefix = "decomp_";
@@ -185,13 +183,11 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
                bool orthogonal_projection, int queue_idx) {
 
   if (stop_level < 0 || stop_level > hierarchy.l_target()) {
-    std::cout << log::log_err << "recompose: stop_level out of bound.\n";
-    exit(-1);
+    throw std::runtime_error("recompose: stop_level out of bound.");
   }
 
   if (start_level < 0 || start_level > hierarchy.l_target()) {
-    std::cout << log::log_err << "recompose: start_level out of bound.\n";
-    exit(-1);
+    throw std::runtime_error("recompose: start_level out of bound.");
   }
 
   Array<D, T, DeviceType> workspace;
@@ -316,7 +312,7 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
     if (multidim_refactoring_debug_print) { // debug
       PrintSubarray4D(format("final output"), v);
     } // deb
-  }   // D > 3
+  } // D > 3
   // DeviceRuntime<DeviceType>::SyncDevice();
 }
 

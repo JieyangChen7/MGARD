@@ -40,7 +40,7 @@ public:
     Adapt(max_n * byte_ratio, config, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
-  ~HybridLevelCompressor(){};
+  ~HybridLevelCompressor() {};
 
   void Adapt(SIZE max_n, SIZE max_level, SIZE max_bitplanes, Config config,
              int queue_idx) {
@@ -114,7 +114,9 @@ public:
         rle_success = false;
         cr_threshold = 2.0;
         if (merged_bitplane_size > size_threshold) {
-          rle_success = rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx], cr_threshold, queue_idx);
+          rle_success =
+              rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
+                           cr_threshold, queue_idx);
           if (rle_success) {
             rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
           } else {
@@ -126,12 +128,13 @@ public:
                 &huffman.outlier_count,
                 huffman.workspace.outlier_count_subarray.data(), 1, queue_idx);
             huffman_success = huffman.CompressPrimary(
-                encoded_bitplane, compressed_bitplanes[bitplane_idx], cr_threshold, queue_idx);
+                encoded_bitplane, compressed_bitplanes[bitplane_idx],
+                cr_threshold, queue_idx);
             if (huffman_success) {
               huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
             }
           }
-        } 
+        }
 
         if (huffman_success == false && rle_success == false) {
           // direct copy

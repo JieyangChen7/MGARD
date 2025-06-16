@@ -26,8 +26,7 @@ void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
                int queue_idx) {
 
   if (stop_level < 0) {
-    std::cout << log::log_err << "decompose: stop_level out of bound.\n";
-    exit(-1);
+    throw std::runtime_error("decompose: stop_level out of bound.");
   }
 
   std::vector<SIZE> workspace_shape =
@@ -103,7 +102,7 @@ void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
       }
 
     } // loop dimensions
-  }   // loop levels
+  } // loop levels
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -112,8 +111,7 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
                int queue_idx) {
 
   if (stop_level < 0 || stop_level > hierarchy.l_target()) {
-    std::cout << log::log_err << "recompose: stop_level out of bound.\n";
-    exit(-1);
+    throw std::runtime_error("recompose: stop_level out of bound.");
   }
 
   std::vector<SIZE> workspace_shape =
@@ -189,7 +187,7 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
       }
 
     } // loop dimensions
-  }   // loop levels
+  } // loop levels
 }
 
 } // namespace single_dimension

@@ -21,9 +21,9 @@ public:
       c = 1.0 + 21.0 * sqrt(3) / 8;
       break;
     default:
-      std::cerr << num_dims << "-Dimentional error estimation not implemented."
-                << std::endl;
-      exit(-1);
+      throw std::runtime_error(
+          std::to_string(num_dims) +
+          "-Dimentional error estimation not implemented.");
     }
     c *= 4; // 2 more bitplane for negabinary
   }

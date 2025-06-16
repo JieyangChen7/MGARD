@@ -46,7 +46,9 @@
 // #define ROUND_UP_WARP(TID) ((TID) + WARP_SIZE - 1) / WARP_SIZE
 
 #define gpuErrchk(ans)                                                         \
-  { mgard_cuda::gpuAssert((ans), __FILE__, __LINE__); }
+  {                                                                            \
+    mgard_cuda::gpuAssert((ans), __FILE__, __LINE__);                          \
+  }
 
 namespace mgard_cuda {
 

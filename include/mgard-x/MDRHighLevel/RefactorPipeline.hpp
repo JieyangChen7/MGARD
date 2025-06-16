@@ -54,7 +54,7 @@ void refactor_pipeline(
 
   Timer timer_series;
   // if (log::level & log::TIME)
-    timer_series.start();
+  timer_series.start();
   // Prefetch the first subdomain to one buffer
   int current_buffer = 0;
   int current_queue = 0;
@@ -91,8 +91,10 @@ void refactor_pipeline(
     refactor.Refactor(device_subdomain_buffer[current_buffer],
                       refactored_metadata.metadata[curr_subdomain_id],
                       mdr_data[current_buffer], current_queue);
-    refactor.Compress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
-    refactor.StoreMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+    refactor.Compress(refactored_metadata.metadata[curr_subdomain_id],
+                      mdr_data[current_buffer], current_queue);
+    refactor.StoreMetadata(refactored_metadata.metadata[curr_subdomain_id],
+                           mdr_data[current_buffer], current_queue);
     mdr_data[current_buffer].CopyToRefactoredData(
         refactored_metadata.metadata[curr_subdomain_id],
         refactored_data.data[curr_subdomain_id],
@@ -103,10 +105,10 @@ void refactor_pipeline(
   }
   DeviceRuntime<DeviceType>::SyncDevice();
   // if (log::level & log::TIME) {
-    timer_series.end();
-    log::csv("time.csv", timer_series.get());
-    timer_series.print("Refactor pipeline", total_size);
-    timer_series.clear();
+  timer_series.end();
+  log::csv("time.csv", timer_series.get());
+  timer_series.print("Refactor pipeline", total_size);
+  timer_series.clear();
   // }
 }
 

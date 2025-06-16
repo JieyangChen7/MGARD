@@ -117,8 +117,8 @@ public:
 
   std::vector<SIZE> subdomain_shape(int subdomain_id) {
     if (subdomain_id >= _num_subdomains) {
-      log::err("DomainDecomposer::subdomain_shape wrong subdomain_id.");
-      exit(-1);
+      throw std::runtime_error(
+          "DomainDecomposer: subdomain_shape wrong subdomain_id.");
     }
     if (!_domain_decomposed) {
       return shape;
@@ -155,8 +155,7 @@ public:
             _domain_decomposed_sizes[subdomain_id];
         return chunk_shape;
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
         return shape;
       }
     }
@@ -290,8 +289,7 @@ public:
           delete[] chunk_coords[d];
         return hierarchy;
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
       }
     }
   }
@@ -349,8 +347,7 @@ public:
                   std::to_string(this->_num_subdomains) +
                   " subdomains using Variable method");
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
       }
     }
 
@@ -409,8 +406,7 @@ public:
                   std::to_string(this->_num_subdomains) +
                   " subdomains using Variable method");
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
       }
     }
 
@@ -464,8 +460,7 @@ public:
                   std::to_string(this->_num_subdomains) +
                   " subdomains using Variable method");
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
       }
     }
 
@@ -519,8 +514,7 @@ public:
                   std::to_string(this->_num_subdomains) +
                   " subdomains using Variable method");
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
       }
     }
 
@@ -619,8 +613,7 @@ public:
         return decomposed_original_data[subdomain_id];
       }
     } else {
-      log::err("Wrong domain decomposition type.");
-      exit(-1);
+      throw std::runtime_error("Wrong domain decomposition type.");
     }
   }
 
@@ -635,14 +628,14 @@ public:
   void copy_subdomain(Array<D, T, DeviceType> &subdomain_data, int subdomain_id,
                       enum subdomain_copy_direction direction, int queue_idx) {
     if (subdomain_id >= _num_subdomains) {
-      log::err("DomainDecomposer::copy_subdomain wrong subdomain_id.");
-      exit(-1);
+      throw std::runtime_error(
+          "DomainDecomposer::copy_subdomain wrong subdomain_id.");
     }
 
     if (!_domain_decomposed) {
       // if (keep_original_data_decomposed) {
-      //   log::err("Do not support restoring to decomposed data when no domain
-      //   decomposition was used."); exit(-1);
+      //   throw std::runtime_error("Do not support restoring to decomposed data
+      //   when no domain decomposition was used.");
       // }
 
       if (direction == subdomain_copy_direction::OriginalToSubdomain) {
@@ -666,9 +659,9 @@ public:
       if (config.domain_decomposition == domain_decomposition_type::MaxDim ||
           config.domain_decomposition == domain_decomposition_type::Variable) {
         if (keep_original_data_decomposed) {
-          log::err("Do not support restoring to decomposed data when using "
-                   "MaxDim or Variable");
-          exit(-1);
+          throw std::runtime_error(
+              "Do not support restoring to decomposed data when using "
+              "MaxDim or Variable");
         }
         T *data = original_data_ptr(subdomain_id);
         if (direction == subdomain_copy_direction::OriginalToSubdomain) {
@@ -816,12 +809,11 @@ public:
             }
           }
         } else {
-          log::err("Copy subdomain does not support higher than 5D data.");
-          exit(-1);
+          throw std::runtime_error(
+              "Copy subdomain does not support higher than 5D data.");
         }
       } else {
-        log::err("Wrong domain decomposition type.");
-        exit(-1);
+        throw std::runtime_error("Wrong domain decomposition type.");
       }
     }
   }

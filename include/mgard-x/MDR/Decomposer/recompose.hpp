@@ -12,7 +12,7 @@ using namespace std;
 
 template <class T> class Recomposer {
 public:
-  Recomposer(){};
+  Recomposer() {};
   ~Recomposer() {
     if (data_buffer)
       free(data_buffer);

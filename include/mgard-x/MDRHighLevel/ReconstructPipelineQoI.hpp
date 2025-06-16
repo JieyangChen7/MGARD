@@ -29,9 +29,9 @@ void reconstruct_pipeline_qoi(
   MDRData<DeviceType> *mdr_data = Cache::cache.mdr_data;
 
   if (config.mdr_qoi_num_variables != domain_decomposer.num_subdomains()) {
-    log::err("QOI mode requires the number of variables to be equal to the "
-             "number of subdomains");
-    exit(-1);
+    throw std::runtime_error(
+        "QOI mode requires the number of variables to be equal to the "
+        "number of subdomains");
   }
 
   if (!Cache::cache.InHierarchyCache(domain_decomposer.subdomain_shape(0),
@@ -105,9 +105,10 @@ void reconstruct_pipeline_qoi(
     log::info("Reconstruct subdomain " + std::to_string(curr_subdomain_id) +
               " with shape: " + ss.str());
 
-    reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
-    reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
-
+    reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id],
+                               mdr_data[current_buffer], current_queue);
+    reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id],
+                             mdr_data[current_buffer], current_queue);
 
     // Reconstruct
     reconstructor.ProgressiveReconstruct(
@@ -116,7 +117,7 @@ void reconstruct_pipeline_qoi(
         device_subdomain_buffer[current_buffer], current_queue);
 
     DeviceRuntime<DeviceType>::SyncQueue(current_queue);
-    
+
     if (curr_subdomain_id == config.mdr_qoi_num_variables - 1) {
       DeviceRuntime<DeviceType>::SyncQueue(current_queue);
       // We are done with reconstructing all variables now
@@ -134,22 +135,22 @@ void reconstruct_pipeline_qoi(
       //  we set it true for testing only
       reconstructed_data.qoi_in_progress = true;
     }
-    
+
     current_buffer = next_buffer;
     current_queue = next_queue;
   }
 
   // Copy final data out if we are done with reconstructing
   DeviceRuntime<DeviceType>::SyncDevice();
-  // We should only copy out data when we are done. But we copy it now for testing purposes
-  // if (!reconstructed_data.qoi_in_progress) {
-    for (SIZE curr_subdomain_id = 0;
-      curr_subdomain_id < domain_decomposer.num_subdomains();
-      curr_subdomain_id++) {
-      // Update reconstructed data
-      domain_decomposer.copy_subdomain(
-          device_subdomain_buffer[curr_subdomain_id], curr_subdomain_id,
-          subdomain_copy_direction::SubdomainToOriginal, current_queue);
+  // We should only copy out data when we are done. But we copy it now for
+  // testing purposes if (!reconstructed_data.qoi_in_progress) {
+  for (SIZE curr_subdomain_id = 0;
+       curr_subdomain_id < domain_decomposer.num_subdomains();
+       curr_subdomain_id++) {
+    // Update reconstructed data
+    domain_decomposer.copy_subdomain(
+        device_subdomain_buffer[curr_subdomain_id], curr_subdomain_id,
+        subdomain_copy_direction::SubdomainToOriginal, current_queue);
     // }
   }
 

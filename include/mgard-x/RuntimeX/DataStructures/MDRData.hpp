@@ -114,15 +114,14 @@ public:
               compressed_bitplanes[level_idx][bitplane_idx].data(),
               mdr_metadata.level_sizes[level_idx][bitplane_idx], queue_idx);
         } else {
-          log::err("Bitplane copy failed. level_idx(" +
-                   std::to_string(level_idx) + ") bitplane_idx(" +
-                   std::to_string(bitplane_idx) +
-                   ") Insufficient buffer space " +
-                   std::to_string(allocation_size[level_idx][bitplane_idx]) +
-                   " vs. " +
-                   std::to_string(
-                       mdr_metadata.level_sizes[level_idx][bitplane_idx]));
-          exit(-1);
+          throw std::runtime_error(
+              "Bitplane copy failed. level_idx(" + std::to_string(level_idx) +
+              ") bitplane_idx(" + std::to_string(bitplane_idx) +
+              ") Insufficient buffer space " +
+              std::to_string(allocation_size[level_idx][bitplane_idx]) +
+              " vs. " +
+              std::to_string(
+                  mdr_metadata.level_sizes[level_idx][bitplane_idx]));
         }
       }
     }
@@ -142,17 +141,17 @@ public:
     // TODO: load
     for (int level_idx = 0; level_idx < mdr_metadata.num_levels; level_idx++) {
       if (!level_signs[level_idx].hasDeviceAllocation()) {
-        log::err("Bitplane verification failed. level_signs(" +
-                 std::to_string(level_idx) + ") No allocation found.\n");
-        exit(-1);
+        throw std::runtime_error("Bitplane verification failed. level_signs(" +
+                                 std::to_string(level_idx) +
+                                 ") No allocation found.\n");
       }
       if (level_signs[level_idx].shape(0) !=
           mdr_metadata.level_num_elems[level_idx]) {
-        log::err("Bitplane verification failed. level_signs(" +
-                 std::to_string(level_idx) + ") Size mismatch " +
-                 std::to_string(level_signs[level_idx].shape(0)) + " vs. " +
-                 std::to_string(mdr_metadata.level_num_elems[level_idx]));
-        exit(-1);
+        throw std::runtime_error(
+            "Bitplane verification failed. level_signs(" +
+            std::to_string(level_idx) + ") Size mismatch " +
+            std::to_string(level_signs[level_idx].shape(0)) + " vs. " +
+            std::to_string(mdr_metadata.level_num_elems[level_idx]));
       }
       for (int bitplane_idx =
                mdr_metadata.prev_used_level_num_bitplanes[level_idx];
@@ -160,22 +159,22 @@ public:
            bitplane_idx++) {
         if (!compressed_bitplanes[level_idx][bitplane_idx]
                  .hasDeviceAllocation()) {
-          log::err("Bitplane verification failed. level_idx(" +
-                   std::to_string(level_idx) + ") bitplane_idx(" +
-                   std::to_string(bitplane_idx) + ") No allocation found.\n");
-          exit(-1);
+          throw std::runtime_error(
+              "Bitplane verification failed. level_idx(" +
+              std::to_string(level_idx) + ") bitplane_idx(" +
+              std::to_string(bitplane_idx) + ") No allocation found.\n");
         }
         if (compressed_bitplanes[level_idx][bitplane_idx].shape(0) !=
             mdr_metadata.level_sizes[level_idx][bitplane_idx]) {
-          log::err("Bitplane verification failed. level_idx(" +
-                   std::to_string(level_idx) + ") bitplane_idx(" +
-                   std::to_string(bitplane_idx) + ") Size mismatch " +
-                   std::to_string(
-                       compressed_bitplanes[level_idx][bitplane_idx].shape(0)) +
-                   " vs. " +
-                   std::to_string(
-                       mdr_metadata.level_sizes[level_idx][bitplane_idx]));
-          exit(-1);
+          throw std::runtime_error(
+              "Bitplane verification failed. level_idx(" +
+              std::to_string(level_idx) + ") bitplane_idx(" +
+              std::to_string(bitplane_idx) + ") Size mismatch " +
+              std::to_string(
+                  compressed_bitplanes[level_idx][bitplane_idx].shape(0)) +
+              " vs. " +
+              std::to_string(
+                  mdr_metadata.level_sizes[level_idx][bitplane_idx]));
         }
       }
     }

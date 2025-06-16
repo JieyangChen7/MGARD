@@ -540,8 +540,7 @@ SIZE Hierarchy<D, T, DeviceType>::total_num_elems() {
 template <DIM D, typename T, typename DeviceType>
 SIZE Hierarchy<D, T, DeviceType>::level_num_elems(SIZE level) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::level_num_elems level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::level_num_elems level out of bound.");
   }
   return _level_num_elems[level];
 }
@@ -564,8 +563,7 @@ SIZE Hierarchy<D, T, DeviceType>::l_target() {
 template <DIM D, typename T, typename DeviceType>
 std::vector<SIZE> Hierarchy<D, T, DeviceType>::level_shape(SIZE level) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::level_shape level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::level_shape level out of bound.");
   }
   return _level_shape[level];
 }
@@ -573,8 +571,7 @@ std::vector<SIZE> Hierarchy<D, T, DeviceType>::level_shape(SIZE level) {
 template <DIM D, typename T, typename DeviceType>
 SIZE Hierarchy<D, T, DeviceType>::level_shape(SIZE level, DIM dim) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::level_shape level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::level_shape level out of bound.");
   }
   if (dim >= D)
     return 1;
@@ -585,8 +582,8 @@ template <DIM D, typename T, typename DeviceType>
 Array<1, SIZE, DeviceType> &
 Hierarchy<D, T, DeviceType>::level_shape_array(SIZE level) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::level_shape_array level out of bound.");
-    exit(-1);
+    throw std::runtime_error(
+        "Hierarchy::level_shape_array level out of bound.");
   }
   return _level_shape_array[level];
 }
@@ -595,8 +592,7 @@ template <DIM D, typename T, typename DeviceType>
 Array<1, T, DeviceType> &Hierarchy<D, T, DeviceType>::dist(SIZE level,
                                                            DIM dim) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::dist level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::dist level out of bound.");
   }
   if (dim >= D)
     return dummy_array;
@@ -607,8 +603,7 @@ template <DIM D, typename T, typename DeviceType>
 Array<1, T, DeviceType> &Hierarchy<D, T, DeviceType>::ratio(SIZE level,
                                                             DIM dim) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::ratio level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::ratio level out of bound.");
   }
   if (dim >= D)
     return dummy_array;
@@ -618,8 +613,7 @@ Array<1, T, DeviceType> &Hierarchy<D, T, DeviceType>::ratio(SIZE level,
 template <DIM D, typename T, typename DeviceType>
 Array<1, T, DeviceType> &Hierarchy<D, T, DeviceType>::am(SIZE level, DIM dim) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::am level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::am level out of bound.");
   }
   if (dim >= D)
     return dummy_array;
@@ -629,8 +623,7 @@ Array<1, T, DeviceType> &Hierarchy<D, T, DeviceType>::am(SIZE level, DIM dim) {
 template <DIM D, typename T, typename DeviceType>
 Array<1, T, DeviceType> &Hierarchy<D, T, DeviceType>::bm(SIZE level, DIM dim) {
   if (level > _l_target + 1) {
-    log::err("Hierarchy::bm level out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::bm level out of bound.");
   }
   if (dim >= D)
     return dummy_array;
@@ -641,8 +634,7 @@ template <DIM D, typename T, typename DeviceType>
 Array<1, DIM, DeviceType> &
 Hierarchy<D, T, DeviceType>::processed(SIZE idx, DIM &processed_n) {
   if (idx >= D) {
-    log::err("Hierarchy::processed idx out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::processed idx out of bound.");
   }
   processed_n = _processed_n[idx];
   return _processed_dims[idx];
@@ -652,8 +644,7 @@ template <DIM D, typename T, typename DeviceType>
 Array<1, DIM, DeviceType> &
 Hierarchy<D, T, DeviceType>::unprocessed(SIZE idx, DIM &processed_n) {
   if (idx >= D) {
-    log::err("Hierarchy::unprocessed idx out of bound.");
-    exit(-1);
+    throw std::runtime_error("Hierarchy::unprocessed idx out of bound.");
   }
   processed_n = _unprocessed_n[idx];
   return _unprocessed_dims[idx];
@@ -746,18 +737,16 @@ template <DIM D, typename T, typename DeviceType>
 Hierarchy<D, T, DeviceType>::Hierarchy(std::vector<SIZE> shape, Config config) {
   int ret = check_shape<D>(shape);
   if (ret == -1) {
-    log::err(
+    throw std::runtime_error(
         "Number of dimensions mismatch. mgard_x::Hierarchy not initialized!");
-    exit(-1);
   }
   if (ret == -2) {
-    log::err("Size of any dimension cannot be smaller than 3. "
-             "mgard_x::Hierarchy not initialized!");
+    throw std::runtime_error("Size of any dimension cannot be smaller than 3. "
+                             "mgard_x::Hierarchy not initialized!");
     std::stringstream ss;
     for (DIM d = 0; d < D; d++)
       ss << shape[d] << " ";
-    log::err("Input shape: " + ss.str());
-    exit(-1);
+    throw std::runtime_error("Input shape: " + ss.str());
   }
   dstype = data_structure_type::Cartesian_Grid_Uniform;
   std::vector<T *> coords =
@@ -774,14 +763,12 @@ Hierarchy<D, T, DeviceType>::Hierarchy(std::vector<SIZE> shape,
                                        std::vector<T *> coords, Config config) {
   int ret = check_shape<D>(shape);
   if (ret == -1) {
-    log::err(
+    throw std::runtime_error(
         "Number of dimensions mismatch. mgard_x::Hierarchy not initialized!");
-    exit(-1);
   }
   if (ret == -2) {
-    log::err("Size of any dimension cannot be smaller than 3. "
-             "mgard_x::Hierarchy not initialized!");
-    exit(-1);
+    throw std::runtime_error("Size of any dimension cannot be smaller than 3. "
+                             "mgard_x::Hierarchy not initialized!");
   }
 
   dstype = data_structure_type::Cartesian_Grid_Non_Uniform;

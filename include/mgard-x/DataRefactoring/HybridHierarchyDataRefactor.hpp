@@ -7,8 +7,6 @@
 
 #include "DataRefactor.hpp"
 #include "HybridHierarchyDataRefactorInterface.hpp"
-// #include "DataRefactoringWorkspace.hpp"
-#include "../Linearization/LevelLinearizer.hpp"
 #include "InCacheBlock/DataRefactoring.h"
 #include "MultiDimension/DataRefactoring.h"
 #include "SingleDimension/DataRefactoring.h"

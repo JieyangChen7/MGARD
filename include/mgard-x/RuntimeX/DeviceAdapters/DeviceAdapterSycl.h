@@ -464,7 +464,7 @@ public:
 template <> class MemoryManager<SYCL> {
 public:
   MGARDX_CONT
-  MemoryManager(){};
+  MemoryManager() {};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -1735,8 +1735,7 @@ public:
                          SYCL>(std::string(KernelType::Name), min_config);
     }
 #else
-    log::err("MGARD is not built with auto tuning enabled.");
-    exit(-1);
+    throw std::runtime_error("MGARD is not built with auto tuning enabled.");
 #endif
   }
 
@@ -1785,7 +1784,7 @@ template <typename T> struct SquareOp {
 template <> class DeviceCollective<SYCL> {
 public:
   MGARDX_CONT
-  DeviceCollective(){};
+  DeviceCollective() {};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, SYCL> v,
@@ -1841,7 +1840,8 @@ public:
         T *res = result.data();
         T *input = v.data();
         h.parallel_for(
-            sycl::range{n}, sycl::reduction(res, std::numeric_limits<T>::max(), AbsMinOp<T>()),
+            sycl::range{n},
+            sycl::reduction(res, std::numeric_limits<T>::max(), AbsMinOp<T>()),
             [=](sycl::id<1> i, auto &res) { res.combine(input[i]); });
       });
       DeviceRuntime<SYCL>::SyncDevice();

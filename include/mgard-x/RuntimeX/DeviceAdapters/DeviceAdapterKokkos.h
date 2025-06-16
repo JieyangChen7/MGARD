@@ -15,7 +15,9 @@ namespace mgard_x {
 
 #ifdef KOKKOS_ENABLE_CUDA
 #define gpuErrchk(ans)                                                         \
-  { gpuAssert((ans), __FILE__, __LINE__); }
+  {                                                                            \
+    gpuAssert((ans), __FILE__, __LINE__);                                      \
+  }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
@@ -31,7 +33,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
 #ifdef KOKKOS_ENABLE_HIP
 
 #define gpuErrchk(ans)                                                         \
-  { gpuAssert((ans), __FILE__, __LINE__); }
+  {                                                                            \
+    gpuAssert((ans), __FILE__, __LINE__);                                      \
+  }
 
 inline void gpuAssert(hipError_t code, const char *file, int line,
                       bool abort = true) {
@@ -284,7 +288,7 @@ inline void gpuAssert(hipError_t code, const char *file, int line,
   template <> class MemoryManager<KOKKOS> {
   public:
     MGARDX_CONT
-    MemoryManager(){};
+    MemoryManager() {};
 
     template <typename T>
     MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n, int queue_idx) {

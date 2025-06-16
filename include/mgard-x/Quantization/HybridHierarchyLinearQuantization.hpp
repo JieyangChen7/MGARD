@@ -235,8 +235,7 @@ public:
         quantizer = 1.0f / quantizer;
     } else { // s != inf
 
-      log::err("s != inf not supported yet.");
-      exit(-1);
+      throw std::runtime_error("s != inf not supported yet.");
       // xin - uniform
       // T C2 = 1 + 3 * std::sqrt(3) / 4;
       // T c = std::sqrt(std::pow(2, D - 2 * s));
@@ -361,8 +360,7 @@ public:
                            hierarchy->total_num_elems()) +
             "%)");
       } else {
-        log::err("Not enough workspace for outliers.");
-        exit(-1);
+        throw std::runtime_error("Not enough workspace for outliers.");
       }
     }
   }

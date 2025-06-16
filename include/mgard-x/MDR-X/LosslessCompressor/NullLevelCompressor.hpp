@@ -33,7 +33,7 @@ public:
     Adapt(max_n, config, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
-  ~NullLevelCompressor(){};
+  ~NullLevelCompressor() {};
 
   void Adapt(SIZE max_n, Config config, int queue_idx) {
     this->initialized = true;

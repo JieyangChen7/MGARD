@@ -13,7 +13,7 @@ namespace mgard_x {
 template <> class KernelConfigs<KOKKOS> {
 public:
   MGARDX_CONT
-  KernelConfigs(){};
+  KernelConfigs() {};
 };
 
 template <> class AutoTuningTable<KOKKOS> {
@@ -372,7 +372,7 @@ public:
 template <> class AutoTuner<KOKKOS> {
 public:
   MGARDX_CONT
-  AutoTuner(){};
+  AutoTuner() {};
 
   static KernelConfigs<KOKKOS> kernelConfigs;
   static AutoTuningTable<KOKKOS> autoTuningTable;

@@ -146,8 +146,7 @@ template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::LosslessCompress(
     Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
   Array<1, QUANTIZED_INT, DeviceType> quantized_liearized_array(
-      {hierarchy->total_num_elems()},
-      (QUANTIZED_INT *)quantized_array.data());
+      {hierarchy->total_num_elems()}, (QUANTIZED_INT *)quantized_array.data());
   lossless_compressor.Compress(quantized_liearized_array, compressed_data,
                                queue_idx);
 }
@@ -183,8 +182,7 @@ template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::LosslessDecompress(
     Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
   Array<1, QUANTIZED_INT, DeviceType> quantized_liearized_data(
-      {hierarchy->total_num_elems()},
-      (QUANTIZED_INT *)quantized_array.data());
+      {hierarchy->total_num_elems()}, (QUANTIZED_INT *)quantized_array.data());
   lossless_compressor.Decompress(compressed_data, quantized_liearized_data,
                                  queue_idx);
 }
