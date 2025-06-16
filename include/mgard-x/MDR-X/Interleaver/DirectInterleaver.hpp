@@ -73,10 +73,9 @@ public:
     if (levels_decomposed_data_device_length < hierarchy.l_target() + 1) {
       MemoryManager<DeviceType>::Free(levels_decomposed_data_device, queue_idx);
       MemoryManager<DeviceType>::Malloc1D(levels_decomposed_data_device,
-                                        hierarchy.l_target() + 1, queue_idx);
+                                          hierarchy.l_target() + 1, queue_idx);
       levels_decomposed_data_device_length = hierarchy.l_target() + 1;
     }
-    
   }
   ~DirectInterleaver() {
     if (initialized) {

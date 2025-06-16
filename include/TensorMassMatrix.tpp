@@ -267,7 +267,9 @@ void ConstituentMassMatrixInverse<N, Real>::do_operator_parentheses(
   }
 
   // Start of backward sweep (first entry).
-  { x_next = *out_middle /= divisors[n - 1]; }
+  {
+    x_next = *out_middle /= divisors[n - 1];
+  }
 
   // Up to now (apart from its very first usage), `p` has pointed to the 'right'
   // index. From now on it will point to the 'middle' index.

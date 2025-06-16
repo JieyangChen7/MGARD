@@ -353,10 +353,6 @@ template <DIM D, typename T, typename DeviceType> void release_cache() {
   Cache2::cache.SafeRelease();
 }
 
-
-
-
-
 } // namespace MDR
 } // namespace mgard_x
 

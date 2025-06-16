@@ -822,7 +822,7 @@ public:
 template <> class MemoryManager<SERIAL> {
 public:
   MGARDX_CONT
-  MemoryManager(){};
+  MemoryManager() {};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -832,7 +832,7 @@ public:
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     ptr = (T *)std::malloc(n * sizeof(converted_T));
     if (ptr == nullptr) {
-      log::err("MemoryManager<SERIAL>::Malloc1D error.");
+      throw std::runtime_error("MemoryManager<SERIAL>::Malloc1D error.");
     }
   }
 
@@ -845,7 +845,7 @@ public:
     ptr = (T *)std::malloc(n1 * n2 * sizeof(converted_T));
     ld = n1;
     if (ptr == nullptr) {
-      log::err("MemoryManager<SERIAL>::MallocND error.");
+      throw std::runtime_error("MemoryManager<SERIAL>::MallocND error.");
     }
   }
 
@@ -857,7 +857,7 @@ public:
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     ptr = (T *)std::malloc(n * sizeof(converted_T));
     if (ptr == nullptr) {
-      log::err("MemoryManager<SERIAL>::MallocManaged1D error.");
+      throw std::runtime_error("MemoryManager<SERIAL>::MallocManaged1D error.");
     }
   }
 
@@ -907,7 +907,7 @@ public:
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     ptr = (T *)std::malloc(n * sizeof(converted_T));
     if (ptr == nullptr) {
-      log::err("MemoryManager<SERIAL>::MallocHost error.");
+      throw std::runtime_error("MemoryManager<SERIAL>::MallocHost error.");
     }
   }
 
@@ -1100,7 +1100,7 @@ struct BlockErrorCollect<T, T_fp, T_sfp, T_error, nblockx, nblocky, nblockz,
 template <typename TaskType> class DeviceAdapter<TaskType, SERIAL> {
 public:
   MGARDX_CONT
-  DeviceAdapter(){};
+  DeviceAdapter() {};
 
   MGARDX_CONT
   int IsResourceEnough(TaskType &task) {
@@ -1298,8 +1298,7 @@ public:
                          SERIAL>(std::string(KernelType::Name), min_config);
     }
 #else
-    log::err("MGARD is not built with auto tuning enabled.");
-    exit(-1);
+    throw std::runtime_error("MGARD is not built with auto tuning enabled.");
 #endif
   }
 
@@ -1332,7 +1331,7 @@ public:
 template <> class DeviceCollective<SERIAL> {
 public:
   MGARDX_CONT
-  DeviceCollective(){};
+  DeviceCollective() {};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, SERIAL> v,

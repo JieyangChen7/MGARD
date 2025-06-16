@@ -33,7 +33,7 @@ public:
     Adapt(max_n * byte_ratio, config, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
-  ~DefaultLevelCompressor(){};
+  ~DefaultLevelCompressor() {};
 
   void Adapt(SIZE max_n, SIZE max_level, SIZE max_bitplanes, Config config,
              int queue_idx) {

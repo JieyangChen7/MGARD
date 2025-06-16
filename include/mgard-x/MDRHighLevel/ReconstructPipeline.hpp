@@ -43,23 +43,20 @@ void reconstruct_pipeline(
   mdr_data[0].Resize(reconstructor, hierarchy, 0);
   mdr_data[1].Resize(reconstructor, hierarchy, 0);
   mdr_data[2].Resize(reconstructor, hierarchy, 0);
-  device_subdomain_buffer[0].resize(
-      domain_decomposer.subdomain_shape(0), 0);
-  device_subdomain_buffer[1].resize(
-      domain_decomposer.subdomain_shape(0), 0);
-  device_subdomain_buffer[2].resize(
-      domain_decomposer.subdomain_shape(0), 0);
+  device_subdomain_buffer[0].resize(domain_decomposer.subdomain_shape(0), 0);
+  device_subdomain_buffer[1].resize(domain_decomposer.subdomain_shape(0), 0);
+  device_subdomain_buffer[2].resize(domain_decomposer.subdomain_shape(0), 0);
 
   Timer timer_series;
   // if (log::level & log::TIME)
-    timer_series.start();
+  timer_series.start();
   // Prefetch the first subdomain
   int current_buffer = 0;
   int current_queue = 0;
-  mdr_data[current_buffer].Resize(
-          refactored_metadata.metadata[0], current_queue);
-      device_subdomain_buffer[current_buffer].resize(
-          domain_decomposer.subdomain_shape(0), current_queue);
+  mdr_data[current_buffer].Resize(refactored_metadata.metadata[0],
+                                  current_queue);
+  device_subdomain_buffer[current_buffer].resize(
+      domain_decomposer.subdomain_shape(0), current_queue);
   mdr_data[current_buffer].CopyFromRefactoredData(
       refactored_metadata.metadata[0], refactored_data.data[0], current_queue);
   mdr_data[current_buffer].CopyFromRefactoredSigns(
@@ -110,9 +107,11 @@ void reconstruct_pipeline(
     }
     log::info("Reconstruct subdomain " + std::to_string(curr_subdomain_id) +
               " with shape: " + ss.str());
-    
-    reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
-    reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id], mdr_data[current_buffer], current_queue);
+
+    reconstructor.LoadMetadata(refactored_metadata.metadata[curr_subdomain_id],
+                               mdr_data[current_buffer], current_queue);
+    reconstructor.Decompress(refactored_metadata.metadata[curr_subdomain_id],
+                             mdr_data[current_buffer], current_queue);
 
     if (curr_subdomain_id > 0) {
       // We delay D2H since since it can delay the D2H in lossless decompession
@@ -176,10 +175,10 @@ void reconstruct_pipeline(
 
   DeviceRuntime<DeviceType>::SyncDevice();
   // if (log::level & log::TIME) {
-    timer_series.end();
-    log::csv("time.csv", timer_series.get());
-    timer_series.print("Reconstruct pipeline", total_size);
-    timer_series.clear();
+  timer_series.end();
+  log::csv("time.csv", timer_series.get());
+  timer_series.print("Reconstruct pipeline", total_size);
+  timer_series.clear();
   // }
 }
 

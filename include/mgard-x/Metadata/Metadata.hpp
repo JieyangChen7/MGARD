@@ -742,8 +742,7 @@ private:
     Deserialize(header_crc32, p);
 
     if (header_crc32 != ComputeCRC32(p, header_size)) {
-      std::cout << log::log_err << "header CRC32 mismatch.\n";
-      exit(-1);
+      throw std::runtime_error("header CRC32 mismatch.");
     }
 
     metadata_size = 0;
@@ -761,8 +760,7 @@ private:
       software_version[1] = mgard_version_number.minor_();
       software_version[2] = mgard_version_number.patch_();
       if (software_version[0] > MGARD_VERSION_MAJOR) {
-        std::cout << log::log_err << "MGARD version mismatch.\n";
-        exit(-1);
+        throw std::runtime_error("MGARD version mismatch.");
       }
 
       const mgard::pb::VersionNumber format_version_number =
@@ -771,8 +769,7 @@ private:
       file_version[1] = format_version_number.minor_();
       file_version[2] = format_version_number.patch_();
       if (file_version[0] > MGARD_FILE_VERSION_MAJOR) {
-        std::cout << log::log_err << "MGARD file format version mismatch.\n";
-        exit(-1);
+        throw std::runtime_error("MGARD file format version mismatch.");
       }
     }
 
@@ -784,9 +781,7 @@ private:
       const google::protobuf::RepeatedField<google::protobuf::uint64> shape_ =
           cartesian_grid_topology.shape();
       if (total_dims != shape_.size()) {
-        std::cout << log::log_err
-                  << "grid shape does not match given dimension.\n";
-        exit(-1);
+        throw std::runtime_error("grid shape does not match given dimension.");
       }
       shape = std::vector<uint64_t>(total_dims);
       std::copy(shape_.begin(), shape_.end(), shape.begin());
@@ -804,10 +799,8 @@ private:
         for (DIM d = 0; d < total_dims; d++)
           totel_len += shape[d];
         if (totel_len != coordinates.size()) {
-          std::cout << log::log_err
-                    << "mismatch between number of node coordinates and grid "
-                       "shape.\n";
-          exit(-1);
+          throw std::runtime_error(
+              "mismatch between number of node coordinates and grid shape.");
         }
         using It = google::protobuf::RepeatedField<double>::const_iterator;
         It p = coordinates.begin();
@@ -891,10 +884,8 @@ private:
                  mgard::pb::FunctionDecomposition::HYBRID_HIERARCHY) {
         decomposition = decomposition_type::Hybrid;
       } else {
-        std::cout << log::log_err
-                  << "this decomposition hierarchy mismatch the hierarchy used "
-                     "in MGARD-X.\n";
-        exit(-1);
+        throw std::runtime_error("this decomposition hierarchy mismatch the "
+                                 "hierarchy used in MGARD-X.");
       }
       l_target = function_decomposition.l_target();
     }
@@ -934,10 +925,8 @@ private:
           quantization.method() == mgard::pb::Quantization::NOOP_QUANTIZATION &&
               bitplane_encoding.method() ==
                   mgard::pb::BitplaneEncoding::NOOP_BITPLANE_ENCODING) {
-        std::cout << log::log_err
-                  << "cannot determine whether this is compressed or "
-                     "refactored data.\n";
-        exit(-1);
+        throw std::runtime_error(
+            "cannot determine whether this is compressed or refactored data.");
       }
     }
 
@@ -974,8 +963,7 @@ private:
                  mgard::pb::Encoding::CPU_HUFFMAN_ZSTD) {
         ltype = mgard_x::lossless_type::CPU_Lossless;
       } else {
-        std::cout << log::log_err << "unknown lossless compressor type.\n";
-        exit(-1);
+        throw std::runtime_error("unknown lossless compressor type.");
       }
     }
 
@@ -992,9 +980,7 @@ private:
       } else if (device.backend() == mgard::pb::Device::X_SYCL) {
         ptype = processor_type::X_SYCL;
       } else if (device.backend() == mgard::pb::Device::CPU) {
-        std::cout << log::log_err
-                  << "this data was not compressed with MGARD-X.\n";
-        exit(-1);
+        throw std::runtime_error("this data was not compressed with MGARD-X.");
       }
     }
   }
@@ -1049,8 +1035,7 @@ private:
       char c_;
       Deserialize(c_, p);
       if (c_ != c) {
-        std::cout << log::log_err << "signature mismatch.\n";
-        exit(-1);
+        throw std::runtime_error("signature mismatch.");
       }
     }
   }
@@ -1128,8 +1113,7 @@ private:
                                         uint64_t header_size) {
     // The `CodedInputStream` constructor takes an `int`.
     if (header_size > std::numeric_limits<int>::max()) {
-      std::cout << log::log_err
-                << "header is too large (size would overflow).\n";
+      throw std::runtime_error("header is too large (size would overflow).");
     }
     SERIALIZED_TYPE *header_bytes_h = (SERIALIZED_TYPE *)malloc(header_size);
     Mem::Copy1D(header_bytes_h, header_bytes, header_size, 0);

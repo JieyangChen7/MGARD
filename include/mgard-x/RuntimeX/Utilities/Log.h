@@ -1,10 +1,10 @@
 #ifndef MGARD_X_MESSGAE_HH
 #define MGARD_X_MESSGAE_HH
 
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <fstream>
 
 using std::string;
 
@@ -40,8 +40,7 @@ void build(std::ostream &o, T t, Args... args);
 
 template <typename... Args> void print(string log_head, Args... args);
 
-template<typename T>
-void csv(std::string file, T v) {
+template <typename T> void csv(std::string file, T v) {
   std::ofstream myfile;
   myfile.open(file, std::ios_base::app);
   myfile << v << ", ";

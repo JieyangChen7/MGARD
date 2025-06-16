@@ -114,9 +114,10 @@ int main(int argc, char *argv[]) {
   size_t lagrange_size = 0;
   for (size_t iter = 0; iter < num_iter; iter++) {
     if (iter == num_iter - 1) {
-      iter_nnodes = (size_t)(std::ceil)(
-          ((double)(nnodes - div_nnodes * iter)) /
-          (double)np_size); // local_nnodes - iter_nnodes*iter;
+      iter_nnodes =
+          (size_t)(std::ceil)(((double)(nnodes - div_nnodes * iter)) /
+                              (double)
+                                  np_size); // local_nnodes - iter_nnodes*iter;
       local_nnodes =
           (rank == np_size - 1)
               ? (nnodes - div_nnodes * iter - iter_nnodes * (np_size - 1))

@@ -172,7 +172,7 @@ void print_statistics(double s, enum mgard_x::error_bound_type mode,
             << "\n";
 
   if (actual_error > tol)
-    exit(-1);
+    throw std::runtime_error("Error tolerance exceeded");
 }
 
 void create_dir(std::string name) {
@@ -233,8 +233,9 @@ void read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 }
 
 size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
-              mgard_x::MDR::RefactoredData &refactored_data, std::string input,
-              bool initialize_signs, mgard_x::Config config) {
+                mgard_x::MDR::RefactoredData &refactored_data,
+                std::string input, bool initialize_signs,
+                mgard_x::Config config) {
 
   size_t size_read = 0;
   int num_subdomains = refactored_metadata.metadata.size();
@@ -260,8 +261,7 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
             level_size, config);
         if (level_size != refactored_metadata.metadata[subdomain_id]
                               .level_sizes[level_idx][bitplane_idx]) {
-          std::cout << "mdr component size mismatch.";
-          exit(-1);
+          throw std::runtime_error("mdr component size mismatch.");
         }
         size_read += level_size;
       }
@@ -315,8 +315,8 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
 
   // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   // config.domain_decomposition_dim = 0;
-  // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512, 512};
-  // config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
+  // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512,
+  // 512}; config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 256);
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
@@ -372,7 +372,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   write_mdr(refactored_metadata, refactored_data, output_file);
 
   mgard_x::unpin_memory(original_data, config);
-  delete[](T *) original_data;
+  delete[] (T *)original_data;
 
   return 0;
 }
@@ -394,8 +394,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
   // config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   // config.domain_decomposition_dim = 0;
-  // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512, 512};
-  // config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
+  // config.domain_decomposition_sizes = {512, 512, 512, 512, 512, 512, 512,
+  // 512}; config.domain_decomposition_sizes = {98, 98, 98, 98, 98, 98, 98, 98};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 256);
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
@@ -423,7 +423,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       loaded_size += std::min(in_size / sizeof(T), original_size - loaded_size);
     }
     in_size = loaded_size * sizeof(T);
-  }  
+  }
   if (in_size != original_size * sizeof(T)) {
     std::cout << mgard_x::log::log_warn << "input file size mismatch "
               << in_size << " vs. " << original_size * sizeof(T) << "!\n";
@@ -443,8 +443,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     for (auto &metadata : refactored_metadata.metadata) {
       metadata.PrintStatus();
     }
-    size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
-             first_reconstruction, config);
+    size_t size_read = read_mdr(refactored_metadata, refactored_data,
+                                input_file, first_reconstruction, config);
 
     mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
                                 reconstructed_data, config, false);
@@ -453,7 +453,7 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
     std::cout << mgard_x::log::log_info << "Additional " << size_read
               << " bytes read for reconstruction\n";
-    
+
     mgard_x::log::csv("size.csv", size_read);
 
     if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
@@ -567,13 +567,15 @@ bool try_reconstruction(int argc, char *argv[]) {
   if (verbose)
     std::cout << mgard_x::log::log_info << "verbose: enabled.\n";
   if (dtype == mgard_x::data_type::Double) {
-    launch_reconstruct<double>(input_file, output_file, original_file, dtype, shape, tols,
-                     s, mode, adaptive_resolution, dev_type, verbose);
+    launch_reconstruct<double>(input_file, output_file, original_file, dtype,
+                               shape, tols, s, mode, adaptive_resolution,
+                               dev_type, verbose);
   } else if (dtype == mgard_x::data_type::Float) {
-    launch_reconstruct<float>(input_file, output_file, original_file, dtype, shape, tols,
-                     s, mode, adaptive_resolution, dev_type, verbose);
+    launch_reconstruct<float>(input_file, output_file, original_file, dtype,
+                              shape, tols, s, mode, adaptive_resolution,
+                              dev_type, verbose);
   }
-  
+
   return true;
 }
 

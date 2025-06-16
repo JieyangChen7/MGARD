@@ -143,7 +143,9 @@ public:
 #pragma omp parallel
     {
 #pragma omp single
-      { NumSMs[dev_id] = omp_get_num_threads(); }
+      {
+        NumSMs[dev_id] = omp_get_num_threads();
+      }
     }
     return NumSMs[dev_id];
   }
@@ -330,7 +332,7 @@ public:
 template <> class MemoryManager<OPENMP> {
 public:
   MGARDX_CONT
-  MemoryManager(){};
+  MemoryManager() {};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -340,7 +342,7 @@ public:
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     ptr = (T *)std::malloc(n * sizeof(converted_T));
     if (ptr == nullptr) {
-      log::err("MemoryManager<OPENMP>::Malloc1D error.");
+      throw std::runtime_error("MemoryManager<OPENMP>::Malloc1D error.");
     }
   }
 
@@ -353,7 +355,7 @@ public:
     ptr = (T *)std::malloc(n1 * n2 * sizeof(converted_T));
     ld = n1;
     if (ptr == nullptr) {
-      log::err("MemoryManager<OPENMP>::MallocND error.");
+      throw std::runtime_error("MemoryManager<OPENMP>::MallocND error.");
     }
   }
 
@@ -365,7 +367,7 @@ public:
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     ptr = (T *)std::malloc(n * sizeof(converted_T));
     if (ptr == nullptr) {
-      log::err("MemoryManager<OPENMP>::MallocManaged1D error.");
+      throw std::runtime_error("MemoryManager<OPENMP>::MallocManaged1D error.");
     }
   }
 
@@ -415,7 +417,7 @@ public:
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     ptr = (T *)std::malloc(n * sizeof(converted_T));
     if (ptr == nullptr) {
-      log::err("MemoryManager<OPENMP>::MallocHost error.");
+      throw std::runtime_error("MemoryManager<OPENMP>::MallocHost error.");
     }
   }
 
@@ -1371,8 +1373,7 @@ public:
                          OPENMP>(std::string(KernelType::Name), min_config);
     }
 #else
-    log::err("MGARD is not built with auto tuning enabled.");
-    exit(-1);
+    throw std::runtime_error("MGARD is not built with auto tuning enabled.");
 #endif
   }
 
@@ -1405,7 +1406,7 @@ public:
 template <> class DeviceCollective<OPENMP> {
 public:
   MGARDX_CONT
-  DeviceCollective(){};
+  DeviceCollective() {};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, OPENMP> v,
@@ -1487,7 +1488,8 @@ public:
       workspace.resize({(SIZE)1}, queue_idx);
     }
 #else
-    log::err("Please recompile with GCC 9+ to use ScanSumInclusive<OPENMP>.");
+    throw std::runtime_error(
+        "Please recompile with GCC 9+ to use ScanSumInclusive<OPENMP>.");
 #endif
   }
 
@@ -1506,7 +1508,8 @@ public:
       workspace.resize({(SIZE)1}, queue_idx);
     }
 #else
-    log::err("Please recompile with GCC 9+ to use ScanSumExclusive<OPENMP>.");
+    throw std::runtime_error(
+        "Please recompile with GCC 9+ to use ScanSumExclusive<OPENMP>.");
 #endif
   }
 
@@ -1526,7 +1529,8 @@ public:
       workspace.resize({(SIZE)1}, queue_idx);
     }
 #else
-    log::err("Please recompile with GCC 9+ to use ScanSumExtended<OPENMP>.");
+    throw std::runtime_error(
+        "Please recompile with GCC 9+ to use ScanSumExtended<OPENMP>.");
 #endif
   }
 

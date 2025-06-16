@@ -34,13 +34,13 @@ public:
   // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
   //                                CONTROL_L2, DeviceType>;
   // using Encoder = BPEncoderOptV1a<D, T_data, T_bitplane, T_error, NegaBinary,
-                                //  CONTROL_L2, DeviceTyspe>;
+  //  CONTROL_L2, DeviceTyspe>;
   using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary,
-                                CONTROL_L2, DeviceType>;
+                                  CONTROL_L2, DeviceType>;
   // using Encoder = BPEncoderOptV2<D, T_data, T_bitplane, T_error, NegaBinary,
   //                                CONTROL_L2, DeviceType>;
-    // using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary,
-    //                              CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
   // using Encoder = BPEncoderOptV3<D, T_data, T_bitplane, T_error, NegaBinary,
   //                               CONTROL_L2, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
@@ -89,8 +89,9 @@ public:
     level_data_subarray.resize(hierarchy.l_target() + 1);
     abs_max_array.resize(hierarchy.l_target() + 1);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      level_data_array[level_idx].resize({round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE)},
-                                         queue_idx);
+      level_data_array[level_idx].resize(
+          {round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE)},
+          queue_idx);
       level_data_subarray[level_idx] =
           SubArray<1, T_data, DeviceType>(level_data_array[level_idx]);
       abs_max_array[level_idx].resize({1}, queue_idx);
@@ -129,7 +130,8 @@ public:
     size_t size = 0;
     size += hierarchy.EstimateMemoryFootprint(shape);
     for (int level_idx = 0; level_idx < hierarchy.l_target() + 1; level_idx++) {
-      size += round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE) * sizeof(T_data);
+      size += round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE) *
+              sizeof(T_data);
     }
     size += sizeof(T_data);
     Array<1, Byte, DeviceType> tmp;
@@ -185,35 +187,36 @@ public:
     mdr_metadata.Initialize(hierarchy->l_target() + 1, Encoder::MAX_BITPLANES);
     mdr_data.Resize(*this, *hierarchy, queue_idx);
 
-    if (0){
-    int level_idx = hierarchy->l_target();
-    encoder.encode(level_data_subarray[level_idx].shape(0),
-                    Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-                    level_data_subarray[level_idx],
-                    encoded_bitplanes_subarray[level_idx],
-                    level_errors_subarray[level_idx], queue_idx);
-    encoder.encode(level_data_subarray[level_idx].shape(0),
-                      Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-                      level_data_subarray[level_idx],
-                      encoded_bitplanes_subarray[level_idx],
-                      level_errors_subarray[level_idx], queue_idx);
-      
+    if (0) {
+      int level_idx = hierarchy->l_target();
+      encoder.encode(level_data_subarray[level_idx].shape(0),
+                     Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+                     level_data_subarray[level_idx],
+                     encoded_bitplanes_subarray[level_idx],
+                     level_errors_subarray[level_idx], queue_idx);
+      encoder.encode(level_data_subarray[level_idx].shape(0),
+                     Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
+                     level_data_subarray[level_idx],
+                     encoded_bitplanes_subarray[level_idx],
+                     level_errors_subarray[level_idx], queue_idx);
+
       for (int i = 0; i < 10; i++) {
         SIZE N = pow(2, i) * 1e6;
-        N = round_up(N, BATCH_SIZE) ;
+        N = round_up(N, BATCH_SIZE);
         Array<1, T_data, DeviceType> test_data({N}, queue_idx);
         Array<2, T_bitplane, DeviceType> encoded_data(
-          {(SIZE)Encoder::MAX_BITPLANES, encoder.bitplane_length(N)}, queue_idx);
+            {(SIZE)Encoder::MAX_BITPLANES, encoder.bitplane_length(N)},
+            queue_idx);
 
         // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
         // Timer timer_iter; timer_iter.start();
-        encoder.encode(test_data.shape(0),
-                        Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-                        SubArray(test_data),
-                        encoded_bitplanes_subarray[level_idx],
-                        level_errors_subarray[level_idx], queue_idx);
+        encoder.encode(test_data.shape(0), Encoder::MAX_BITPLANES,
+                       SubArray(abs_max_array[level_idx]), SubArray(test_data),
+                       encoded_bitplanes_subarray[level_idx],
+                       level_errors_subarray[level_idx], queue_idx);
         // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        // timer_iter.end(); timer_iter.print("Encoding level", test_data.shape(0) * sizeof(T_data));
+        // timer_iter.end(); timer_iter.print("Encoding level",
+        // test_data.shape(0) * sizeof(T_data));
       }
       // exit(0);
     }
@@ -249,19 +252,21 @@ public:
          level_idx++) {
       DeviceCollective<DeviceType>::AbsMax(
           level_data_subarray[level_idx].shape(0),
-          level_data_subarray[level_idx], SubArray(abs_max_array[level_idx]), abs_max_workspace, true,
-          queue_idx);
+          level_data_subarray[level_idx], SubArray(abs_max_array[level_idx]),
+          abs_max_workspace, true, queue_idx);
 
       {
-        // DumpSubArray("level_"+std::to_string(level_idx), level_data_subarray[level_idx]);
-        // for (SIZE i = 0; i < level_data_subarray[level_idx].shape(0); i += 1e6) {
-        // // for (SIZE i = 0; i <  10; i += 10) {          
-        //   SIZE n = std::min(level_data_subarray[level_idx].shape(0) - i, (SIZE)1e6);
-        //   SubArray<1, T_data, DeviceType> data_block({n}, level_data_subarray[level_idx](i));
+        // DumpSubArray("level_"+std::to_string(level_idx),
+        // level_data_subarray[level_idx]); for (SIZE i = 0; i <
+        // level_data_subarray[level_idx].shape(0); i += 1e6) {
+        // // for (SIZE i = 0; i <  10; i += 10) {
+        //   SIZE n = std::min(level_data_subarray[level_idx].shape(0) - i,
+        //   (SIZE)1e6); SubArray<1, T_data, DeviceType> data_block({n},
+        //   level_data_subarray[level_idx](i));
         //   // PrintSubarray("data_block", data_block);
         //   T_data * ddd = new T_data[n];
-        //   MemoryManager<DeviceType>::Copy1D(ddd, data_block.data(), n, queue_idx);
-        //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        //   MemoryManager<DeviceType>::Copy1D(ddd, data_block.data(), n,
+        //   queue_idx); DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
         //   T_data min = fabs(ddd[0]);
         //   T_data max = fabs(ddd[0]);
@@ -276,13 +281,13 @@ public:
         //       c++;
         //     }
         //   }
-        //   std::cout << "cpu: [" << n << "] " << max << " - "<< min  << " c: " << c << std::endl;
-
+        //   std::cout << "cpu: [" << n << "] " << max << " - "<< min  << " c: "
+        //   << c << std::endl;
 
         //   DeviceCollective<DeviceType>::AbsMax(
         //       n,
-        //       data_block, SubArray(abs_max_array[level_idx]), abs_max_workspace, true,
-        //       queue_idx);
+        //       data_block, SubArray(abs_max_array[level_idx]),
+        //       abs_max_workspace, true, queue_idx);
         //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
         //   abs_max_array[level_idx].hostCopy(false, queue_idx);
         //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -290,8 +295,8 @@ public:
 
         //   DeviceCollective<DeviceType>::AbsMin(
         //       n,
-        //       data_block, SubArray(abs_max_array[level_idx]), abs_max_workspace, true,
-        //       queue_idx);
+        //       data_block, SubArray(abs_max_array[level_idx]),
+        //       abs_max_workspace, true, queue_idx);
         //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
         //   abs_max_array[level_idx].hostCopy(false, queue_idx);
         //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -299,10 +304,7 @@ public:
 
         //   std::cout << "abs: " << abs_max << " - "<< abs_min << std::endl;
         // }
-
       }
-
-
 
       encoded_bitplanes_array[level_idx].resize(
           {(SIZE)Encoder::MAX_BITPLANES,
@@ -320,7 +322,8 @@ public:
                      encoded_bitplanes_subarray[level_idx],
                      level_errors_subarray[level_idx], queue_idx);
       // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      // timer_iter.end(); timer_iter.print("Encoding level",
+      // level_data_subarray[level_idx].shape(0) * sizeof(T_data));
     }
 
     if (log::level & log::TIME) {
@@ -361,11 +364,13 @@ public:
     //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     //   T_data level_max_error = abs_max_array[level_idx].dataHost()[0];
     //   mdr_metadata.level_error_bounds[level_idx] = level_max_error;
-    //   mdr_metadata.level_num_elems[level_idx] = hierarchy->level_num_elems(level_idx);
-    //   std::vector<T_error> squared_error(Encoder::MAX_BITPLANES + 1);
+    //   mdr_metadata.level_num_elems[level_idx] =
+    //   hierarchy->level_num_elems(level_idx); std::vector<T_error>
+    //   squared_error(Encoder::MAX_BITPLANES + 1);
     //   MemoryManager<DeviceType>::Copy1D(squared_error.data(),
     //                                     level_errors_array[level_idx].data(),
-    //                                     Encoder::MAX_BITPLANES + 1, queue_idx);
+    //                                     Encoder::MAX_BITPLANES + 1,
+    //                                     queue_idx);
     //   mdr_metadata.level_squared_errors[level_idx] = squared_error;
     //   // PrintSubarray("level_errors", level_errors_subarray[level_idx]);
     // }
@@ -400,14 +405,16 @@ public:
     }
   }
 
-  void StoreMetadata(MDRMetadata &mdr_metadata, MDRData<DeviceType> &mdr_data, int queue_idx) {
+  void StoreMetadata(MDRMetadata &mdr_metadata, MDRData<DeviceType> &mdr_data,
+                     int queue_idx) {
     for (int level_idx = 0; level_idx < hierarchy->l_target() + 1;
          level_idx++) {
       abs_max_array[level_idx].hostCopy(false, queue_idx);
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       T_data level_max_error = abs_max_array[level_idx].dataHost()[0];
       mdr_metadata.level_error_bounds[level_idx] = level_max_error;
-      mdr_metadata.level_num_elems[level_idx] = hierarchy->level_num_elems(level_idx);
+      mdr_metadata.level_num_elems[level_idx] =
+          hierarchy->level_num_elems(level_idx);
       std::vector<T_error> squared_error(Encoder::MAX_BITPLANES + 1);
       MemoryManager<DeviceType>::Copy1D(squared_error.data(),
                                         level_errors_array[level_idx].data(),

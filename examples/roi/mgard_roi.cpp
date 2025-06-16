@@ -62,8 +62,7 @@ int main(int argc, char **argv) {
   adios2::IO writer_io = ad.DeclareIO("Output");
   if (rank == 0) {
     std::cout << "write: "
-              << "./" + fname + ".mgard"
-              << "\n";
+              << "./" + fname + ".mgard" << "\n";
     std::cout << "readin: " << dpath + fname << "\n";
   }
   adios2::Engine reader = reader_io.Open(dpath + fname, adios2::Mode::Read);

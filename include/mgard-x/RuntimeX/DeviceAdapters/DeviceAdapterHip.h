@@ -8,8 +8,8 @@
 #include "DeviceAdapter.h"
 
 #define HIP_ENABLE_WARP_SYNC_BUILTINS
-#include <hip/hip_runtime_api.h>
 #include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 #include <hipcub/hipcub.hpp>
 #include <iostream>
 // #include <mma.h>
@@ -51,8 +51,9 @@ template <typename TaskType>
 inline void ErrorAsyncCheckTask(hipError_t code, TaskType &task,
                                 bool abort = true) {
   if (code != hipSuccess) {
-    log::err(std::string(hipGetErrorString(code)) + " while executing " +
-             task.GetFunctorName().c_str() + " with HIP (Async-check)");
+    throw std::runtime_error(
+        std::string(hipGetErrorString(code)) + " while executing " +
+        task.GetFunctorName().c_str() + " with HIP (Async-check)");
     if (abort)
       exit(code);
   }
@@ -62,8 +63,9 @@ template <typename TaskType>
 inline void ErrorSyncCheckTask(hipError_t code, TaskType &task,
                                bool abort = true) {
   if (code != hipSuccess) {
-    log::err(std::string(hipGetErrorString(code)) + " while executing " +
-             task.GetFunctorName().c_str() + " with HIP (Sync-check)");
+    throw std::runtime_error(
+        std::string(hipGetErrorString(code)) + " while executing " +
+        task.GetFunctorName().c_str() + " with HIP (Sync-check)");
     if (abort)
       exit(code);
   }
@@ -72,8 +74,9 @@ inline void ErrorSyncCheckTask(hipError_t code, TaskType &task,
 inline void ErrorAsyncCheck(hipError_t code, std::string task,
                             bool abort = true) {
   if (code != hipSuccess) {
-    log::err(std::string(hipGetErrorString(code)) + " while executing " +
-             task.c_str() + " with HIP (Async-check)");
+    throw std::runtime_error(std::string(hipGetErrorString(code)) +
+                             " while executing " + task.c_str() +
+                             " with HIP (Async-check)");
     if (abort)
       exit(code);
   }
@@ -82,15 +85,18 @@ inline void ErrorAsyncCheck(hipError_t code, std::string task,
 inline void ErrorSyncCheck(hipError_t code, std::string task,
                            bool abort = true) {
   if (code != hipSuccess) {
-    log::err(std::string(hipGetErrorString(code)) + " while executing " +
-             task.c_str() + " with HIP (Sync-check)");
+    throw std::runtime_error(std::string(hipGetErrorString(code)) +
+                             " while executing " + task.c_str() +
+                             " with HIP (Sync-check)");
     if (abort)
       exit(code);
   }
 }
 
 #define gpuErrchk(ans)                                                         \
-  { gpuAssert((ans), __FILE__, __LINE__); }
+  {                                                                            \
+    gpuAssert((ans), __FILE__, __LINE__);                                      \
+  }
 
 inline void gpuAssert(hipError_t code, const char *file, int line,
                       bool abort = true) {
@@ -668,7 +674,7 @@ public:
           &numBlocks, HipHuffmanCWCustomizedKernel<Task<FunctorType>>,
           blockSize, dynamicSMemSize));
     } else {
-      log::err("GetOccupancyMaxActiveBlocksPerSM Error!");
+      throw std::runtime_error("GetOccupancyMaxActiveBlocksPerSM Error!");
     }
     // HIP tends to over estimate this value
     numBlocks /= 2;
@@ -699,7 +705,7 @@ public:
           (const void *)HipHuffmanCWCustomizedKernel<Task<FunctorType>>,
           hipFuncAttributeMaxDynamicSharedMemorySize, maxbytes));
     } else {
-      log::err("SetPreferredSharedMemoryCarveout Error!");
+      throw std::runtime_error("SetPreferredSharedMemoryCarveout Error!");
     }
   }
 
@@ -716,7 +722,7 @@ public:
 template <> class MemoryManager<HIP> {
 public:
   MGARDX_CONT
-  MemoryManager(){};
+  MemoryManager() {};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -2256,8 +2262,7 @@ public:
                          HIP>(std::string(KernelType::Name), min_config);
     }
 #else
-    log::err("MGARD is not built with auto tuning enabled.");
-    exit(-1);
+    throw std::runtime_error("MGARD is not built with auto tuning enabled.");
 #endif
   }
 
@@ -2311,7 +2316,7 @@ struct SquareOp {
 template <> class DeviceCollective<HIP> {
 public:
   MGARDX_CONT
-  DeviceCollective(){};
+  DeviceCollective() {};
 
   template <typename T>
   MGARDX_CONT static void
@@ -2365,8 +2370,8 @@ public:
     AbsMinOp absMinOp;
     hipStream_t stream = DeviceRuntime<HIP>::GetQueue(queue_idx);
     hipcub::DeviceReduce::Reduce(d_temp_storage, temp_storage_bytes, v.data(),
-                                 result.data(), n, absMinOp, std::numeric_limits<T>::max(),
-                                 stream);
+                                 result.data(), n, absMinOp,
+                                 std::numeric_limits<T>::max(), stream);
     ErrorAsyncCheck(hipGetLastError(), "DeviceCollective<HIP>::AbsMax");
     if (DeviceRuntime<HIP>::SyncAllKernelsAndCheckErrors) {
       ErrorSyncCheck(hipDeviceSynchronize(), "DeviceCollective<HIP>::AbsMax");

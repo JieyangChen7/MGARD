@@ -36,13 +36,15 @@ class BitplaneEncoderInterface {
 public:
   virtual ~BitplaneEncoderInterface() = default;
 
-  virtual void encode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  virtual void encode(SIZE n, int num_bitplanes,
+                      SubArray<1, T_data, DeviceType> abs_max,
                       SubArray<1, T_data, DeviceType> v,
                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                       SubArray<1, T_error, DeviceType> level_errors,
                       int queue_idx) = 0;
 
-  virtual void decode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  virtual void decode(SIZE n, int num_bitplanes,
+                      SubArray<1, T_data, DeviceType> abs_max,
                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                       int level, SubArray<1, T_data, DeviceType> v,
                       int queue_idx) = 0;

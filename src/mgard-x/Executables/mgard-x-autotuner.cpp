@@ -63,7 +63,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   mgard_x::decompress(compressed_data, compressed_size, decompressed_data,
                       config, false);
 
-  delete[](T *) original_data;
+  delete[] (T *)original_data;
   free(compressed_data);
   free(decompressed_data);
   return 0;
@@ -207,8 +207,7 @@ mgard_x::device_type get_arg_dev_type(int argc, char *argv[]) {
     dev_type = mgard_x::device_type::SYCL;
     std::cout << mgard_x::log::log_info << "device type: SYCL\n";
   } else {
-    std::cout << "wrong device type.\n";
-    exit(-1);
+    throw std::runtime_error("wrong device type.");
   }
   return dev_type;
 }

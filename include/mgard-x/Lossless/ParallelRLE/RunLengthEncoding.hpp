@@ -33,7 +33,8 @@ public:
     start_marks.resize({max_size}, queue_idx);
     scanned_start_marks.resize({max_size}, queue_idx);
     start_positions.resize({max_size}, queue_idx);
-    MemoryManager<DeviceType>::MallocHost(signature_verify, 7 * sizeof(char), queue_idx);
+    MemoryManager<DeviceType>::MallocHost(signature_verify, 7 * sizeof(char),
+                                          queue_idx);
     DeviceCollective<DeviceType>::ScanSumInclusive(
         max_size, SubArray<1, C_global, DeviceType>(),
         SubArray<1, C_global, DeviceType>(), this->scan_workspace, false,
@@ -105,8 +106,8 @@ public:
   }
 
   bool Compress(Array<1, T_symbol, DeviceType> &original_data,
-                Array<1, Byte, DeviceType> &compressed_data, 
-                float target_cr, int queue_idx) {
+                Array<1, Byte, DeviceType> &compressed_data, float target_cr,
+                int queue_idx) {
     Timer timer;
     // Timer timer_each;
     if (log::level & log::TIME) {
@@ -149,10 +150,11 @@ public:
         queue_idx);
 
     if (target_cr > 0) {
-      double est_cr = (double)(original_length * sizeof(T_symbol)) /
-           (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
-      log::info("RLE estimated CR: " + std::to_string(est_cr) + " (target: " +
-                std::to_string(target_cr) + ")");
+      double est_cr =
+          (double)(original_length * sizeof(T_symbol)) /
+          (_total_run_length * (sizeof(T_symbol) + sizeof(C_run)) + 30);
+      log::info("RLE estimated CR: " + std::to_string(est_cr) +
+                " (target: " + std::to_string(target_cr) + ")");
       if (est_cr < target_cr) {
         return false;
       }
@@ -252,8 +254,8 @@ public:
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
     SIZE byte_offset = 0;
-    DeserializeArray<Byte>(compressed_subarray, signature_verify, 7, byte_offset,
-                           false, queue_idx);
+    DeserializeArray<Byte>(compressed_subarray, signature_verify, 7,
+                           byte_offset, false, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
     for (int i = 0; i < 7; i++) {
       if (signature[i] != signature_verify[i]) {
@@ -265,8 +267,7 @@ public:
 
   void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     if (!Verify(compressed_data, queue_idx)) {
-      log::err("RLE signature mismatch.");
-      exit(-1);
+      throw std::runtime_error("RLE signature mismatch.");
     }
     SubArray<1, Byte, DeviceType> compressed_subarray(compressed_data);
     Byte *signature_ptr = nullptr;
@@ -347,7 +348,7 @@ public:
   C_run *counts_ptr = nullptr;
   T_symbol *symbols_ptr = nullptr;
   Byte signature[7] = {'M', 'G', 'X', 'R', 'L', 'E', 'C'};
-  Byte * signature_verify;
+  Byte *signature_verify;
 
   Array<1, C_global, DeviceType> start_marks;
   Array<1, C_global, DeviceType> scanned_start_marks;

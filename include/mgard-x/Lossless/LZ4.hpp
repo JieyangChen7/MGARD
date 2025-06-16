@@ -224,10 +224,8 @@ public:
         timer.clear();
       }
   #else
-      log::err("LZ4 for is only available on CUDA devices. Portable version is "
-               "in development.");
-      exit(-1);
-  #endif
+      throw std::runtime_error("LZ4 for is only available on CUDA devices.
+  Portable version is " "in development."); #endif
     }
 
      void Decompress2(Array<1, Byte, DeviceType> &data, int queue_idx) {
@@ -327,10 +325,8 @@ public:
         timer.clear();
       }
   #else
-      log::err("LZ4 for is only available on CUDA devices. Portable version is "
-               "in development.");
-      exit(-1);
-  #endif
+      throw std::runtime_error("LZ4 for is only available on CUDA devices.
+  Portable version is " "in development."); #endif
     }
   */
   void Compress(Array<1, Byte, DeviceType> &data, int queue_idx) {
@@ -372,9 +368,9 @@ public:
       timer.clear();
     }
 #else
-    log::err("LZ4 is only available on CUDA devices. Portable version is "
-             "in development.");
-    exit(-1);
+    throw std::runtime_error(
+        "LZ4 is only available on CUDA devices. Portable version is "
+        "in development.");
 #endif
   }
 
@@ -408,9 +404,9 @@ public:
       timer.clear();
     }
 #else
-    log::err("LZ4 is only available on CUDA devices. Portable version is "
-             "in development.");
-    exit(-1);
+    throw std::runtime_error(
+        "LZ4 is only available on CUDA devices. Portable version is "
+        "in development.");
 #endif
   }
 

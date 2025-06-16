@@ -158,11 +158,11 @@ public:
 template <typename TaskType, typename DeviceType> class DeviceAdapter {
 public:
   MGARDX_CONT
-  DeviceAdapter(){};
+  DeviceAdapter() {};
   MGARDX_CONT
   int IsResourceEnough() { return false; }
   MGARDX_CONT
-  ExecutionReturn Execute(){};
+  ExecutionReturn Execute() {};
 };
 
 template <typename DeviceType> class DeviceLauncher {
@@ -179,7 +179,7 @@ template <typename KeyT, typename ValueT> struct KeyValueComparator {
 
 template <typename DeviceType> class DeviceCollective {
 public:
-  template <typename T> MGARDX_CONT DeviceCollective(){};
+  template <typename T> MGARDX_CONT DeviceCollective() {};
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, DeviceType> v,
                               SubArray<1, T, DeviceType> result,
@@ -192,7 +192,7 @@ public:
                                  Array<1, Byte, DeviceType> &workspace,
                                  bool workspace_allocated, int queue_idx);
 
-    template <typename T>
+  template <typename T>
   MGARDX_CONT static void AbsMin(SIZE n, SubArray<1, T, DeviceType> v,
                                  SubArray<1, T, DeviceType> result,
                                  Array<1, Byte, DeviceType> &workspace,
@@ -238,7 +238,7 @@ public:
 template <typename DeviceType> class MemoryManager {
 public:
   MGARDX_CONT
-  MemoryManager(){};
+  MemoryManager() {};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,

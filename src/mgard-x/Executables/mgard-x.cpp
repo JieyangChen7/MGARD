@@ -145,9 +145,6 @@ void print_statistics(double s, enum mgard_x::error_bound_type mode,
   std::cout << mgard_x::log::log_info
             << "PSNR: " << mgard_x::PSNR(n, original_data, decompressed_data)
             << "\n";
-
-  // if (actual_error > tol)
-  // exit(-1);
 }
 
 int verbose_to_log_level(int verbose) {
@@ -215,7 +212,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   // config.domain_decomposition_sizes = {180, 368, 463, 529, 605, 692, 43};
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(192, 15);
 
-  config.estimate_outlier_ratio = 0.3;
+  config.estimate_outlier_ratio = 1.0;
 
   config.dev_type = dev_type;
   config.reorder = 0;
@@ -272,8 +269,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   ret = mgard_x::compress(D, dtype, shape, tol, s, mode, original_data,
                           compressed_data, compressed_size, config, true);
   if (ret != mgard_x::compress_status_type::Success) {
-    std::cout << mgard_x::log::log_err << "Compression failed\n";
-    exit(-1);
+    throw std::runtime_error("Compression failed");
   }
   writefile(output_file, compressed_size, compressed_data);
   std::cout << mgard_x::log::log_info << "Compression ratio: "

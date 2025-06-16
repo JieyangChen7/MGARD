@@ -51,8 +51,7 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                                        refactored_metadata, refactored_data,
                                        config, output_pre_allocated);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else if (dtype == data_type::Double) {
     if (D == 1) {
@@ -76,12 +75,11 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                                         refactored_metadata, refactored_data,
                                         config, output_pre_allocated);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else {
-    log::err("do not support types other than double and float!");
-    exit(-1);
+    throw std::runtime_error(
+        "do not support types other than double and float!");
   }
 }
 
@@ -116,8 +114,7 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                                        refactored_metadata, refactored_data,
                                        config, output_pre_allocated);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else if (dtype == data_type::Double) {
     std::vector<double *> double_coords;
@@ -144,12 +141,11 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                                         refactored_metadata, refactored_data,
                                         config, output_pre_allocated);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else {
-    log::err("do not support types other than double and float!");
-    exit(-1);
+    throw std::runtime_error(
+        "do not support types other than double and float!");
   }
 }
 
@@ -175,8 +171,7 @@ void MDRequest(RefactoredMetadata &refactored_metadata, Config config) {
     } else if (shape.size() == 5) {
       MDRequest<5, float, DeviceType>(shape, refactored_metadata, config);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else if (dtype == data_type::Double) {
     if (shape.size() == 1) {
@@ -190,12 +185,11 @@ void MDRequest(RefactoredMetadata &refactored_metadata, Config config) {
     } else if (shape.size() == 5) {
       MDRequest<5, double, DeviceType>(shape, refactored_metadata, config);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else {
-    log::err("do not support types other than double and float!");
-    exit(-1);
+    throw std::runtime_error(
+        "do not support types other than double and float!");
   }
 }
 
@@ -214,8 +208,7 @@ SIZE MDRMaxOutputDataSize(DIM D, data_type dtype, std::vector<SIZE> shape,
     } else if (shape.size() == 5) {
       return MDRMaxOutputDataSize<5, float, DeviceType>(shape, config);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else if (dtype == data_type::Double) {
     if (shape.size() == 1) {
@@ -229,12 +222,11 @@ SIZE MDRMaxOutputDataSize(DIM D, data_type dtype, std::vector<SIZE> shape,
     } else if (shape.size() == 5) {
       return MDRMaxOutputDataSize<5, double, DeviceType>(shape, config);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else {
-    log::err("do not support types other than double and float!");
-    exit(-1);
+    throw std::runtime_error(
+        "do not support types other than double and float!");
   }
 }
 
@@ -274,8 +266,7 @@ void MDReconstruct(RefactoredMetadata &refactored_metadata,
                                           refactored_data, reconstructed_data,
                                           config, output_pre_allocated);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else if (dtype == data_type::Double) {
     if (shape.size() == 1) {
@@ -299,12 +290,11 @@ void MDReconstruct(RefactoredMetadata &refactored_metadata,
                                            refactored_data, reconstructed_data,
                                            config, output_pre_allocated);
     } else {
-      log::err("do not support higher than five dimentions");
-      exit(-1);
+      throw std::runtime_error("do not support higher than five dimentions");
     }
   } else {
-    log::err("do not support types other than double and float!");
-    exit(-1);
+    throw std::runtime_error(
+        "do not support types other than double and float!");
   }
 }
 
@@ -332,8 +322,7 @@ enum device_type auto_detect_device() {
   }
 #endif
   if (dev_type == device_type::NONE) {
-    log::err("MDR-X was not built with any backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with any backend.");
   }
   return dev_type;
 }
@@ -354,44 +343,38 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
     MDRefactor<SERIAL>(D, dtype, shape, original_data, refactored_metadata,
                        refactored_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with SERIAL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SERIAL backend.");
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
     MDRefactor<OPENMP>(D, dtype, shape, original_data, refactored_metadata,
                        refactored_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with OPENMP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with OPENMP backend.");
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
     MDRefactor<CUDA>(D, dtype, shape, original_data, refactored_metadata,
                      refactored_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with CUDA backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with CUDA backend.");
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
     MDRefactor<HIP>(D, dtype, shape, original_data, refactored_metadata,
                     refactored_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with HIP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with HIP backend.");
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
     MDRefactor<SYCL>(D, dtype, shape, original_data, refactored_metadata,
                      refactored_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with SYCL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SYCL backend.");
 #endif
   } else {
-    log::err("Unsupported backend.");
-    exit(-1);
+    throw std::runtime_error("Unsupported backend.");
   }
 }
 
@@ -412,8 +395,7 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                        refactored_metadata, refactored_data, config,
                        output_pre_allocated);
 #else
-    log::err("MDR-X was not built with SERIAL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SERIAL backend.");
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
@@ -421,8 +403,7 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                        refactored_metadata, refactored_data, config,
                        output_pre_allocated);
 #else
-    log::err("MDR-X was not built with OPENMP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with OPENMP backend.");
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
@@ -430,16 +411,14 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                      refactored_metadata, refactored_data, config,
                      output_pre_allocated);
 #else
-    log::err("MDR-X was not built with CUDA backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with CUDA backend.");
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
     MDRefactor<HIP>(D, dtype, shape, original_data, coords, refactored_metadata,
                     refactored_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with HIP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with HIP backend.");
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
@@ -447,12 +426,10 @@ void MDRefactor(DIM D, data_type dtype, std::vector<SIZE> shape,
                      refactored_metadata, refactored_data, config,
                      output_pre_allocated);
 #else
-    log::err("MDR-X was not built with SYCL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SYCL backend.");
 #endif
   } else {
-    log::err("Unsupported backend.");
-    exit(-1);
+    throw std::runtime_error("Unsupported backend.");
   }
 }
 
@@ -467,40 +444,34 @@ void MDRequest(RefactoredMetadata &refactored_metadata, Config config) {
 #if MGARD_ENABLE_SERIAL
     MDRequest<SERIAL>(refactored_metadata, config);
 #else
-    log::err("MDR-X was not built with SERIAL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SERIAL backend.");
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
     MDRequest<OPENMP>(refactored_metadata, config);
 #else
-    log::err("MDR-X was not built with OPENMP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with OPENMP backend.");
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
     MDRequest<CUDA>(refactored_metadata, config);
 #else
-    log::err("MDR-X was not built with CUDA backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with CUDA backend.");
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
     MDRequest<HIP>(refactored_metadata, config);
 #else
-    log::err("MDR-X was not built with HIP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with HIP backend.");
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
     MDRequest<SYCL>(refactored_metadata, config);
 #else
-    log::err("MDR-X was not built with SYCL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SYCL backend.");
 #endif
   } else {
-    log::err("Unsupported backend.");
-    exit(-1);
+    throw std::runtime_error("Unsupported backend.");
   }
 }
 
@@ -516,40 +487,34 @@ SIZE MDRMaxOutputDataSize(DIM D, data_type dtype, std::vector<SIZE> shape,
 #if MGARD_ENABLE_SERIAL
     return MDRMaxOutputDataSize<SERIAL>(D, dtype, shape, config);
 #else
-    log::err("MDR-X was not built with SERIAL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SERIAL backend.");
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
     return MDRMaxOutputDataSize<OPENMP>(D, dtype, shape, config);
 #else
-    log::err("MDR-X was not built with OPENMP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with OPENMP backend.");
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
     return MDRMaxOutputDataSize<CUDA>(D, dtype, shape, config);
 #else
-    log::err("MDR-X was not built with CUDA backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with CUDA backend.");
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
     return MDRMaxOutputDataSize<HIP>(D, dtype, shape, config);
 #else
-    log::err("MDR-X was not built with HIP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with HIP backend.");
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
     return MDRMaxOutputDataSize<SYCL>(D, dtype, shape, config);
 #else
-    log::err("MDR-X was not built with SYCL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SYCL backend.");
 #endif
   } else {
-    log::err("Unsupported backend.");
-    exit(-1);
+    throw std::runtime_error("Unsupported backend.");
   }
 }
 
@@ -568,44 +533,38 @@ void MDReconstruct(RefactoredMetadata &refactored_metadata,
     MDReconstruct<SERIAL>(refactored_metadata, refactored_data,
                           reconstructed_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with SERIAL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SERIAL backend.");
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
     MDReconstruct<OPENMP>(refactored_metadata, refactored_data,
                           reconstructed_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with OPENMP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with OPENMP backend.");
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
     MDReconstruct<CUDA>(refactored_metadata, refactored_data,
                         reconstructed_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with CUDA backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with CUDA backend.");
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
     MDReconstruct<HIP>(refactored_metadata, refactored_data, reconstructed_data,
                        config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with HIP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with HIP backend.");
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
     MDReconstruct<SYCL>(refactored_metadata, refactored_data,
                         reconstructed_data, config, output_pre_allocated);
 #else
-    log::err("MDR-X was not built with SYCL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SYCL backend.");
 #endif
   } else {
-    log::err("Unsupported backend.");
-    exit(-1);
+    throw std::runtime_error("Unsupported backend.");
   }
 }
 
@@ -633,40 +592,34 @@ void release_cache(Config config) {
 #if MGARD_ENABLE_SERIAL
     release_cache<SERIAL>();
 #else
-    log::err("MDR-X was not built with SERIAL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SERIAL backend.");
 #endif
   } else if (dev_type == device_type::OPENMP) {
 #if MGARD_ENABLE_OPENMP
     release_cache<OPENMP>();
 #else
-    log::err("MDR-X was not built with OPENMP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with OPENMP backend.");
 #endif
   } else if (dev_type == device_type::CUDA) {
 #if MGARD_ENABLE_CUDA
     release_cache<CUDA>();
 #else
-    log::err("MDR-X was not built with CUDA backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with CUDA backend.");
 #endif
   } else if (dev_type == device_type::HIP) {
 #if MGARD_ENABLE_HIP
     release_cache<HIP>();
 #else
-    log::err("MDR-X was not built with HIP backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with HIP backend.");
 #endif
   } else if (dev_type == device_type::SYCL) {
 #if MGARD_ENABLE_SYCL
     elease_cache<SYCL>();
 #else
-    log::err("MDR-X was not built with SYCL backend.");
-    exit(-1);
+    throw std::runtime_error("MDR-X was not built with SYCL backend.");
 #endif
   } else {
-    log::err("Unsupported backend.");
-    exit(-1);
+    throw std::runtime_error("Unsupported backend.");
   }
 }
 

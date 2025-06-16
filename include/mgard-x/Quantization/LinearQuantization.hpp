@@ -25,12 +25,13 @@ public:
       SubArray<2, SIZE, DeviceType> level_ranges,
       SubArray<2, int, DeviceType> level_marks, SIZE l_target,
       SubArray<1, T, DeviceType> quantizers,
-      SubArray<3, T, DeviceType> level_volumes, bool calc_vol, SubArray<D, T, DeviceType> v,
+      SubArray<3, T, DeviceType> level_volumes, bool calc_vol,
+      SubArray<D, T, DeviceType> v,
       SubArray<D, QUANTIZED_INT, DeviceType> quantized_v)
       : level_ranges(level_ranges), level_marks(level_marks),
         l_target(l_target), quantizers(quantizers),
-        level_volumes(level_volumes), calc_vol(calc_vol), v(v), quantized_v(quantized_v)
-         {
+        level_volumes(level_volumes), calc_vol(calc_vol), v(v),
+        quantized_v(quantized_v) {
     Functor<DeviceType>();
   }
 
@@ -137,11 +138,13 @@ public:
       SubArray<2, SIZE, DeviceType> level_ranges,
       SubArray<2, int, DeviceType> level_marks, SIZE l_target,
       SubArray<1, T, DeviceType> quantizers,
-      SubArray<3, T, DeviceType> level_volumes, bool calc_vol, SubArray<D, T, DeviceType> v, SubArray<D, QUANTIZED_INT, DeviceType> quantized_v)
+      SubArray<3, T, DeviceType> level_volumes, bool calc_vol,
+      SubArray<D, T, DeviceType> v,
+      SubArray<D, QUANTIZED_INT, DeviceType> quantized_v)
       : level_ranges(level_ranges), level_marks(level_marks),
         l_target(l_target), quantizers(quantizers),
         level_volumes(level_volumes), calc_vol(calc_vol), v(v),
-        quantized_v(quantized_v){}
+        quantized_v(quantized_v) {}
 
   template <SIZE R, SIZE C, SIZE F>
   MGARDX_CONT
@@ -281,7 +284,7 @@ public:
                 LosslessCompressorType &lossless, int queue_idx) {
 
     bool prep_huffman = false;
-        // config.lossless != lossless_type::CPU_Lossless; // always do Huffman
+    // config.lossless != lossless_type::CPU_Lossless; // always do Huffman
     SIZE total_elems = hierarchy->total_num_elems();
     SubArray<2, SIZE, DeviceType> level_ranges_subarray(
         hierarchy->level_ranges());
@@ -305,10 +308,9 @@ public:
         s != std::numeric_limits<T>::infinity(); // m.ntype == norm_type::L_2;
     DeviceLauncher<DeviceType>::Execute(
         LevelwiseLinearQuantizerKernel<D, T, MGARDX_QUANTIZE, DeviceType>(
-            level_ranges_subarray, level_marks_subarray,
-            hierarchy->l_target(), quantizers_subarray,
-            level_volumes_subarray, calc_vol, original_data,
-            quantized_data),
+            level_ranges_subarray, level_marks_subarray, hierarchy->l_target(),
+            quantizers_subarray, level_volumes_subarray, calc_vol,
+            original_data, quantized_data),
         queue_idx);
 
     if (log::level & log::TIME) {
@@ -334,7 +336,8 @@ public:
     SubArray<3, T, DeviceType> level_volumes_subarray(
         hierarchy->level_volumes(true));
 
-    bool prep_huffman = false; //config.lossless != lossless_type::CPU_Lossless;
+    bool prep_huffman = false; // config.lossless !=
+                               // lossless_type::CPU_Lossless;
 
     SubArray<1, T, DeviceType> quantizers_subarray(quantizers_array);
     T *quantizers = new T[hierarchy->l_target() + 1];

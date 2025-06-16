@@ -46,10 +46,9 @@ template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 void Array<D, T, DeviceType, Pitched, Managed>::initialize(
     std::vector<SIZE> shape) {
   if (shape.size() != D) {
-    std::cerr << log::log_err << "Number of dimensions mismatch ("
-              << shape.size() << "!=" << D
-              << "). mgard_x::Array not initialized!\n";
-    exit(-1);
+    throw std::runtime_error(
+        "Number of dimensions mismatch (" + std::to_string(shape.size()) +
+        "!=" + std::to_string(D) + "). mgard_x::Array not initialized!");
   }
   dev_id = DeviceRuntime<DeviceType>::GetDevice();
   __shape = shape;
@@ -202,11 +201,10 @@ void Array<D, T, DeviceType, Pitched, Managed>::load(const T *data, SIZE ld,
 }
 template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 void Array<D, T, DeviceType, Pitched, Managed>::hostAllocate(bool keep,
-                                                       int queue_idx) {
+                                                             int queue_idx) {
   log::dbg("Calling Array::hostAllocate");
   if (!device_allocated) {
-    std::cout << log::log_err << "device buffer not initialized.\n";
-    exit(-1);
+    throw std::runtime_error("device buffer not initialized.");
   }
   if (!host_allocated) {
     MemoryManager<DeviceType>::MallocHost(hv, __shape[D - 1] * linearized_width,
@@ -221,8 +219,7 @@ T *Array<D, T, DeviceType, Pitched, Managed>::hostCopy(bool keep,
                                                        int queue_idx) {
   log::dbg("Calling Array::hostCopy");
   if (!device_allocated) {
-    std::cout << log::log_err << "device buffer not initialized.\n";
-    exit(-1);
+    throw std::runtime_error("device buffer not initialized.");
   }
   if (!host_allocated) {
     MemoryManager<DeviceType>::MallocHost(hv, __shape[D - 1] * linearized_width,
@@ -239,8 +236,7 @@ T *Array<D, T, DeviceType, Pitched, Managed>::hostCopy(bool keep,
 template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 T *Array<D, T, DeviceType, Pitched, Managed>::data(SIZE &ld) {
   if (!device_allocated) {
-    std::cout << log::log_err << "device buffer not initialized.\n";
-    exit(-1);
+    throw std::runtime_error("device buffer not initialized.");
   }
   ld = __ldvs[D - 1];
   return dv;
@@ -268,8 +264,7 @@ SIZE Array<D, T, DeviceType, Pitched, Managed>::totalNumElems() {
 template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 T *Array<D, T, DeviceType, Pitched, Managed>::data() {
   if (!device_allocated) {
-    std::cout << log::log_err << "device buffer not initialized.\n";
-    exit(-1);
+    throw std::runtime_error("device buffer not initialized.");
   }
   return dv;
 }
@@ -277,8 +272,7 @@ T *Array<D, T, DeviceType, Pitched, Managed>::data() {
 template <DIM D, typename T, typename DeviceType, bool Pitched, bool Managed>
 T *Array<D, T, DeviceType, Pitched, Managed>::dataHost() {
   if (!host_allocated) {
-    std::cout << log::log_err << "host buffer not initialized.\n";
-    exit(-1);
+    throw std::runtime_error("host buffer not initialized.");
   }
   return hv;
 }

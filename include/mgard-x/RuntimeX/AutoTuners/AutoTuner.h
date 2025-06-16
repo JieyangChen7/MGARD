@@ -61,8 +61,7 @@ MGARDX_CONT void FillAutoTunerTable(std::string kernel_name, int config) {
   } else if (std::is_same<DeviceType, SYCL>::value) {
     device_type_string = "Sycl";
   } else {
-    std::cout << log::log_err << "invalid device_type in FillAutoTunerTable.\n";
-    exit(-1);
+    throw std::runtime_error("invalid device_type in FillAutoTunerTable.");
   }
 
   string curr_file_path = __FILE__;
@@ -121,13 +120,13 @@ MGARDX_CONT void FillAutoTunerTable(std::string kernel_name, int config) {
 template <typename DeviceType> class AutoTuningTable {
 public:
   MGARDX_CONT
-  AutoTuningTable(){};
+  AutoTuningTable() {};
 };
 
 template <typename DeviceType> class AutoTuner {
 public:
   MGARDX_CONT
-  AutoTuner(){};
+  AutoTuner() {};
 
   static AutoTuningTable<DeviceType> autoTuningTable;
   static bool ProfileKenrles;
