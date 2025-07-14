@@ -1,5 +1,5 @@
-#ifndef _MDR_BP_ENCODER_OPT_V1b_HPP
-#define _MDR_BP_ENCODER_OPT_V1b_HPP
+#ifndef _MDR_BP_ENCODER_REGISTER_BLOCK_HPP
+#define _MDR_BP_ENCODER_REGISTER_BLOCK_HPP
 
 #include "../../RuntimeX/RuntimeX.h"
 
@@ -10,19 +10,19 @@ namespace mgard_x {
 namespace MDR {
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, int NUM_BITPLANES, bool NegaBinary,
-          bool CollectError, typename DeviceType>
-class BPEncoderOptV1bFunctor : public Functor<DeviceType> {
+          typename T_error, int NUM_BITPLANES, bool NegaBinary, bool CollectError,
+          typename DeviceType>
+class BPEncoderRegisterBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPEncoderOptV1bFunctor() {}
+  BPEncoderRegisterBlockFunctor() {}
   MGARDX_CONT
-  BPEncoderOptV1bFunctor(
-      SIZE n, SubArray<1, T_data, DeviceType> abs_max,
-      SubArray<1, T_data, DeviceType> v,
-      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-      SubArray<2, T_error, DeviceType> level_errors_workspace)
-      : n(n), abs_max(abs_max), encoded_bitplanes(encoded_bitplanes), v(v),
+  BPEncoderRegisterBlockFunctor(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
+                        SubArray<1, T_data, DeviceType> v,
+                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+                        SubArray<2, T_error, DeviceType> level_errors_workspace)
+      : n(n), abs_max(abs_max),
+        encoded_bitplanes(encoded_bitplanes), v(v),
         level_errors_workspace(level_errors_workspace) {
     Functor<DeviceType>();
   }
@@ -266,24 +266,25 @@ private:
 };
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, int NUM_BITPLANES, bool NegaBinary,
-          bool CollectError, typename DeviceType>
-class BPEncoderOptV1bKernel : public Kernel {
+          typename T_error, int NUM_BITPLANES, bool NegaBinary, bool CollectError,
+          typename DeviceType>
+class BPEncoderRegisterBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   static constexpr int BATCH_SIZE = sizeof(T_bitplane) * 8;
   MGARDX_CONT
-  BPEncoderOptV1bKernel(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
-                        SubArray<1, T_data, DeviceType> v,
-                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                        SubArray<2, T_error, DeviceType> level_errors_workspace)
-      : n(n), abs_max(abs_max), encoded_bitplanes(encoded_bitplanes), v(v),
+  BPEncoderRegisterBlockKernel(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
+                       SubArray<1, T_data, DeviceType> v,
+                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+                       SubArray<2, T_error, DeviceType> level_errors_workspace)
+      : n(n), abs_max(abs_max),
+        encoded_bitplanes(encoded_bitplanes), v(v),
         level_errors_workspace(level_errors_workspace) {}
 
-  using FunctorType = BPEncoderOptV1bFunctor<T_data, T_fp, T_sfp, T_bitplane,
-                                             T_error, NUM_BITPLANES, NegaBinary,
-                                             CollectError, DeviceType>;
+  using FunctorType =
+      BPEncoderRegisterBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error, NUM_BITPLANES,
+                            NegaBinary, CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -312,17 +313,18 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           int NUM_BITPLANES, bool NegaBinary, typename DeviceType>
-class BPDecoderOptV1bFunctor : public Functor<DeviceType> {
+class BPDecoderRegisterBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPDecoderOptV1bFunctor() {}
+  BPDecoderRegisterBlockFunctor() {}
   MGARDX_CONT
-  BPDecoderOptV1bFunctor(SIZE n, int starting_bitplane,
-                         SubArray<1, T_data, DeviceType> abs_max,
-                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                         SubArray<1, bool, DeviceType> signs,
-                         SubArray<1, T_data, DeviceType> v)
-      : n(n), starting_bitplane(starting_bitplane), abs_max(abs_max),
+  BPDecoderRegisterBlockFunctor(SIZE n, int starting_bitplane,
+                        SubArray<1, T_data, DeviceType> abs_max,
+                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+                        SubArray<1, bool, DeviceType> signs,
+                        SubArray<1, T_data, DeviceType> v)
+      : n(n), starting_bitplane(starting_bitplane),
+         abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {
     Functor<DeviceType>();
   }
@@ -473,24 +475,24 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           int NUM_BITPLANES, bool NegaBinary, typename DeviceType>
-class BPDecoderOptV1bKernel : public Kernel {
+class BPDecoderRegisterBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
   MGARDX_CONT
-  BPDecoderOptV1bKernel(SIZE n, int starting_bitplane,
-                        SubArray<1, T_data, DeviceType> abs_max,
-                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                        SubArray<1, bool, DeviceType> signs,
-                        SubArray<1, T_data, DeviceType> v)
-      : n(n), starting_bitplane(starting_bitplane), abs_max(abs_max),
+  BPDecoderRegisterBlockKernel(SIZE n, int starting_bitplane,
+                       SubArray<1, T_data, DeviceType> abs_max,
+                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+                       SubArray<1, bool, DeviceType> signs,
+                       SubArray<1, T_data, DeviceType> v)
+      : n(n), starting_bitplane(starting_bitplane),
+        abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
 
-  using FunctorType =
-      BPDecoderOptV1bFunctor<T_data, T_fp, T_sfp, T_bitplane, NUM_BITPLANES,
-                             NegaBinary, DeviceType>;
+  using FunctorType = BPDecoderRegisterBlockFunctor<T_data, T_fp, T_sfp, T_bitplane,
+                                            NUM_BITPLANES, NegaBinary, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -523,7 +525,7 @@ private:
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
           bool NegaBinary, bool CollectError, typename DeviceType>
-class BPEncoderOptV1b
+class BPEncoderRegisterBlock
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
                                                 CollectError, DeviceType> {
 public:
@@ -534,7 +536,7 @@ public:
   using T_fp = typename std::conditional<std::is_same<T_data, double>::value,
                                          uint64_t, uint32_t>::type;
 
-  BPEncoderOptV1b() : initialized(false) {
+  BPEncoderRegisterBlock() : initialized(false) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -544,7 +546,7 @@ public:
     static_assert(std::is_integral<T_bitplane>::value,
                   "GroupedBPBlockEncoder: streams must be unsigned integers.");
   }
-  BPEncoderOptV1b(Hierarchy<D, T_data, DeviceType> &hierarchy) {
+  BPEncoderRegisterBlock(Hierarchy<D, T_data, DeviceType> &hierarchy) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -612,10 +614,9 @@ public:
     SubArray<2, T_error, DeviceType> level_errors_work(level_errors_work_array);
 
     DeviceLauncher<DeviceType>::Execute(
-        BPEncoderOptV1bKernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                              MAX_BITPLANES, NegaBinary, CollectError,
-                              DeviceType>(n, abs_max, v, encoded_bitplanes,
-                                          level_errors_work),
+        BPEncoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, T_error, MAX_BITPLANES,
+                             NegaBinary, CollectError, DeviceType>(
+            n, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
 
     if constexpr (CollectError) {
@@ -645,86 +646,39 @@ public:
 
     // if (num_bitplanes > 0) {
     //   DeviceLauncher<DeviceType>::Execute(
-    //       BPDecoderOptV1bKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
-    //                            DeviceType>(n, starting_bitplane,
-    //                            num_bitplanes,
-    //                                        abs_max, encoded_bitplanes,
-    //                                        level_signs, v),
+    //       BPDecoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
+    //                            DeviceType>(n, starting_bitplane, num_bitplanes,
+    //                                        abs_max, encoded_bitplanes, level_signs,
+    //                                        v),
     //       queue_idx);
     // }
 
-#define V1B_DECODE(NUM_BITPLANES)                                              \
-  if (num_bitplanes == NUM_BITPLANES) {                                        \
-    DeviceLauncher<DeviceType>::Execute(                                       \
-        BPDecoderOptV1bKernel<T_data, T_fp, T_sfp, T_bitplane, NUM_BITPLANES,  \
-                              NegaBinary, DeviceType>(                         \
-            n, starting_bitplane, abs_max, encoded_bitplanes, level_signs, v), \
-        queue_idx);                                                            \
-  }
-    V1B_DECODE(1);
-    V1B_DECODE(2);
-    V1B_DECODE(3);
-    V1B_DECODE(4);
-    V1B_DECODE(5);
-    V1B_DECODE(6);
-    V1B_DECODE(7);
-    V1B_DECODE(8);
-    V1B_DECODE(9);
-    V1B_DECODE(10);
-    V1B_DECODE(11);
-    V1B_DECODE(12);
-    V1B_DECODE(13);
-    V1B_DECODE(14);
-    V1B_DECODE(15);
-    V1B_DECODE(16);
-    V1B_DECODE(17);
-    V1B_DECODE(18);
-    V1B_DECODE(19);
-    V1B_DECODE(20);
-    V1B_DECODE(21);
-    V1B_DECODE(22);
-    V1B_DECODE(23);
-    V1B_DECODE(24);
-    V1B_DECODE(25);
-    V1B_DECODE(26);
-    V1B_DECODE(27);
-    V1B_DECODE(28);
-    V1B_DECODE(29);
-    V1B_DECODE(30);
-    V1B_DECODE(31);
-    V1B_DECODE(32);
-    V1B_DECODE(33);
-    V1B_DECODE(34);
-    V1B_DECODE(35);
-    V1B_DECODE(36);
-    V1B_DECODE(37);
-    V1B_DECODE(38);
-    V1B_DECODE(39);
-    V1B_DECODE(40);
-    V1B_DECODE(41);
-    V1B_DECODE(42);
-    V1B_DECODE(43);
-    V1B_DECODE(44);
-    V1B_DECODE(45);
-    V1B_DECODE(46);
-    V1B_DECODE(47);
-    V1B_DECODE(48);
-    V1B_DECODE(49);
-    V1B_DECODE(50);
-    V1B_DECODE(51);
-    V1B_DECODE(52);
-    V1B_DECODE(53);
-    V1B_DECODE(54);
-    V1B_DECODE(55);
-    V1B_DECODE(56);
-    V1B_DECODE(57);
-    V1B_DECODE(58);
-    V1B_DECODE(59);
-    V1B_DECODE(60);
-    V1B_DECODE(61);
-    V1B_DECODE(62);
-    V1B_DECODE(63);
-    V1B_DECODE(64);
+    #define V1B_DECODE(NUM_BITPLANES) \
+      if (num_bitplanes == NUM_BITPLANES) { \
+        DeviceLauncher<DeviceType>::Execute( \
+            BPDecoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, NUM_BITPLANES, NegaBinary, \
+                                 DeviceType>(n, starting_bitplane, \
+                                             abs_max, encoded_bitplanes, \
+                                             level_signs, v), \
+            queue_idx); \
+      }
+    V1B_DECODE(1); V1B_DECODE(2); V1B_DECODE(3);  V1B_DECODE(4); 
+    V1B_DECODE(5);  V1B_DECODE(6); V1B_DECODE(7); V1B_DECODE(8); 
+    V1B_DECODE(9); V1B_DECODE(10); V1B_DECODE(11); V1B_DECODE(12); 
+    V1B_DECODE(13); V1B_DECODE(14); V1B_DECODE(15); V1B_DECODE(16);
+    V1B_DECODE(17); V1B_DECODE(18); V1B_DECODE(19); V1B_DECODE(20);
+    V1B_DECODE(21); V1B_DECODE(22); V1B_DECODE(23); V1B_DECODE(24);
+    V1B_DECODE(25); V1B_DECODE(26); V1B_DECODE(27); V1B_DECODE(28);
+    V1B_DECODE(29); V1B_DECODE(30); V1B_DECODE(31); V1B_DECODE(32);
+    V1B_DECODE(33); V1B_DECODE(34); V1B_DECODE(35); V1B_DECODE(36);
+    V1B_DECODE(37); V1B_DECODE(38); V1B_DECODE(39); V1B_DECODE(40);
+    V1B_DECODE(41); V1B_DECODE(42); V1B_DECODE(43); V1B_DECODE(44);
+    V1B_DECODE(45); V1B_DECODE(46); V1B_DECODE(47); V1B_DECODE(48);
+    V1B_DECODE(49); V1B_DECODE(50); V1B_DECODE(51); V1B_DECODE(52);
+    V1B_DECODE(53); V1B_DECODE(54); V1B_DECODE(55); V1B_DECODE(56); 
+    V1B_DECODE(57); V1B_DECODE(58); V1B_DECODE(59); V1B_DECODE(60); 
+    V1B_DECODE(61); V1B_DECODE(62); V1B_DECODE(63); V1B_DECODE(64); 
+
   }
 
   void print() const { std::cout << "Grouped bitplane encoder" << std::endl; }
