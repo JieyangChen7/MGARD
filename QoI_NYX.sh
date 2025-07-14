@@ -1,7 +1,7 @@
 #!/bin/bash
-# wget https://g-8d6b0.fd635.8443.data.globus.org/ds131.2/Data-Reduction-Repo/raw-data/EXASKY/NYX/SDRBENCH-EXASKY-NYX-512x512x512.tar.gz
-# tar -xzf SDRBENCH-EXASKY-NYX-512x512x512.tar.gz
-# cat SDRBENCH-EXASKY-NYX-512x512x512/velocity_x.f32 SDRBENCH-EXASKY-NYX-512x512x512/velocity_y.f32 SDRBENCH-EXASKY-NYX-512x512x512/velocity_z.f32 > SDRBENCH-EXASKY-NYX-512x512x512/VelocityXYZ.dat
+wget https://g-8d6b0.fd635.8443.data.globus.org/ds131.2/Data-Reduction-Repo/raw-data/EXASKY/NYX/SDRBENCH-EXASKY-NYX-512x512x512.tar.gz
+tar -xzf SDRBENCH-EXASKY-NYX-512x512x512.tar.gz
+cat SDRBENCH-EXASKY-NYX-512x512x512/velocity_x.f32 SDRBENCH-EXASKY-NYX-512x512x512/velocity_y.f32 SDRBENCH-EXASKY-NYX-512x512x512/velocity_z.f32 > SDRBENCH-EXASKY-NYX-512x512x512/VelocityXYZ.dat
 
 set -x
 set -e
