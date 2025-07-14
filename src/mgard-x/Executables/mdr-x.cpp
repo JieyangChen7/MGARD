@@ -216,7 +216,7 @@ void write_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
       }
     }
   }
-  std::cout << mgard_x::log::log_info << size_written << " bytes written\n";
+  mgard_x::log::info(std::to_string(size_written) + " bytes written");
   mgard_x::log::csv("size.csv", size_written);
 }
 
@@ -358,9 +358,9 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
               << in_size << " vs. " << original_size * sizeof(T) << "!\n";
   }
 
-  std::cout << mgard_x::log::log_info << "Max output data size: "
-            << mgard_x::MDR::MDRMaxOutputDataSize(D, dtype, shape, config)
-            << " bytes\n";
+  mgard_x::log::info("Max output data size: " +
+            std::to_string(mgard_x::MDR::MDRMaxOutputDataSize(D, dtype, shape, config))
+            + " bytes");
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
   mgard_x::MDR::RefactoredData refactored_data;
@@ -400,33 +400,36 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   // config.domain_decomposition_sizes = std::vector<mgard_x::SIZE>(8, 100);
 
   size_t original_size = 1;
-  for (mgard_x::DIM i = 0; i < shape.size(); i++)
-    original_size *= shape[i];
-  T *original_data = (T *)malloc(original_size * sizeof(T));
-  size_t in_size = 0;
-  if (std::string(original_file).compare("random") == 0) {
-    in_size = original_size * sizeof(T);
-    srand(7117);
-    T c = 0;
-    for (size_t i = 0; i < original_size; i++) {
-      original_data[i] = rand() % 10 + 1;
-    }
-  } else {
-    T *file_data;
-    in_size = readfile(original_file, file_data);
+  T *original_data = nullptr;
+  if (original_file.compare("none") != 0) {
+    for (mgard_x::DIM i = 0; i < shape.size(); i++)
+      original_size *= shape[i];
+    original_data = (T *)malloc(original_size * sizeof(T));
+    size_t in_size = 0;
+    if (std::string(original_file).compare("random") == 0) {
+      in_size = original_size * sizeof(T);
+      srand(7117);
+      T c = 0;
+      for (size_t i = 0; i < original_size; i++) {
+        original_data[i] = rand() % 10 + 1;
+      }
+    } else {
+      T *file_data;
+      in_size = readfile(original_file, file_data);
 
-    size_t loaded_size = 0;
-    while (loaded_size < original_size) {
-      std::memcpy(original_data + loaded_size, file_data,
-                  std::min(in_size / sizeof(T), original_size - loaded_size) *
-                      sizeof(T));
-      loaded_size += std::min(in_size / sizeof(T), original_size - loaded_size);
+      size_t loaded_size = 0;
+      while (loaded_size < original_size) {
+        std::memcpy(original_data + loaded_size, file_data,
+                    std::min(in_size / sizeof(T), original_size - loaded_size) *
+                        sizeof(T));
+        loaded_size += std::min(in_size / sizeof(T), original_size - loaded_size);
+      }
+      in_size = loaded_size * sizeof(T);
+    }  
+    if (in_size != original_size * sizeof(T)) {
+      std::cout << mgard_x::log::log_warn << "input file size mismatch "
+                << in_size << " vs. " << original_size * sizeof(T) << "!\n";
     }
-    in_size = loaded_size * sizeof(T);
-  }  
-  if (in_size != original_size * sizeof(T)) {
-    std::cout << mgard_x::log::log_warn << "input file size mismatch "
-              << in_size << " vs. " << original_size * sizeof(T) << "!\n";
   }
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
@@ -451,8 +454,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
     first_reconstruction = false;
 
-    std::cout << mgard_x::log::log_info << "Additional " << size_read
-              << " bytes read for reconstruction\n";
+    mgard_x::log::info("Additional " + std::to_string(size_read)
+              + " bytes (" + std::to_string((float)100*size_read/(original_size*sizeof(T))) + "%) read for reconstruction");
     
     // mgard_x::log::csv("size.csv", size_read);
 

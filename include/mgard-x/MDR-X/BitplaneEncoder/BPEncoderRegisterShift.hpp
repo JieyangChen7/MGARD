@@ -1,5 +1,5 @@
-#ifndef _MDR_BP_ENCODER_OPT_V2a_HPP
-#define _MDR_BP_ENCODER_OPT_V2a_HPP
+#ifndef _MDR_BP_ENCODER_REGISTER_SHIFT_HPP
+#define _MDR_BP_ENCODER_REGISTER_SHIFT_HPP
 
 #include "../../RuntimeX/RuntimeX.h"
 
@@ -12,12 +12,12 @@ namespace MDR {
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, SIZE NUM_BITPLANES, SIZE M, bool NegaBinary, bool CollectError,
           typename DeviceType>
-class BPEncoderOptV2aFunctor : public Functor<DeviceType> {
+class BPEncoderRegisterShiftFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPEncoderOptV2aFunctor() {}
+  BPEncoderRegisterShiftFunctor() {}
   MGARDX_CONT
-  BPEncoderOptV2aFunctor(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderRegisterShiftFunctor(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<1, T_data, DeviceType> v,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -147,55 +147,24 @@ public:
         #pragma unroll
         for (int bp_idx = 0; bp_idx < NUM_BITPLANES; bp_idx++) {
           T_bitplane bit = (fp_data >> (NUM_BITPLANES - 1 - bp_idx)) & (T_bitplane)1;
-
-          // option 1
-          // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - lane_id;
-          // for (int offset = 16; offset > 0; offset /= 2) {
-          //   buffer |= __shfl_down_sync(FULL_MASK, shifted_bit, offset);
-          // }
-          // buffer = __shfl_sync(FULL_MASK, buffer, 0);
-
-          // option 2
           T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - lane_id;
-          buffer = __reduce_add_sync(FULL_MASK, shifted_bit);
-          // buffer = __shfl_sync(FULL_MASK, buffer, 0);
+          for (int offset = 16; offset > 0; offset /= 2) {
+            buffer |= __shfl_down_sync(FULL_MASK, shifted_bit, offset);
+          }
+          buffer = __shfl_sync(FULL_MASK, buffer, 0);
 
-          // option 3
-          // buffer = __match_any_sync(FULL_MASK, bit);
-          // if (!bit) buffer ^= FULL_MASK;
-          // buffer = __shfl_sync(FULL_MASK, buffer, 0);
-
-          // option 4
-          // buffer = __ballot_sync(FULL_MASK, bit);
-
-          // Save to mine registers
           if (lane_id == i) {
             encoded_data[bp_idx] = buffer;
           }
         }
-
-        // option 5
-        // fp_data[lane_id] = fp_data;
-        
-
-
-      
-        // option 1
-        // encoded_sign = fp_sign << BATCH_SIZE - 1 - data_idx;
-        // for (int offset = 16; offset > 0; offset /= 2) {
-        //   encoded_sign |= __shfl_down_sync(FULL_MASK, encoded_sign, offset);
-        // }
-        // option 2
-        // encoded_sign = fp_sign << BATCH_SIZE - 1 - data_idx;
-        // encoded_sign = __reduce_add_sync(FULL_MASK, encoded_sign);
-
-        // option 3
-        // buffer = __ballot_sync(FULL_MASK, fp_sign);
+        encoded_sign = fp_sign << BATCH_SIZE - 1 - lane_id;
+        for (int offset = 16; offset > 0; offset /= 2) {
+          encoded_sign |= __shfl_down_sync(FULL_MASK, encoded_sign, offset);
+        }
 
         if (lane_id == i) {
           encoded_sign = buffer;
         }
-      // }
     }
 
     // if (lane_id < actual_batch_per_warp) {
@@ -211,83 +180,8 @@ public:
     // }
   }
 
-  MGARDX_EXEC void EncodeNegaBinary() {
-    SIZE max_batches_per_warp = 32;
-    SIZE global_batch_start = FunctorBase<DeviceType>::GetBlockIdX() * max_batches_per_warp;
-    SIZE tid = FunctorBase<DeviceType>::GetThreadIdX();
-
-    SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
-    SIZE num_batches_this_warp = std::min(num_batches - global_batch_start, max_batches_per_warp);
-    T_data data;
-    T_data shifted_data;
-    T_fp fp_data;
-    T_fp fp_sign;
-    T_bitplane buffer;
-    T_bitplane encoded_data[MAX_BITPLANES];
-    T_bitplane encoded_sign;
-    T_error errors;
-
-
-    int exp;
-    frexp(*abs_max((IDX)0), &exp); 
-    exp += 2;
-
-    SIZE data_idx = tid;
-    SIZE my_batch_idx = tid;
-
-    for (SIZE local_batch_idx = 0; local_batch_idx < num_batches_this_warp; local_batch_idx++) {
-      SIZE global_batch_idx = global_batch_start + local_batch_idx;
-      data = 0;
-      if (global_batch_idx * BATCH_SIZE + data_idx < n) {
-        data = *v(global_batch_idx * BATCH_SIZE + data_idx);
-      }
-      shifted_data = ldexp(data, num_bitplanes - exp);
-      fp_data =
-            Math<DeviceType>::binary2negabinary((T_sfp)shifted_data);
-      #define FULL_MASK 0xffffffff
-      unsigned long long full_mask = 0xffffffff;
-      for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        // T_bitplane bit = (fp_data >> (num_bitplanes - 1 - bp_idx)) & 1u;
-        T_bitplane bit = (T_bitplane)1;
-        // T_bitplane shifted_bit = bit << BATCH_SIZE - 1 - data_idx;
-        // option 1
-        // for (int offset = 16; offset > 0; offset /= 2) {
-        //   buffer |= __shfl_down_sync(FULL_MASK, shifted_bit, offset);
-        // }
-        // option 2
-        // buffer = __reduce_add_sync(FULL_MASK, shifted_bit);
-
-        // option 3
-        // buffer = __match_any_sync(FULL_MASK, bit);
-        // if (!bit) buffer ^= FULL_MASK;
-
-        // option 4
-        // buffer = __ballot_sync(FULL_MASK, bit);
-        buffer = __ballot_sync(full_mask, bit);
-
-        // buffer = __shfl_sync(FULL_MASK, buffer, 0);
-        if (my_batch_idx == local_batch_idx) {
-          encoded_data[bp_idx] = buffer;
-        }
-      }
-
-
-      for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        // printf("thread %llu, encoded_data %u, \n", tid, encoded_data[bp_idx]);
-        // print_bits(encoded_data[bp_idx], b);
-        *encoded_bitplanes(bp_idx, global_batch_start + my_batch_idx) = encoded_data[bp_idx];
-      }
-    }
-
-    
-  }
-
   MGARDX_EXEC void Operation1() {
-    if constexpr (NegaBinary) {
-      EncodeNegaBinary();
-    } else {
-      EncodeBinary();
-    }
+    EncodeBinary();
   }
 
   MGARDX_CONT size_t shared_memory_size() {
@@ -311,14 +205,14 @@ private:
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, SIZE NUM_BITPLANES, SIZE M, bool NegaBinary, bool CollectError,
           typename DeviceType>
-class BPEncoderOptV2aKernel : public Kernel {
+class BPEncoderRegisterShiftKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
   MGARDX_CONT
-  BPEncoderOptV2aKernel(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderRegisterShiftKernel(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<1, T_data, DeviceType> v,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -327,7 +221,7 @@ public:
         level_errors_workspace(level_errors_workspace) {}
 
   using FunctorType =
-      BPEncoderOptV2aFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error,
+      BPEncoderRegisterShiftFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error,
                             NUM_BITPLANES, M, NegaBinary, CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -360,12 +254,12 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           SIZE M, bool NegaBinary, typename DeviceType>
-class BPDecoderOptV2aFunctor : public Functor<DeviceType> {
+class BPDecoderRegisterShiftFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPDecoderOptV2aFunctor() {}
+  BPDecoderRegisterShiftFunctor() {}
   MGARDX_CONT
-  BPDecoderOptV2aFunctor(SIZE n, int starting_bitplane, int num_bitplanes,
+  BPDecoderRegisterShiftFunctor(SIZE n, int starting_bitplane, int num_bitplanes,
                         SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<1, bool, DeviceType> signs,
@@ -455,54 +349,8 @@ public:
 
   }
 
-  MGARDX_EXEC void DecodeNegaBinary() {
-    SIZE gid = FunctorBase<DeviceType>::GetBlockIdX() *
-                   FunctorBase<DeviceType>::GetBlockDimX() +
-               FunctorBase<DeviceType>::GetThreadIdX();
-    SIZE grid_size = FunctorBase<DeviceType>::GetGridDimX() *
-                     FunctorBase<DeviceType>::GetBlockDimX();
-    SIZE num_batches = (n - 1) / BATCH_SIZE + 1;
-
-    T_data shifted_data[BATCH_SIZE];
-    T_fp fp_data[BATCH_SIZE];
-    T_bitplane encoded_data[MAX_BITPLANES];
-
-    int exp;
-    frexp(*abs_max((IDX)0), &exp); 
-    exp += 2;
-
-    int ending_bitplane = starting_bitplane + num_bitplanes;
-
-    for (SIZE batch_idx = gid; batch_idx < num_batches;
-         batch_idx += grid_size) {
-
-      for (int bp_idx = 0; bp_idx < num_bitplanes; bp_idx++) {
-        encoded_data[bp_idx] =
-            *encoded_bitplanes(starting_bitplane + bp_idx, batch_idx);
-        // print_bits(encoded_data[bp_idx], batch_size);
-      }
-      // encode data
-      decode_batch(fp_data, encoded_data);
-
-      for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-        T_data data = ldexp(
-            (T_data)Math<DeviceType>::negabinary2binary(fp_data[data_idx]),
-            -ending_bitplane + exp);
-        if (batch_idx * BATCH_SIZE + data_idx < n) {
-          *v(batch_idx * BATCH_SIZE + data_idx) =
-              ending_bitplane % 2 != 0 ? -data : data;
-        }
-        // printf("%f: ", data); print_bits(fp_data[data_idx], b);
-      }
-    }
-  }
-
   MGARDX_EXEC void Operation1() {
-    if constexpr (NegaBinary) {
-      DecodeNegaBinary();
-    } else {
-      DecodeBinary();
-    }
+    DecodeBinary();
   }
 
   MGARDX_CONT size_t shared_memory_size() {
@@ -525,14 +373,14 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           SIZE M, bool NegaBinary, typename DeviceType>
-class BPDecoderOptV2aKernel : public Kernel {
+class BPDecoderRegisterShiftKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
   MGARDX_CONT
-  BPDecoderOptV2aKernel(SIZE n, int starting_bitplane, int num_bitplanes,
+  BPDecoderRegisterShiftKernel(SIZE n, int starting_bitplane, int num_bitplanes,
                        SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<1, bool, DeviceType> signs,
@@ -541,7 +389,7 @@ public:
         num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
 
-  using FunctorType = BPDecoderOptV2aFunctor<T_data, T_fp, T_sfp, T_bitplane,
+  using FunctorType = BPDecoderRegisterShiftFunctor<T_data, T_fp, T_sfp, T_bitplane,
                                             M, NegaBinary, DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -577,7 +425,7 @@ private:
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
           bool NegaBinary, bool CollectError, typename DeviceType>
-class BPEncoderOptV2a
+class BPEncoderRegisterShift
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
                                                 CollectError, DeviceType> {
 public:
@@ -588,7 +436,7 @@ public:
   using T_fp = typename std::conditional<std::is_same<T_data, double>::value,
                                          uint64_t, uint32_t>::type;
 
-  BPEncoderOptV2a() : initialized(false) {
+  BPEncoderRegisterShift() : initialized(false) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -598,7 +446,7 @@ public:
     static_assert(std::is_integral<T_bitplane>::value,
                   "GroupedBPBlockEncoder: streams must be unsigned integers.");
   }
-  BPEncoderOptV2a(Hierarchy<D, T_data, DeviceType> &hierarchy) {
+  BPEncoderRegisterShift(Hierarchy<D, T_data, DeviceType> &hierarchy) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -660,7 +508,7 @@ public:
 
     constexpr SIZE max_batch_per_warp = 8;
     DeviceLauncher<DeviceType>::Execute(
-        BPEncoderOptV2aKernel<T_data, T_fp, T_sfp, T_bitplane, T_error, MAX_BITPLANES, max_batch_per_warp,
+        BPEncoderRegisterShiftKernel<T_data, T_fp, T_sfp, T_bitplane, T_error, MAX_BITPLANES, max_batch_per_warp,
                              NegaBinary, CollectError, DeviceType>(
             n, num_bitplanes, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
@@ -692,7 +540,7 @@ public:
     constexpr SIZE max_batch_per_warp = 8;
     if (num_bitplanes > 0) {
       DeviceLauncher<DeviceType>::Execute(
-          BPDecoderOptV2aKernel<T_data, T_fp, T_sfp, T_bitplane, max_batch_per_warp, NegaBinary,
+          BPDecoderRegisterShiftKernel<T_data, T_fp, T_sfp, T_bitplane, max_batch_per_warp, NegaBinary,
                                DeviceType>(n, starting_bitplanes, num_bitplanes,
                                            abs_max, encoded_bitplanes, level_signs,
                                            v),

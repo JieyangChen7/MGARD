@@ -1,5 +1,5 @@
-#ifndef _MDR_BP_ENCODER_OPT_V1b_HPP
-#define _MDR_BP_ENCODER_OPT_V1b_HPP
+#ifndef _MDR_BP_ENCODER_REGISTER_BLOCK_HPP
+#define _MDR_BP_ENCODER_REGISTER_BLOCK_HPP
 
 #include "../../RuntimeX/RuntimeX.h"
 
@@ -12,12 +12,12 @@ namespace MDR {
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, int NUM_BITPLANES, bool NegaBinary, bool CollectError,
           typename DeviceType>
-class BPEncoderOptV1bFunctor : public Functor<DeviceType> {
+class BPEncoderRegisterBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPEncoderOptV1bFunctor() {}
+  BPEncoderRegisterBlockFunctor() {}
   MGARDX_CONT
-  BPEncoderOptV1bFunctor(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderRegisterBlockFunctor(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<1, T_data, DeviceType> v,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -263,13 +263,13 @@ private:
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, int NUM_BITPLANES, bool NegaBinary, bool CollectError,
           typename DeviceType>
-class BPEncoderOptV1bKernel : public Kernel {
+class BPEncoderRegisterBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   static constexpr int BATCH_SIZE = sizeof(T_bitplane) * 8;
   MGARDX_CONT
-  BPEncoderOptV1bKernel(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderRegisterBlockKernel(SIZE n, SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<1, T_data, DeviceType> v,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -278,7 +278,7 @@ public:
         level_errors_workspace(level_errors_workspace) {}
 
   using FunctorType =
-      BPEncoderOptV1bFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error, NUM_BITPLANES,
+      BPEncoderRegisterBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error, NUM_BITPLANES,
                             NegaBinary, CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -308,12 +308,12 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           int NUM_BITPLANES, bool NegaBinary, typename DeviceType>
-class BPDecoderOptV1bFunctor : public Functor<DeviceType> {
+class BPDecoderRegisterBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPDecoderOptV1bFunctor() {}
+  BPDecoderRegisterBlockFunctor() {}
   MGARDX_CONT
-  BPDecoderOptV1bFunctor(SIZE n, int starting_bitplane,
+  BPDecoderRegisterBlockFunctor(SIZE n, int starting_bitplane,
                         SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<1, bool, DeviceType> signs,
@@ -466,14 +466,14 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           int NUM_BITPLANES, bool NegaBinary, typename DeviceType>
-class BPDecoderOptV1bKernel : public Kernel {
+class BPDecoderRegisterBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
   MGARDX_CONT
-  BPDecoderOptV1bKernel(SIZE n, int starting_bitplane,
+  BPDecoderRegisterBlockKernel(SIZE n, int starting_bitplane,
                        SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<1, bool, DeviceType> signs,
@@ -482,7 +482,7 @@ public:
         abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
 
-  using FunctorType = BPDecoderOptV1bFunctor<T_data, T_fp, T_sfp, T_bitplane,
+  using FunctorType = BPDecoderRegisterBlockFunctor<T_data, T_fp, T_sfp, T_bitplane,
                                             NUM_BITPLANES, NegaBinary, DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -516,7 +516,7 @@ private:
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
           bool NegaBinary, bool CollectError, typename DeviceType>
-class BPEncoderOptV1b
+class BPEncoderRegisterBlock
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
                                                 CollectError, DeviceType> {
 public:
@@ -527,7 +527,7 @@ public:
   using T_fp = typename std::conditional<std::is_same<T_data, double>::value,
                                          uint64_t, uint32_t>::type;
 
-  BPEncoderOptV1b() : initialized(false) {
+  BPEncoderRegisterBlock() : initialized(false) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -537,7 +537,7 @@ public:
     static_assert(std::is_integral<T_bitplane>::value,
                   "GroupedBPBlockEncoder: streams must be unsigned integers.");
   }
-  BPEncoderOptV1b(Hierarchy<D, T_data, DeviceType> &hierarchy) {
+  BPEncoderRegisterBlock(Hierarchy<D, T_data, DeviceType> &hierarchy) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -603,7 +603,7 @@ public:
     SubArray<2, T_error, DeviceType> level_errors_work(level_errors_work_array);
 
     DeviceLauncher<DeviceType>::Execute(
-        BPEncoderOptV1bKernel<T_data, T_fp, T_sfp, T_bitplane, T_error, MAX_BITPLANES,
+        BPEncoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, T_error, MAX_BITPLANES,
                              NegaBinary, CollectError, DeviceType>(
             n, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
@@ -634,7 +634,7 @@ public:
 
     // if (num_bitplanes > 0) {
     //   DeviceLauncher<DeviceType>::Execute(
-    //       BPDecoderOptV1bKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
+    //       BPDecoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
     //                            DeviceType>(n, starting_bitplane, num_bitplanes,
     //                                        abs_max, encoded_bitplanes, level_signs,
     //                                        v),
@@ -644,7 +644,7 @@ public:
     #define V1B_DECODE(NUM_BITPLANES) \
       if (num_bitplanes == NUM_BITPLANES) { \
         DeviceLauncher<DeviceType>::Execute( \
-            BPDecoderOptV1bKernel<T_data, T_fp, T_sfp, T_bitplane, NUM_BITPLANES, NegaBinary, \
+            BPDecoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, NUM_BITPLANES, NegaBinary, \
                                  DeviceType>(n, starting_bitplane, \
                                              abs_max, encoded_bitplanes, \
                                              level_signs, v), \

@@ -20,6 +20,8 @@ void reconstruct_pipeline(
   using Cache = ReconstructorCache<D, T, DeviceType, ReconstructorType>;
   using HierarchyType = typename ReconstructorType::HierarchyType;
 
+  bool timing_pipeline = true;
+
   ReconstructorType &reconstructor = *Cache::cache.reconstructor;
   Array<D, T, DeviceType> *device_subdomain_buffer =
       Cache::cache.device_subdomain_buffer;
@@ -51,8 +53,7 @@ void reconstruct_pipeline(
       domain_decomposer.subdomain_shape(0), 0);
 
   Timer timer_series;
-  // if (log::level & log::TIME)
-    timer_series.start();
+  if (timing_pipeline) timer_series.start();
   // Prefetch the first subdomain
   int current_buffer = 0;
   int current_queue = 0;
@@ -175,12 +176,12 @@ void reconstruct_pipeline(
       subdomain_copy_direction::SubdomainToOriginal, previous_queue);
 
   DeviceRuntime<DeviceType>::SyncDevice();
-  // if (log::level & log::TIME) {
+  if (timing_pipeline) {
     timer_series.end();
     // log::csv("time.csv", timer_series.get());
-    timer_series.print("Reconstruct pipeline", total_size);
+    timer_series.print("Reconstruct pipeline", total_size, true);
     timer_series.clear();
-  // }
+  }
 }
 
 } // namespace MDR

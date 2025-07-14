@@ -33,12 +33,23 @@ public:
   using Basis = Hierarchical;
   using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
-  // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error, false,
-  // // DeviceType>;
-  // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
+
+  constexpr static bool ProfileBPEncoder = false;
+  // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
   //                                CONTROL_L2, DeviceType>;
-    using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
-    //  using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary, CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                                CONTROL_L2, DeviceType>;
+  using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error, NegaBinary,
+                                CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+  
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
@@ -325,39 +336,12 @@ public:
   void Decompress(MDRMetadata &mdr_metadata,
                            MDRData<DeviceType> &mdr_data, int queue_idx) {
 
-    if (0){
-      int level_idx = hierarchy->l_target();
-      encoder.progressive_decode(
-          level_data_subarray[level_idx].shape(0),
-          0, 32, SubArray(abs_max_array[level_idx]),
-          encoded_bitplanes_subarray[level_idx],
-          level_signs_subarray[level_idx], level_idx,
-          level_data_subarray[level_idx], queue_idx);
-      encoder.progressive_decode(
-      level_data_subarray[level_idx].shape(0),
-      0, 32, SubArray(abs_max_array[level_idx]),
-      encoded_bitplanes_subarray[level_idx],
-      level_signs_subarray[level_idx], level_idx,
-      level_data_subarray[level_idx], queue_idx);
-      
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      Timer timer_iter; timer_iter.start();
-      encoder.progressive_decode(
-          level_data_subarray[level_idx].shape(0),
-          0, 32, SubArray(abs_max_array[level_idx]),
-          encoded_bitplanes_subarray[level_idx],
-          level_signs_subarray[level_idx], level_idx,
-          level_data_subarray[level_idx], queue_idx);
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
-      exit(0);
-    }
-
     Timer timer;
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.start();
     }
+    SIZE decompressed_size = 0;
     for (int level_idx = 0; level_idx <= mdr_metadata.CurrFinalLevel(); level_idx++) {
       // Number of bitplanes need to be retrieved in addition to previously
       // already retrieved bitplanes
@@ -371,11 +355,13 @@ public:
           encoded_bitplanes_subarray[level_idx],
           mdr_metadata.prev_used_level_num_bitplanes[level_idx], level_num_bitplanes[level_idx],
           level_idx, queue_idx);
+      decompressed_size += encoded_bitplanes_subarray[level_idx].shape(1) * num_bitplanes * sizeof(T_bitplane);
     }
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();
-      timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
+      // timer.print("Lossless", hierarchy->total_num_elems() * sizeof(T_data));
+      timer.print("Lossless", decompressed_size);
       timer.clear();
       timer.start();
     }
@@ -413,8 +399,11 @@ public:
 
     for (int level_idx = 0; level_idx <= curr_final_level; level_idx++) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // level_num_bitplanes[level_idx] = i;
-      // Timer timer_iter; timer_iter.start();
+      Timer timer_iter;
+      if constexpr (ProfileBPEncoder) {
+        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        timer_iter.start();
+      }
       encoder.progressive_decode(
           level_data_subarray[level_idx].shape(0),
           mdr_metadata.prev_used_level_num_bitplanes[level_idx],
@@ -422,9 +411,10 @@ public:
           encoded_bitplanes_subarray[level_idx],
           level_signs_subarray[level_idx], level_idx,
           level_data_subarray[level_idx], queue_idx);
-      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data));
-
+      if constexpr (ProfileBPEncoder) {
+        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
+      }
       // if (level_idx < curr_final_level) {
       //   printf("%.6f, ", timer_iter.get()); 
       // } else {

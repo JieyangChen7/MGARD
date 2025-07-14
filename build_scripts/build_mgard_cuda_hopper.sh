@@ -25,22 +25,6 @@ export CC=gcc
 export CXX=g++
 export CUDACXX=nvcc
 
-# #build NVCOMP
-nvcomp_dir=${build_dir}/nvcomp
-nvcomp_src_dir=${nvcomp_dir}/src
-nvcomp_build_dir=${nvcomp_dir}/build
-nvcomp_install_dir=${install_dir}
-if [ ! -d "${nvcomp_src_dir}" ]; then
-  mkdir -p ${nvcomp_src_dir}
-  wget https://developer.download.nvidia.com/compute/nvcomp/2.6.1/local_installers/nvcomp_2.6.1_x86_64_11.x.tgz -P ${nvcomp_src_dir}
-  mkdir -p ${nvcomp_build_dir}
-  tar -zxf ${nvcomp_src_dir}/nvcomp_2.6.1_x86_64_11.x.tgz --directory ${nvcomp_build_dir}
-  mkdir -p ${nvcomp_install_dir}
-  cp -r ${nvcomp_build_dir}/include ${nvcomp_install_dir}/
-  cp -r ${nvcomp_build_dir}/lib ${nvcomp_install_dir}/
-  cp -r ${nvcomp_build_dir}/bin ${nvcomp_install_dir}/
-fi 
-
 #build NVCOMP
 nvcomp_dir=${build_dir}/nvcomp
 nvcomp_src_dir=${nvcomp_dir}/src
