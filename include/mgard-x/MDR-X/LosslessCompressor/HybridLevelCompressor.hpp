@@ -27,13 +27,6 @@ public:
   SIZE size_threshold = 1e6;
   float cr_threshold = 2.0;
 
-  static constexpr int C = 0; // direct copy
-  static constexpr int H = 1; // Huffman
-  static constexpr int R = 2; // RLE
-  static constexpr int Z = 3; // Zstd
-
-  std::vector<std::vector<int>> recipe;
-
   HybridLevelCompressor() : initialized(false) {}
   HybridLevelCompressor(SIZE max_n, Config config) {
     this->initialized = true;
@@ -51,29 +44,6 @@ public:
     rle.Resize(max_n * byte_ratio * num_merged_bitplanes, queue_idx);
     zstd.Resize(max_n * sizeof(T_bitplane), config.zstd_compress_level,
                 queue_idx);
-    recipe.resize(max_level);
-    // clang-format off
-    // All copy
-    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, C); 
-    // All Huffman 
-    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, H); 
-    // All RLE
-    for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, R); 
-    // All Zstd 
-    // for (int i = 0; i < max_level; i++) recipe[i] = std::vector<int>(max_bitplanes, Z); 
-    
-    // Hybrid
-    // recipe = {{C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
-    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
-    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
-    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
-    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, R, R, R, R},
-    //           {C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C},
-    //           {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
-    //           {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
-    //           {H, H, H, H, H, H, H, H, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H},
-    //           {H, H, H, H, R, R, R, R, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, H, H, H, H}};
-    // clang-format on
   }
   static size_t EstimateMemoryFootprint(SIZE max_n, Config config) {
     size_t size = 0;

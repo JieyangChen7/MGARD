@@ -30,18 +30,18 @@ public:
   }
 
   void clear() { total_time = 0; }
-  void print(std::string s, SIZE num_bytes = 0) {
+  void print(std::string s, SIZE num_bytes = 0, bool override = false) {
     if (num_bytes == 0) {
-      log::time(s + ": " + std::to_string(total_time) + " s");
+      log::time(s + ": " + std::to_string(total_time) + " s", override);
     } else {
       log::time(s + ": " + std::to_string(total_time) + " s (" +
-                std::to_string(get_throughput(num_bytes)) + " GB/s)");
+                std::to_string(get_throughput(num_bytes)) + " GB/s)", override);
     }
   }
 
-  void print_throughput(std::string s, SIZE n) {
+  void print_throughput(std::string s, SIZE n, bool override = false) {
     log::time(s + " throughput: " + std::to_string(get_throughput(n)) +
-              " GB/s");
+              " GB/s", override);
   }
 
 private:

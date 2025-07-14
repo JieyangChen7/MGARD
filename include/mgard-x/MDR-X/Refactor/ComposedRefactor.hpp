@@ -29,20 +29,24 @@ public:
   using Basis = Hierarchical;
   using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
+
+  constexpr static bool ProfileBPEncoder = false;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
-  // CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderOptV1<D, T_data, T_bitplane, T_error, NegaBinary,
   //                                CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderOptV1a<D, T_data, T_bitplane, T_error, NegaBinary,
-  //  CONTROL_L2, DeviceTyspe>;
-  using Encoder = BPEncoderOptV1b<D, T_data, T_bitplane, T_error, NegaBinary,
-                                  CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderOptV2<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error, NegaBinary,
   //                                CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderOptV2a<D, T_data, T_bitplane, T_error, NegaBinary,
+  using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error, NegaBinary,
+                                CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error, NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderOptV3<D, T_data, T_bitplane, T_error, NegaBinary,
-  //                               CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error, NegaBinary,
+  //                              CONTROL_L2, DeviceType>;
+
+
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
@@ -187,40 +191,6 @@ public:
     mdr_metadata.Initialize(hierarchy->l_target() + 1, Encoder::MAX_BITPLANES);
     mdr_data.Resize(*this, *hierarchy, queue_idx);
 
-    if (0) {
-      int level_idx = hierarchy->l_target();
-      encoder.encode(level_data_subarray[level_idx].shape(0),
-                     Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-                     level_data_subarray[level_idx],
-                     encoded_bitplanes_subarray[level_idx],
-                     level_errors_subarray[level_idx], queue_idx);
-      encoder.encode(level_data_subarray[level_idx].shape(0),
-                     Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
-                     level_data_subarray[level_idx],
-                     encoded_bitplanes_subarray[level_idx],
-                     level_errors_subarray[level_idx], queue_idx);
-
-      for (int i = 0; i < 10; i++) {
-        SIZE N = pow(2, i) * 1e6;
-        N = round_up(N, BATCH_SIZE);
-        Array<1, T_data, DeviceType> test_data({N}, queue_idx);
-        Array<2, T_bitplane, DeviceType> encoded_data(
-            {(SIZE)Encoder::MAX_BITPLANES, encoder.bitplane_length(N)},
-            queue_idx);
-
-        // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        // Timer timer_iter; timer_iter.start();
-        encoder.encode(test_data.shape(0), Encoder::MAX_BITPLANES,
-                       SubArray(abs_max_array[level_idx]), SubArray(test_data),
-                       encoded_bitplanes_subarray[level_idx],
-                       level_errors_subarray[level_idx], queue_idx);
-        // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        // timer_iter.end(); timer_iter.print("Encoding level",
-        // test_data.shape(0) * sizeof(T_data));
-      }
-      // exit(0);
-    }
-
     SubArray<D, T_data, DeviceType> data(data_array);
 
     Timer timer, timer_all;
@@ -313,17 +283,21 @@ public:
       encoded_bitplanes_subarray[level_idx] =
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
-
-      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // Timer timer_iter; timer_iter.start();
+      
+      Timer timer_iter;
+      if constexpr (ProfileBPEncoder) {
+        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        timer_iter.start();
+      }
       encoder.encode(level_data_subarray[level_idx].shape(0),
                      Encoder::MAX_BITPLANES, SubArray(abs_max_array[level_idx]),
                      level_data_subarray[level_idx],
                      encoded_bitplanes_subarray[level_idx],
                      level_errors_subarray[level_idx], queue_idx);
-      // DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      // timer_iter.end(); timer_iter.print("Encoding level",
-      // level_data_subarray[level_idx].shape(0) * sizeof(T_data));
+      if constexpr (ProfileBPEncoder) {
+        DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+        timer_iter.end(); timer_iter.print("Encoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
+      }
     }
 
     if (log::level & log::TIME) {

@@ -20,6 +20,8 @@ void refactor_pipeline(
   using Cache = RefactorCache<D, T, DeviceType, RefactorType>;
   using HierarchyType = typename RefactorType::HierarchyType;
 
+  bool timing_pipeline = true;
+
   RefactorType &refactor = *Cache::cache.refactor;
 
   Array<D, T, DeviceType> *device_subdomain_buffer =
@@ -53,8 +55,7 @@ void refactor_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
 
   Timer timer_series;
-  // if (log::level & log::TIME)
-  timer_series.start();
+  if (timing_pipeline) timer_series.start();
   // Prefetch the first subdomain to one buffer
   int current_buffer = 0;
   int current_queue = 0;
@@ -104,12 +105,12 @@ void refactor_pipeline(
     current_queue = next_queue;
   }
   DeviceRuntime<DeviceType>::SyncDevice();
-  // if (log::level & log::TIME) {
+  if (timing_pipeline) {
     timer_series.end();
     // log::csv("time.csv", timer_series.get());
-    timer_series.print("Refactor pipeline", total_size);
+    timer_series.print("Refactor pipeline", total_size, true);
     timer_series.clear();
-  // }
+  }
 }
 
 } // namespace MDR

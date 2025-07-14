@@ -1,5 +1,5 @@
-#ifndef _MDR_BP_ENCODER_OPT_V1_HPP
-#define _MDR_BP_ENCODER_OPT_V1_HPP
+#ifndef _MDR_BP_ENCODER_LOCALITY_BLOCK_HPP
+#define _MDR_BP_ENCODER_LOCALITY_BLOCK_HPP
 
 #include "../../RuntimeX/RuntimeX.h"
 
@@ -12,13 +12,12 @@ namespace MDR {
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, bool NegaBinary, bool CollectError,
           typename DeviceType>
-class BPEncoderOptV1Functor : public Functor<DeviceType> {
+class BPEncoderLocalityBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPEncoderOptV1Functor() {}
+  BPEncoderLocalityBlockFunctor() {}
   MGARDX_CONT
-  BPEncoderOptV1Functor(SIZE n, int num_bitplanes,
-                        SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderLocalityBlockFunctor(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<1, T_data, DeviceType> v,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -303,13 +302,12 @@ private:
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, bool NegaBinary, bool CollectError,
           typename DeviceType>
-class BPEncoderOptV1Kernel : public Kernel {
+class BPEncoderLocalityBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   MGARDX_CONT
-  BPEncoderOptV1Kernel(SIZE n, int num_bitplanes,
-                       SubArray<1, T_data, DeviceType> abs_max,
+  BPEncoderLocalityBlockKernel(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<1, T_data, DeviceType> v,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<2, T_error, DeviceType> level_errors_workspace)
@@ -318,7 +316,7 @@ public:
         level_errors_workspace(level_errors_workspace) {}
 
   using FunctorType =
-      BPEncoderOptV1Functor<T_data, T_fp, T_sfp, T_bitplane, T_error,
+      BPEncoderLocalityBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error,
                             NegaBinary, CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -351,12 +349,12 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           bool NegaBinary, typename DeviceType>
-class BPDecoderOptV1Functor : public Functor<DeviceType> {
+class BPDecoderLocalityBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
-  BPDecoderOptV1Functor() {}
+  BPDecoderLocalityBlockFunctor() {}
   MGARDX_CONT
-  BPDecoderOptV1Functor(SIZE n, SIZE starting_bitplane, int num_bitplanes,
+  BPDecoderLocalityBlockFunctor(SIZE n, SIZE starting_bitplane, int num_bitplanes,
                         SubArray<1, T_data, DeviceType> abs_max,
                         SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                         SubArray<1, bool, DeviceType> signs,
@@ -506,12 +504,12 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           bool NegaBinary, typename DeviceType>
-class BPDecoderOptV1Kernel : public Kernel {
+class BPDecoderLocalityBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   MGARDX_CONT
-  BPDecoderOptV1Kernel(SIZE n, SIZE starting_bitplane, int num_bitplanes,
+  BPDecoderLocalityBlockKernel(SIZE n, SIZE starting_bitplane, int num_bitplanes,
                        SubArray<1, T_data, DeviceType> abs_max,
                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
                        SubArray<1, bool, DeviceType> signs,
@@ -520,7 +518,7 @@ public:
         num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
 
-  using FunctorType = BPDecoderOptV1Functor<T_data, T_fp, T_sfp, T_bitplane,
+  using FunctorType = BPDecoderLocalityBlockFunctor<T_data, T_fp, T_sfp, T_bitplane,
                                             NegaBinary, DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -557,7 +555,7 @@ private:
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
           bool NegaBinary, bool CollectError, typename DeviceType>
-class BPEncoderOptV1
+class BPEncoderLocalityBlock
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
                                                 CollectError, DeviceType> {
 public:
@@ -568,7 +566,7 @@ public:
   using T_fp = typename std::conditional<std::is_same<T_data, double>::value,
                                          uint64_t, uint32_t>::type;
 
-  BPEncoderOptV1() : initialized(false) {
+  BPEncoderLocalityBlock() : initialized(false) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -578,7 +576,7 @@ public:
     static_assert(std::is_integral<T_bitplane>::value,
                   "GroupedBPBlockEncoder: streams must be unsigned integers.");
   }
-  BPEncoderOptV1(Hierarchy<D, T_data, DeviceType> &hierarchy) {
+  BPEncoderLocalityBlock(Hierarchy<D, T_data, DeviceType> &hierarchy) {
     static_assert(std::is_floating_point<T_data>::value,
                   "GeneralBPEncoder: input data must be floating points.");
     static_assert(!std::is_same<T_data, long double>::value,
@@ -641,7 +639,7 @@ public:
     SubArray<2, T_error, DeviceType> level_errors_work(level_errors_work_array);
 
     DeviceLauncher<DeviceType>::Execute(
-        BPEncoderOptV1Kernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
+        BPEncoderLocalityBlockKernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
                              NegaBinary, CollectError, DeviceType>(
             n, num_bitplanes, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
@@ -673,7 +671,7 @@ public:
 
     if (num_bitplanes > 0) {
       DeviceLauncher<DeviceType>::Execute(
-          BPDecoderOptV1Kernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
+          BPDecoderLocalityBlockKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
                                DeviceType>(n, starting_bitplane, num_bitplanes,
                                            abs_max, encoded_bitplanes,
                                            level_signs, v),
