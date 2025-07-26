@@ -70,7 +70,7 @@ void Hierarchy<D, T, DeviceType>::dist_to_ratio(SIZE dof, T *dist, T *ratio) {
   }
   // if (dof % 2 == 0) {
   //   h_ratio[dof - 2] = h_dist[dof - 2] / (h_dist[dof - 1] + h_dist[dof - 2]);
-    // printf("dof: %llu ratio: %f\n", dof, h_ratio[dof - 2]);
+  // printf("dof: %llu ratio: %f\n", dof, h_ratio[dof - 2]);
   // }
   MemoryManager<DeviceType>::Copy1D(ratio, h_ratio, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
@@ -216,25 +216,25 @@ void Hierarchy<D, T, DeviceType>::calc_volume(SIZE dof, T *dist, T *volume,
   //   for (int i = node_coeff_div; i < dof; i++) {
   //     h_volume[i] = h_coeff_volume[i-node_coeff_div];
   //   }
-    // for (int i = 1; i < dof - 1; i++) {
-    //   if (i % 2 == 0) { // node
-    //     h_volume[i / 2] = (h_dist[i - 1] + h_dist[i]) / 2;
-    //   } else { // coeff
-    //     h_volume[node_coeff_div + i / 2] = (h_dist[i - 1] + h_dist[i]) / 2;
-    //   }
-    // }
-    // if (dof % 2 != 0) {
-    //   h_volume[node_coeff_div - 1] = h_dist[dof - 2] / 2;
-    // } else {
-    //   h_volume[node_coeff_div - 1] = h_dist[dof - 1] / 2;
-    // }
+  // for (int i = 1; i < dof - 1; i++) {
+  //   if (i % 2 == 0) { // node
+  //     h_volume[i / 2] = (h_dist[i - 1] + h_dist[i]) / 2;
+  //   } else { // coeff
+  //     h_volume[node_coeff_div + i / 2] = (h_dist[i - 1] + h_dist[i]) / 2;
+  //   }
+  // }
+  // if (dof % 2 != 0) {
+  //   h_volume[node_coeff_div - 1] = h_dist[dof - 2] / 2;
+  // } else {
+  //   h_volume[node_coeff_div - 1] = h_dist[dof - 1] / 2;
+  // }
   // }
 
-  std::cout << "vol-dof: " << dof << " = ";
-  for (int i = 0; i < dof; i++) {
-    std::cout << h_volume[i] << " ";
-  }
-  std::cout << "\n";
+  // std::cout << "vol-dof: " << dof << " = ";
+  // for (int i = 0; i < dof; i++) {
+  //   std::cout << h_volume[i] << " ";
+  // }
+  // std::cout << "\n";
 
   if (reciprocal) {
     for (int i = 0; i < dof; i++) {
