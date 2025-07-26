@@ -28,20 +28,24 @@ void Hierarchy<D, T, DeviceType>::coord_to_dist(SIZE dof, T *coord, T *dist) {
   T *h_dist = new T[dof];
   for (int i = 0; i < dof; i++)
     h_dist[i] = 0.0;
-  // cudaMemcpyAsyncHelper(*this, h_coord, coord, dof * sizeof(T), AUTO, 0);
   MemoryManager<DeviceType>::Copy1D(h_coord, coord, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
-  // this->sync(0);
   for (int i = 0; i < dof - 1; i++) {
     h_dist[i] = h_coord[i + 1] - h_coord[i];
   }
-  if (dof != 2 && dof % 2 == 0) {
-    T last_dist = h_dist[dof - 2];
-    h_dist[dof - 2] = last_dist / 2.0;
-    h_dist[dof - 1] = last_dist / 2.0;
-  }
-  // cudaMemcpyAsyncHelper(*this, dist, h_dist, dof * sizeof(T), AUTO, 0);
-  // this->sync(0);
+  // this is not necessary
+  // if (dof != 2 && dof % 2 == 0) {
+  //   T last_dist = h_dist[dof - 2];
+  //   h_dist[dof - 2] = last_dist / 2.0;
+  //   h_dist[dof - 1] = last_dist / 2.0;
+  // }
+
+  // std::cout << "dist-dof: " << dof << " = ";
+  // for (int i = 0; i < dof-1; i++) {
+  //   std::cout << h_dist[i] << " ";
+  // }
+  // std::cout << "\n";
+
   MemoryManager<DeviceType>::Copy1D(dist, h_dist, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
 
@@ -58,20 +62,16 @@ void Hierarchy<D, T, DeviceType>::dist_to_ratio(SIZE dof, T *dist, T *ratio) {
   T *h_ratio = new T[dof];
   for (int i = 0; i < dof; i++)
     h_ratio[i] = 0.0;
-  // cudaMemcpyAsyncHelper(*this, h_dist, dist, dof * sizeof(T), AUTO, 0);
-  // this->sync(0);
   MemoryManager<DeviceType>::Copy1D(h_dist, dist, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
   for (int i = 0; i < dof - 2; i++) {
     h_ratio[i] = h_dist[i] / (h_dist[i + 1] + h_dist[i]);
     // printf("dof: %llu ratio: %f\n", dof, h_ratio[i]);
   }
-  if (dof % 2 == 0) {
-    h_ratio[dof - 2] = h_dist[dof - 2] / (h_dist[dof - 1] + h_dist[dof - 2]);
+  // if (dof % 2 == 0) {
+  //   h_ratio[dof - 2] = h_dist[dof - 2] / (h_dist[dof - 1] + h_dist[dof - 2]);
     // printf("dof: %llu ratio: %f\n", dof, h_ratio[dof - 2]);
-  }
-  // cudaMemcpyAsyncHelper(*this, ratio, h_ratio, dof * sizeof(T), AUTO, 0);
-  // this->sync(0);
+  // }
   MemoryManager<DeviceType>::Copy1D(ratio, h_ratio, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
   delete[] h_dist;
@@ -92,16 +92,26 @@ void Hierarchy<D, T, DeviceType>::reduce_dist(SIZE dof, T *dist, T *dist2) {
   // this->sync(0);
   MemoryManager<DeviceType>::Copy1D(h_dist, dist, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
+  T total_dist = 0;
+  for (int i = 0; i < dof - 1; i++) {
+    total_dist += h_dist[i];
+  }
   for (int i = 0; i < dof2 - 1; i++) {
-    h_dist2[i] = h_dist[i * 2] + h_dist[i * 2 + 1];
+    h_dist2[i] = total_dist / (dof2 - 1);
   }
-  if (dof2 != 2 && dof2 % 2 == 0) {
-    T last_dist = h_dist2[dof2 - 2];
-    h_dist2[dof2 - 2] = last_dist / 2.0;
-    h_dist2[dof2 - 1] = last_dist / 2.0;
-  }
+  // if (dof2 != 2 && dof2 % 2 == 0) {
+  //   T last_dist = h_dist2[dof2 - 2];
+  //   h_dist2[dof2 - 2] = last_dist / 2.0;
+  //   h_dist2[dof2 - 1] = last_dist / 2.0;
+  // }
   // cudaMemcpyAsyncHelper(*this, dist2, h_dist2, dof2 * sizeof(T), AUTO, 0);
   // this->sync(0);
+  // std::cout << "dist-dof: " << dof2 << " = ";
+  // for (int i = 0; i < dof2-1; i++) {
+  //   std::cout << h_dist2[i] << " ";
+  // }
+  // std::cout << "\n";
+
   MemoryManager<DeviceType>::Copy1D(dist2, h_dist2, dof2, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
   delete[] h_dist;
@@ -171,12 +181,60 @@ void Hierarchy<D, T, DeviceType>::calc_volume(SIZE dof, T *dist, T *volume,
   }
   MemoryManager<DeviceType>::Copy1D(h_dist, dist, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
-  // level-wise uniform quantizer
-  if (dof > 1) {
-    for (int i = 0; i < dof; i++) {
-      h_volume[i] = 1.0 / (T)(dof - 1);
-    }
+
+  T total_dist = 0;
+  for (int i = 0; i < dof - 1; i++) {
+    total_dist += h_dist[i];
   }
+  for (int i = 0; i < dof; i++) {
+    h_volume[i] = total_dist / (dof - 1);
+  }
+  // if (dof == 2) {
+  //   h_volume[0] = h_dist[0] / 2;
+  //   h_volume[1] = h_dist[0] / 2;
+  // } else {
+  //   int node_coeff_div = dof / 2 + 1;
+  //   T *h_node_volume = new T[node_coeff_div];
+  //   T *h_coeff_volume = new T[dof-node_coeff_div];
+  //   h_volume[0] = h_dist[0] / 2;
+  //   for (int i = 1; i < dof - 1; i++) {
+  //     h_volume[i] = (h_dist[i - 1] + h_dist[i]) / 2;
+  //   }
+  //   h_volume[dof-1] = h_dist[dof-1] / 2;
+
+  //   int node = 0, coeff = 0;
+  //   for (int i = 0; i < dof; i++) {
+  //     if (i % 2 == 0 || i == dof - 1) {
+  //       h_node_volume[node++] = h_volume[i];
+  //     } else {
+  //       h_coeff_volume[coeff++] = h_volume[i];
+  //     }
+  //   }
+  //   for (int i = 0; i < node_coeff_div; i++) {
+  //     h_volume[i] = h_node_volume[i];
+  //   }
+  //   for (int i = node_coeff_div; i < dof; i++) {
+  //     h_volume[i] = h_coeff_volume[i-node_coeff_div];
+  //   }
+    // for (int i = 1; i < dof - 1; i++) {
+    //   if (i % 2 == 0) { // node
+    //     h_volume[i / 2] = (h_dist[i - 1] + h_dist[i]) / 2;
+    //   } else { // coeff
+    //     h_volume[node_coeff_div + i / 2] = (h_dist[i - 1] + h_dist[i]) / 2;
+    //   }
+    // }
+    // if (dof % 2 != 0) {
+    //   h_volume[node_coeff_div - 1] = h_dist[dof - 2] / 2;
+    // } else {
+    //   h_volume[node_coeff_div - 1] = h_dist[dof - 1] / 2;
+    // }
+  // }
+
+  std::cout << "vol-dof: " << dof << " = ";
+  for (int i = 0; i < dof; i++) {
+    std::cout << h_volume[i] << " ";
+  }
+  std::cout << "\n";
 
   if (reciprocal) {
     for (int i = 0; i < dof; i++) {
