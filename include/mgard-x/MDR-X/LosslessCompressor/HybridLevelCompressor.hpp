@@ -82,7 +82,7 @@ public:
         log::level = 0;
         huffman_success = false;
         rle_success = false;
-        cr_threshold = 2.0;
+        // cr_threshold = 2.0;
         if (merged_bitplane_size > size_threshold) {
           rle_success =
               rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
