@@ -17,7 +17,6 @@
 # make sure you have enough space (~128GB) to store JHTDB and refactored data
 
 set -x
-set -e
 
 ml rocm/6.3.1
 ml hdf5
@@ -40,6 +39,7 @@ build_dir=$(ls | grep '^build-' | head -n 1)
 IFS='-' read -r _ device _ <<< "$build_dir"
 echo "$device"
 exe="./$build_dir/mgard/bin/pmdr-x-qoi"
+ioexe="./$build_dir/mgard/bin/pmdr-x-qoi-io"
 
 output_file="JHTDB_output.txt"
 tmp_file="JHTDB_tmp.txt"
@@ -60,11 +60,12 @@ for error_bound in "${error_bounds[@]}"; do
     # $SRUN $exe --reconstruct -i JHTDB/XYZ -o sda -g JHTDB/VelocityXYZ -dt s -dim 3 1536 1024 1024 -m abs -e $error_bound -s inf -ar 0 -d $device -v 0 -dm 4 >> $output_file
     $SRUN $exe --reconstruct -i JHTDB/XYZ -o sda -g JHTDB/VelocityXYZ -dt s -dim 3 1536 1024 1024 -m abs -e $error_bound -s inf -ar 0 -d $device -v 0 -dm 4 > $tmp_file
     bitrate=$(grep "Bitrate" $tmp_file | head -n 1)
-    readtime=$(grep "IO_time" $tmp_file | head -n 1)
     time=$(grep "max_elapsed_time" $tmp_file | head -n 1)
     requested_max_error=$(grep "Requested_Tau" $tmp_file | head -n 1)
     est_max_error=$(grep "Est_max_error" $tmp_file | head -n 1)
     real_max_error=$(grep "Real_max_error" $tmp_file | head -n 1)
+    $SRUN $ioexe --reconstruct -i JHTDB/XYZ -o sda -g JHTDB/VelocityXYZ -dt s -dim 3 1536 1024 1024 -m abs -e $error_bound -s inf -ar 0 -d $device -v 0 -dm 4 > $tmp_file
+    readtime=$(grep "IO_time" $tmp_file | head -n 1)
     echo "Request eb = $error_bound, $bitrate, $readtime, $time, $requested_max_error, $est_max_error, $real_max_error" >> $output_file
 done
 
