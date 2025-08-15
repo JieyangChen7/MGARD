@@ -205,15 +205,18 @@ void write_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
                               .level_sizes[level_idx]
                               .size();
            bitplane_idx++) {
-        std::string filename = "component_" + std::to_string(subdomain_id) +
-                               "_" + std::to_string(level_idx) + "_" +
-                               std::to_string(bitplane_idx);
-        writefile(output + "/" + filename,
-                  refactored_data.data[subdomain_id][level_idx][bitplane_idx],
-                  refactored_metadata.metadata[subdomain_id]
-                      .level_sizes[level_idx][bitplane_idx]);
-        size_written += refactored_metadata.metadata[subdomain_id]
-                            .level_sizes[level_idx][bitplane_idx];
+        if (refactored_metadata.metadata[subdomain_id]
+                            .level_sizes[level_idx][bitplane_idx] > 0) {
+          std::string filename = "component_" + std::to_string(subdomain_id) +
+                                "_" + std::to_string(level_idx) + "_" +
+                                std::to_string(bitplane_idx);
+          writefile(output + "/" + filename,
+                    refactored_data.data[subdomain_id][level_idx][bitplane_idx],
+                    refactored_metadata.metadata[subdomain_id]
+                        .level_sizes[level_idx][bitplane_idx]);
+          size_written += refactored_metadata.metadata[subdomain_id]
+                              .level_sizes[level_idx][bitplane_idx];
+        }
       }
     }
   }
@@ -296,21 +299,24 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
       int num_bitplanes = metadata.level_sizes[level_idx].size();
       for (int bitplane_idx = 0;
            bitplane_idx < num_bitplanes; bitplane_idx++) {
-        std::string filename = "component_" + std::to_string(subdomain_id) +
-                               "_" + std::to_string(level_idx) + "_" +
-                               std::to_string(bitplane_idx);
-        mgard_x::SIZE level_size = readfile(
-            input + "/" + filename,
-            refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
-        mgard_x::pin_memory(
-            refactored_data.data[subdomain_id][level_idx][bitplane_idx],
-            level_size, config);
-        if (level_size != refactored_metadata.metadata[subdomain_id]
-                              .level_sizes[level_idx][bitplane_idx]) {
-          std::cout << "mdr component size mismatch.";
-          exit(-1);
-        }
-        size_read += level_size;
+        if (refactored_metadata.metadata[subdomain_id]
+                              .level_sizes[level_idx][bitplane_idx] > 0) {
+          std::string filename = "component_" + std::to_string(subdomain_id) +
+                                "_" + std::to_string(level_idx) + "_" +
+                                std::to_string(bitplane_idx);
+          mgard_x::SIZE level_size = readfile(
+              input + "/" + filename,
+              refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
+          mgard_x::pin_memory(
+              refactored_data.data[subdomain_id][level_idx][bitplane_idx],
+              level_size, config);
+          if (level_size != refactored_metadata.metadata[subdomain_id]
+                                .level_sizes[level_idx][bitplane_idx]) {
+            std::cout << "mdr component size mismatch.";
+            exit(-1);
+          }
+          size_read += level_size;
+        } 
       }
       if (initialize_signs) {
         // level sign
