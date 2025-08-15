@@ -955,8 +955,10 @@ public:
     using converted_T =
         typename std::conditional<std::is_same<T, void>::value, Byte, T>::type;
     // if (!CheckHostRegister(ptr)) {
-    gpuErrchk(hipHostRegister((void *)ptr, n * sizeof(converted_T),
-                              hipHostRegisterPortable));
+    if (n > 0) {
+      gpuErrchk(hipHostRegister((void *)ptr, n * sizeof(converted_T),
+                                hipHostRegisterPortable));
+    }
     //}
   }
 

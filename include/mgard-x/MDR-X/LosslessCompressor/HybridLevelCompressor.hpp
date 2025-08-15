@@ -124,7 +124,7 @@ public:
         // timer.print("Compressing bitplane", merged_bitplane_size);
         // timer.clear();
       } else {
-        compressed_bitplanes[bitplane_idx].resize({1}, queue_idx);
+        compressed_bitplanes[bitplane_idx].resize({0}, queue_idx);
       }
     }
     // std::string cr_string = "";
