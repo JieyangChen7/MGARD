@@ -1005,7 +1005,7 @@ public:
 
   template <typename T> MGARDX_CONT static void HostRegister(T *ptr, SIZE n) {
     log::dbg("Calling MemoryManager<CUDA>::HostRegister");
-    if (!CheckHostRegister(ptr)) {
+    if (!CheckHostRegister(ptr) && n > 0) {
       gpuErrchk(cudaHostRegister((void *)ptr, n * sizeof(T),
                                  cudaHostRegisterPortable));
     }
