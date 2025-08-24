@@ -93,12 +93,12 @@ public:
               &huffman.outlier_count,
               huffman.workspace.outlier_count_subarray.data(), 1, queue_idx);
           huffman.CompressPrimary(
-              encoded_bitplane, compressed_bitplanes[bitplane_idx], queue_idx);
+              encoded_bitplane, compressed_bitplanes[bitplane_idx], 0.0, queue_idx);
           huffman.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
         }
         if constexpr (std::is_same<CompressorType, RLE>::value) {
           rle.Compress(encoded_bitplane, compressed_bitplanes[bitplane_idx],
-                       queue_idx);
+                       0.0, queue_idx);
           rle.Serialize(compressed_bitplanes[bitplane_idx], queue_idx);
         }
         log::level = old_log_level;
