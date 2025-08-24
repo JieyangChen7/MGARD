@@ -6,10 +6,6 @@ cat SDRBENCH-EXASKY-NYX-512x512x512/velocity_x.f32 SDRBENCH-EXASKY-NYX-512x512x5
 set -x
 set -e
 
-ml rocm/6.3.1
-ml hdf5
-module load cmake
-
 a1=0.1
 a2=0.05
 r=0.1
