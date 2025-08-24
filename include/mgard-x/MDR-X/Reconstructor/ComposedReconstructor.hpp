@@ -35,7 +35,7 @@ public:
   using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
 
-  constexpr static bool ProfileBPEncoder = false;
+  constexpr static bool ProfileBPEncoder = true;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
   //                                CONTROL_L2, DeviceType>;
   // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error, NegaBinary,
@@ -168,6 +168,8 @@ public:
           estimation[level_idx][bitplane_idx] =
               Encoder::bitplane_length(hierarchy.level_num_elems(level_idx)) *
               sizeof(T_bitplane) * Compressor::num_merged_bitplanes;
+          // For Huffman-only model (metadata storage)    
+          estimation[level_idx][bitplane_idx] += 1e6;
         } else {
           estimation[level_idx][bitplane_idx] = 1;
         }
@@ -405,7 +407,8 @@ public:
           level_data_subarray[level_idx], queue_idx);
       if constexpr (ProfileBPEncoder) {
         DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        timer_iter.end(); timer_iter.print("Decoding level", level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
+        timer_iter.end(); 
+        timer_iter.print("Decoding level (# of coefficients: " + std::to_string(level_data_subarray[level_idx].shape(0)) + ")", level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
       }
       // if (level_idx < curr_final_level) {
       //   printf("%.6f, ", timer_iter.get());
