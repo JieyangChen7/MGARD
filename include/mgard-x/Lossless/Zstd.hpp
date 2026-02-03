@@ -111,7 +111,19 @@ public:
 
     uint32_t actual_out_count = 0;
     actual_out_count = *reinterpret_cast<const size_t *>(in_data);
-    Resize(actual_out_count, compressionLevel, queue_idx);
+
+    // FIX: Only resize out_data if needed, do not touch in_data which contains
+    // the compressed data we just copied. The original code called Resize()
+    // which would free and reallocate BOTH in_data and out_data, destroying
+    // the compressed data when actual_out_count > buffer_size.
+    if (this->buffer_size < actual_out_count) {
+      size_t const estimated_out_size = ZSTD_compressBound(actual_out_count);
+      if (out_data != nullptr) {
+        MemoryManager<DeviceType>::FreeHost(out_data, queue_idx);
+      }
+      MemoryManager<DeviceType>::MallocHost(
+          out_data, estimated_out_size + sizeof(size_t), queue_idx);
+    }
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
     ZSTD_decompress(out_data, actual_out_count, in_data + sizeof(size_t),
