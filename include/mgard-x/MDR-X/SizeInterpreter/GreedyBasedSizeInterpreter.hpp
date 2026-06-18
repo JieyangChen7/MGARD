@@ -27,7 +27,7 @@ public:
   interpret_retrieve_size(const std::vector<std::vector<SIZE>> &level_sizes,
                           const std::vector<std::vector<double>> &level_errors,
                           double tolerance, std::vector<uint8_t> &index) const {
-    const int num_levels = level_sizes.size();
+    int num_levels = level_sizes.size();
     std::vector<SIZE> retrieve_sizes(num_levels, 0);
 
     double accumulated_error = 0;
@@ -38,13 +38,38 @@ public:
     std::priority_queue<UnitErrorGain, std::vector<UnitErrorGain>,
                         CompareUnitErrorGain>
         heap;
-    for (int i = 0; i < num_levels; i++) {
-      if (index[i] < level_sizes[i].size()) {
-        double error_gain = error_estimator.estimate_error_gain(
-            accumulated_error, level_errors[i][index[i]],
-            level_errors[i][index[i] + 1], i);
-        heap.push(UnitErrorGain(error_gain / level_sizes[i][index[i]], i));
-      }
+    // old before the fix
+    // for (int i = 0; i < num_levels; i++) {
+    //   if (index[i] < level_sizes[i].size()) {
+    //     double error_gain = error_estimator.estimate_error_gain(
+    //         accumulated_error, level_errors[i][index[i]],
+    //         level_errors[i][index[i] + 1], i);
+    //     heap.push(UnitErrorGain(error_gain / level_sizes[i][index[i]], i));
+    //   }
+    // }
+    // new
+    double min_error = accumulated_error;
+    for(int i=0; i<num_levels; i++){
+        min_error -= error_estimator.estimate_error(level_errors[i][index[i]], i);
+        min_error += error_estimator.estimate_error(level_errors[i].back(), i);
+        // fetch the first component if index is 0
+        if(index[i] == 0){
+            retrieve_sizes[i] += level_sizes[i][index[i]];
+            accumulated_error -= error_estimator.estimate_error(level_errors[i][index[i]], i);
+            accumulated_error += error_estimator.estimate_error(level_errors[i][index[i] + 1], i);
+            index[i] ++;
+            // std::cout << i;
+        }
+        // push the next one
+        if(index[i] != level_sizes[i].size()){
+            double error_gain = error_estimator.estimate_error_gain(accumulated_error, level_errors[i][index[i]], level_errors[i][index[i] + 1], i);
+            heap.push(UnitErrorGain(error_gain / level_sizes[i][index[i]], i));
+        }
+        if(min_error < tolerance){
+            // the min error of first 0~i levels meets the tolerance
+            num_levels = i + 1;
+            break;
+        }
     }
 
     bool tolerance_met = false;
