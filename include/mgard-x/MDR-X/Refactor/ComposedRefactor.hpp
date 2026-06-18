@@ -33,19 +33,23 @@ public:
   constexpr static bool ProfileBPEncoder = false;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
   //                                CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                                CONTROL_L2, DeviceType>;
-  using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error, NegaBinary,
-                                CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error, NegaBinary,
+  using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error,
+                                         NegaBinary, CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-
 
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
@@ -174,7 +178,7 @@ public:
           estimation[level_idx][bitplane_idx] =
               Encoder::bitplane_length(hierarchy.level_num_elems(level_idx)) *
               sizeof(T_bitplane) * Compressor::num_merged_bitplanes;
-          // For Huffman-only model (metadata storage)    
+          // For Huffman-only model (metadata storage)
           estimation[level_idx][bitplane_idx] += 1e6;
         } else {
           estimation[level_idx][bitplane_idx] = 1;
@@ -283,7 +287,7 @@ public:
       encoded_bitplanes_subarray[level_idx] =
           SubArray<2, T_bitplane, DeviceType>(
               encoded_bitplanes_array[level_idx]);
-      
+
       Timer timer_iter;
       if constexpr (ProfileBPEncoder) {
         DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -296,8 +300,11 @@ public:
                      level_errors_subarray[level_idx], queue_idx);
       if constexpr (ProfileBPEncoder) {
         DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        timer_iter.end(); 
-        timer_iter.print("Encoding level (# of coefficients: " + std::to_string(level_data_subarray[level_idx].shape(0)) + ")", level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
+        timer_iter.end();
+        timer_iter.print(
+            "Encoding level (# of coefficients: " +
+                std::to_string(level_data_subarray[level_idx].shape(0)) + ")",
+            level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
       }
     }
 

@@ -38,19 +38,24 @@ public:
   constexpr static bool ProfileBPEncoder = false;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
   //                                CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                                CONTROL_L2, DeviceType>;
-  using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error, NegaBinary,
-                                CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error, NegaBinary,
+  using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error,
+                                         NegaBinary, CONTROL_L2, DeviceType>;
+  // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error, NegaBinary,
+  // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error,
+  // NegaBinary,
   //                              CONTROL_L2, DeviceType>;
-  
+
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
   using Compressor = HybridLevelCompressor<T_bitplane, DeviceType>;
@@ -168,7 +173,7 @@ public:
           estimation[level_idx][bitplane_idx] =
               Encoder::bitplane_length(hierarchy.level_num_elems(level_idx)) *
               sizeof(T_bitplane) * Compressor::num_merged_bitplanes;
-          // For Huffman-only model (metadata storage)    
+          // For Huffman-only model (metadata storage)
           estimation[level_idx][bitplane_idx] += 1e6;
         } else {
           estimation[level_idx][bitplane_idx] = 1;
@@ -202,37 +207,39 @@ public:
       if constexpr (std::is_same<Basis, Orthogonal>::value) {
         MaxErrorEstimatorOB<T_data> estimator(D);
         GreedyBasedSizeInterpreter interpreter(estimator);
-        if(mdr_metadata.segmented) {
+        if (mdr_metadata.segmented) {
           retrieve_sizes = interpreter.interpret_retrieve_size(
-              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
-              mdr_metadata.corresponding_error,
+              mdr_metadata.level_sizes, level_errors,
+              mdr_metadata.requested_size, mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
         } else if (mdr_metadata.corresponding_error_return) {
           retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
-            mdr_metadata.corresponding_error,
-            mdr_metadata.requested_level_num_bitplanes);
+              mdr_metadata.level_sizes, level_errors,
+              mdr_metadata.requested_tol, mdr_metadata.corresponding_error,
+              mdr_metadata.requested_level_num_bitplanes);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
-              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+              mdr_metadata.level_sizes, level_errors,
+              mdr_metadata.requested_tol,
               mdr_metadata.requested_level_num_bitplanes);
         }
       } else if constexpr (std::is_same<Basis, Hierarchical>::value) {
         MaxErrorEstimatorHB<T_data> estimator;
         GreedyBasedSizeInterpreter interpreter(estimator);
-        if(mdr_metadata.segmented) {
+        if (mdr_metadata.segmented) {
           retrieve_sizes = interpreter.interpret_retrieve_size(
-              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_size,
-              mdr_metadata.corresponding_error,
+              mdr_metadata.level_sizes, level_errors,
+              mdr_metadata.requested_size, mdr_metadata.corresponding_error,
               mdr_metadata.requested_level_num_bitplanes);
         } else if (mdr_metadata.corresponding_error_return) {
           retrieve_sizes = interpreter.interpret_retrieve_size(
-            mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
-            mdr_metadata.corresponding_error,
-            mdr_metadata.requested_level_num_bitplanes);
+              mdr_metadata.level_sizes, level_errors,
+              mdr_metadata.requested_tol, mdr_metadata.corresponding_error,
+              mdr_metadata.requested_level_num_bitplanes);
         } else {
           retrieve_sizes = interpreter.interpret_retrieve_size(
-              mdr_metadata.level_sizes, level_errors, mdr_metadata.requested_tol,
+              mdr_metadata.level_sizes, level_errors,
+              mdr_metadata.requested_tol,
               mdr_metadata.requested_level_num_bitplanes);
         }
       }
@@ -336,7 +343,8 @@ public:
       timer.start();
     }
     SIZE decompressed_size = 0;
-    for (int level_idx = 0; level_idx <= mdr_metadata.CurrFinalLevel(); level_idx++) {
+    for (int level_idx = 0; level_idx <= mdr_metadata.CurrFinalLevel();
+         level_idx++) {
       // Number of bitplanes need to be retrieved in addition to previously
       // already retrieved bitplanes
       SIZE num_bitplanes =
@@ -347,9 +355,10 @@ public:
       compressor.decompress_level(
           mdr_data.compressed_bitplanes[level_idx],
           encoded_bitplanes_subarray[level_idx],
-          mdr_metadata.prev_used_level_num_bitplanes[level_idx], level_num_bitplanes[level_idx],
-          level_idx, queue_idx);
-      decompressed_size += encoded_bitplanes_subarray[level_idx].shape(1) * num_bitplanes * sizeof(T_bitplane);
+          mdr_metadata.prev_used_level_num_bitplanes[level_idx],
+          level_num_bitplanes[level_idx], level_idx, queue_idx);
+      decompressed_size += encoded_bitplanes_subarray[level_idx].shape(1) *
+                           num_bitplanes * sizeof(T_bitplane);
     }
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -407,8 +416,11 @@ public:
           level_data_subarray[level_idx], queue_idx);
       if constexpr (ProfileBPEncoder) {
         DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-        timer_iter.end(); 
-        timer_iter.print("Decoding level (# of coefficients: " + std::to_string(level_data_subarray[level_idx].shape(0)) + ")", level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
+        timer_iter.end();
+        timer_iter.print(
+            "Decoding level (# of coefficients: " +
+                std::to_string(level_data_subarray[level_idx].shape(0)) + ")",
+            level_data_subarray[level_idx].shape(0) * sizeof(T_data), true);
       }
       // if (level_idx < curr_final_level) {
       //   printf("%.6f, ", timer_iter.get());

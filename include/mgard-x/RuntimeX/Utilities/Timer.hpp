@@ -35,13 +35,14 @@ public:
       log::time(s + ": " + std::to_string(total_time) + " s", override);
     } else {
       log::time(s + ": " + std::to_string(total_time) + " s (" +
-                std::to_string(get_throughput(num_bytes)) + " GB/s)", override);
+                    std::to_string(get_throughput(num_bytes)) + " GB/s)",
+                override);
     }
   }
 
   void print_throughput(std::string s, SIZE n, bool override = false) {
-    log::time(s + " throughput: " + std::to_string(get_throughput(n)) +
-              " GB/s", override);
+    log::time(s + " throughput: " + std::to_string(get_throughput(n)) + " GB/s",
+              override);
   }
 
 private:

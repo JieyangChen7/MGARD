@@ -3,9 +3,9 @@
 
 #include "BPEncoderBaseline.hpp"
 #include "BPEncoderLocalityBlock.hpp"
-#include "BPEncoderRegisterBlock.hpp"
-#include "BPEncoderRegisterShift.hpp"
 #include "BPEncoderRegisterBallot.hpp"
-#include "BPEncoderRegisterReduceAll.hpp"
+#include "BPEncoderRegisterBlock.hpp"
 #include "BPEncoderRegisterMatchAny.hpp"
+#include "BPEncoderRegisterReduceAll.hpp"
+#include "BPEncoderRegisterShift.hpp"
 #endif

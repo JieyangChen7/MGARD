@@ -55,7 +55,8 @@ void refactor_pipeline(
   DeviceRuntime<DeviceType>::SyncDevice();
 
   Timer timer_series;
-  if (timing_pipeline) timer_series.start();
+  if (timing_pipeline)
+    timer_series.start();
   // Prefetch the first subdomain to one buffer
   int current_buffer = 0;
   int current_queue = 0;

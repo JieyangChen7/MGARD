@@ -31,12 +31,16 @@ public:
   }
 
   MGARDX_EXEC void Operation1() {
-    int tid = FunctorBase<DeviceType>::GetBlockIdX() * FunctorBase<DeviceType>::GetBlockDimX() + FunctorBase<DeviceType>::GetThreadIdX();
-    int stride = FunctorBase<DeviceType>::GetBlockDimX() * FunctorBase<DeviceType>::GetGridDimX();
+    int tid = FunctorBase<DeviceType>::GetBlockIdX() *
+                  FunctorBase<DeviceType>::GetBlockDimX() +
+              FunctorBase<DeviceType>::GetThreadIdX();
+    int stride = FunctorBase<DeviceType>::GetBlockDimX() *
+                 FunctorBase<DeviceType>::GetGridDimX();
 
-    for (int i = tid; i < n; i += stride){
+    for (int i = tid; i < n; i += stride) {
       double value = (double)*x(i);
-      if(value == (double)(*maxabs(0))) *index(0) = (uint32_t) i;
+      if (value == (double)(*maxabs(0)))
+        *index(0) = (uint32_t)i;
     }
   }
 
@@ -62,7 +66,6 @@ public:
                     SubArray<1, double, DeviceType> maxabs,
                     SubArray<1, uint32_t, DeviceType> index)
       : x(x), maxabs(maxabs), index(index) {}
-
 
   MGARDX_CONT Task<MaxAbsIndexFunctor<D, T, DeviceType>>
   GenTask(int queue_idx) {
@@ -92,9 +95,9 @@ template <DIM D, typename T, typename DeviceType>
 void Copy3D(SubArray<D, T, DeviceType> x,
             SubArray<1, double, DeviceType> maxabs,
             SubArray<1, uint32_t, DeviceType> out, int queue_idx) {
-  
-  DeviceLauncher<DeviceType>::Execute(MaxAbsIndexKernel<D, T, DeviceType>(x, maxabs, out), queue_idx);
-  
+
+  DeviceLauncher<DeviceType>::Execute(
+      MaxAbsIndexKernel<D, T, DeviceType>(x, maxabs, out), queue_idx);
 }
 
 } // namespace multi_dimension

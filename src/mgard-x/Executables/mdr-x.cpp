@@ -205,10 +205,10 @@ void write_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
                               .size();
            bitplane_idx++) {
         if (refactored_metadata.metadata[subdomain_id]
-                            .level_sizes[level_idx][bitplane_idx] > 0) {
+                .level_sizes[level_idx][bitplane_idx] > 0) {
           std::string filename = "component_" + std::to_string(subdomain_id) +
-                                "_" + std::to_string(level_idx) + "_" +
-                                std::to_string(bitplane_idx);
+                                 "_" + std::to_string(level_idx) + "_" +
+                                 std::to_string(bitplane_idx);
 
           writefile(output + "/" + filename,
                     refactored_data.data[subdomain_id][level_idx][bitplane_idx],
@@ -255,10 +255,10 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
       for (int bitplane_idx = loaded_bitplanes;
            bitplane_idx < reqested_bitplanes; bitplane_idx++) {
         if (refactored_metadata.metadata[subdomain_id]
-                              .level_sizes[level_idx][bitplane_idx] > 0) {
+                .level_sizes[level_idx][bitplane_idx] > 0) {
           std::string filename = "component_" + std::to_string(subdomain_id) +
-                                "_" + std::to_string(level_idx) + "_" +
-                                std::to_string(bitplane_idx);
+                                 "_" + std::to_string(level_idx) + "_" +
+                                 std::to_string(bitplane_idx);
           mgard_x::SIZE level_size = readfile(
               input + "/" + filename,
               refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
@@ -367,8 +367,9 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   }
 
   mgard_x::log::info("Max output data size: " +
-            std::to_string(mgard_x::MDR::MDRMaxOutputDataSize(D, dtype, shape, config))
-            + " bytes");
+                     std::to_string(mgard_x::MDR::MDRMaxOutputDataSize(
+                         D, dtype, shape, config)) +
+                     " bytes");
 
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
   mgard_x::MDR::RefactoredData refactored_data;
@@ -430,10 +431,11 @@ int launch_reconstruct(std::string input_file, std::string output_file,
         std::memcpy(original_data + loaded_size, file_data,
                     std::min(in_size / sizeof(T), original_size - loaded_size) *
                         sizeof(T));
-        loaded_size += std::min(in_size / sizeof(T), original_size - loaded_size);
+        loaded_size +=
+            std::min(in_size / sizeof(T), original_size - loaded_size);
       }
       in_size = loaded_size * sizeof(T);
-    }  
+    }
     if (in_size != original_size * sizeof(T)) {
       std::cout << mgard_x::log::log_warn << "input file size mismatch "
                 << in_size << " vs. " << original_size * sizeof(T) << "!\n";
@@ -462,9 +464,11 @@ int launch_reconstruct(std::string input_file, std::string output_file,
 
     first_reconstruction = false;
 
-    mgard_x::log::info("Additional " + std::to_string(size_read)
-              + " bytes (" + std::to_string((float)100*size_read/(original_size*sizeof(T))) + "%) read for reconstruction");
-    
+    mgard_x::log::info(
+        "Additional " + std::to_string(size_read) + " bytes (" +
+        std::to_string((float)100 * size_read / (original_size * sizeof(T))) +
+        "%) read for reconstruction");
+
     // mgard_x::log::csv("size.csv", size_read);
 
     if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {

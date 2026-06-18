@@ -135,27 +135,30 @@ public:
                             accumulated_local_coeff_size));
         // std::cout << "accumulated_local_coeff_size: "
         //           << accumulated_local_coeff_size << "\n";
-        
+
         in_cache_block::decompose<D, T, DeviceType>(data, coarse_data,
                                                     local_coeff, queue_idx);
 
-        Array<D, T, DeviceType> data2({data.shape(0), data.shape(1), data.shape(2)}, queue_idx);
+        Array<D, T, DeviceType> data2(
+            {data.shape(0), data.shape(1), data.shape(2)}, queue_idx);
 
         in_cache_block::recompose<D, T, DeviceType>(
-                        SubArray(data2), coarse_data, local_coeff, queue_idx);
+            SubArray(data2), coarse_data, local_coeff, queue_idx);
 
         DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
         PrintSubarray("data2", SubArray(data2));
 
-        T * hdata1 = new T[coarse_num_elems[l]];
-        T * hdata2 = new T[coarse_num_elems[l]];
-        MemoryManager<DeviceType>::Copy1D(hdata1, data.data(), coarse_num_elems[l], queue_idx);
-        MemoryManager<DeviceType>::Copy1D(hdata2, data2.data(), coarse_num_elems[l], queue_idx);
+        T *hdata1 = new T[coarse_num_elems[l]];
+        T *hdata2 = new T[coarse_num_elems[l]];
+        MemoryManager<DeviceType>::Copy1D(hdata1, data.data(),
+                                          coarse_num_elems[l], queue_idx);
+        MemoryManager<DeviceType>::Copy1D(hdata2, data2.data(),
+                                          coarse_num_elems[l], queue_idx);
 
         DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
         for (int i = 0; i < coarse_num_elems[l]; i++) {
-          if (fabs(hdata1[i] - hdata2[i]) > hdata1[i]*1e-5) {
+          if (fabs(hdata1[i] - hdata2[i]) > hdata1[i] * 1e-5) {
             std::cout << "hdata1(" << i << "): " << hdata1[i] << "\n";
             std::cout << "hdata2(" << i << "): " << hdata2[i] << "\n";
           }
@@ -172,7 +175,8 @@ public:
         if (log::level & log::TIME) {
           DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
           timer.end();
-          // std::cout << "coarse_num_elems[l]: " << coarse_num_elems[l] << "\n";
+          // std::cout << "coarse_num_elems[l]: " << coarse_num_elems[l] <<
+          // "\n";
           timer.print("Local Decomposition", coarse_num_elems[l] * sizeof(T));
           timer.clear();
         }

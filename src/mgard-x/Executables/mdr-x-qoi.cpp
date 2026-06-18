@@ -91,7 +91,8 @@ template <typename T> size_t readfile(std::string input_file, T *&in_buff) {
 }
 
 template <typename T>
-size_t readfile_header_metadata(std::string input_file, std::vector<T> &in_buff) {
+size_t readfile_header_metadata(std::string input_file,
+                                std::vector<T> &in_buff) {
   // std::cout << mgard_x::log::log_info << "Loading file: " << input_file <<
   // "\n";
 
@@ -173,7 +174,7 @@ void print_statistics(double s, enum mgard_x::error_bound_type mode,
             << "\n";
 
   // if (actual_error > tol)
-    // exit(-1);
+  // exit(-1);
 }
 
 void create_dir(std::string name) {
@@ -206,10 +207,10 @@ void write_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
                               .size();
            bitplane_idx++) {
         if (refactored_metadata.metadata[subdomain_id]
-                            .level_sizes[level_idx][bitplane_idx] > 0) {
+                .level_sizes[level_idx][bitplane_idx] > 0) {
           std::string filename = "component_" + std::to_string(subdomain_id) +
-                                "_" + std::to_string(level_idx) + "_" +
-                                std::to_string(bitplane_idx);
+                                 "_" + std::to_string(level_idx) + "_" +
+                                 std::to_string(bitplane_idx);
           writefile(output + "/" + filename,
                     refactored_data.data[subdomain_id][level_idx][bitplane_idx],
                     refactored_metadata.metadata[subdomain_id]
@@ -224,13 +225,15 @@ void write_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 }
 
 size_t read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
-                       mgard_x::MDR::RefactoredData &refactored_data,
-                       std::string input) {
-  
+                         mgard_x::MDR::RefactoredData &refactored_data,
+                         std::string input) {
+
   size_t metadata_size = 0;
-  metadata_size += readfile_header_metadata(input + "/header", refactored_metadata.header);
+  metadata_size +=
+      readfile_header_metadata(input + "/header", refactored_metadata.header);
   std::vector<mgard_x::Byte> serialized_metadata;
-  metadata_size += readfile_header_metadata(input + "/metadata", serialized_metadata);
+  metadata_size +=
+      readfile_header_metadata(input + "/metadata", serialized_metadata);
   refactored_metadata.Deserialize(serialized_metadata);
   refactored_metadata.InitializeForReconstruction();
   refactored_data.InitializeForReconstruction(refactored_metadata);
@@ -238,8 +241,8 @@ size_t read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 }
 
 // size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
-//               mgard_x::MDR::RefactoredData &refactored_data, std::string input,
-//               bool initialize_signs, mgard_x::Config config) {
+//               mgard_x::MDR::RefactoredData &refactored_data, std::string
+//               input, bool initialize_signs, mgard_x::Config config) {
 
 //   size_t size_read = 0;
 //   int num_subdomains = refactored_metadata.metadata.size();
@@ -273,7 +276,8 @@ size_t read_mdr_metadata(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 //       if (initialize_signs) {
 //         // level sign
 //         refactored_data.level_signs[subdomain_id][level_idx] =
-//             (bool *)malloc(sizeof(bool) * metadata.level_num_elems[level_idx]);
+//             (bool *)malloc(sizeof(bool) *
+//             metadata.level_num_elems[level_idx]);
 //         memset(refactored_data.level_signs[subdomain_id][level_idx], 0,
 //                sizeof(bool) * metadata.level_num_elems[level_idx]);
 //         mgard_x::pin_memory(
@@ -298,13 +302,12 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
     int num_levels = metadata.level_sizes.size();
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
       int num_bitplanes = metadata.level_sizes[level_idx].size();
-      for (int bitplane_idx = 0;
-           bitplane_idx < num_bitplanes; bitplane_idx++) {
+      for (int bitplane_idx = 0; bitplane_idx < num_bitplanes; bitplane_idx++) {
         if (refactored_metadata.metadata[subdomain_id]
-                              .level_sizes[level_idx][bitplane_idx] > 0) {
+                .level_sizes[level_idx][bitplane_idx] > 0) {
           std::string filename = "component_" + std::to_string(subdomain_id) +
-                                "_" + std::to_string(level_idx) + "_" +
-                                std::to_string(bitplane_idx);
+                                 "_" + std::to_string(level_idx) + "_" +
+                                 std::to_string(bitplane_idx);
           mgard_x::SIZE level_size = readfile(
               input + "/" + filename,
               refactored_data.data[subdomain_id][level_idx][bitplane_idx]);
@@ -317,7 +320,7 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
             exit(-1);
           }
           size_read += level_size;
-        } 
+        }
       }
       if (initialize_signs) {
         // level sign
@@ -369,7 +372,8 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
 
   config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   config.domain_decomposition_dim = 0;
-  config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3, shape[0] / 3};
+  config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3,
+                                       shape[0] / 3};
 
   config.dev_type = dev_type;
   config.max_memory_footprint = max_memory_footprint;
@@ -429,44 +433,46 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
 }
 
 template <class T>
-T compute_max_abs_error(const T *vec_ori, const T * vec_rec, size_t n){
+T compute_max_abs_error(const T *vec_ori, const T *vec_rec, size_t n) {
   T error = fabs(vec_ori[0] - vec_rec[0]);
-	T max = error;
-	for(int i=1; i<n; i++){
+  T max = error;
+  for (int i = 1; i < n; i++) {
     error = fabs(vec_ori[i] - vec_rec[i]);
-		if(max < error) max = error;
-	}
-	return max;
+    if (max < error)
+      max = error;
+  }
+  return max;
 }
 
-template <class T>
-T compute_value_range(const T * vec, size_t n){
-	T min = vec[0];
-	T max = vec[0];
-	for(int i=0; i<n; i++){
-		if(vec[i] < min) min = vec[i];
-		if(vec[i] > max) max = vec[i];
-	}
-	return max - min;
+template <class T> T compute_value_range(const T *vec, size_t n) {
+  T min = vec[0];
+  T max = vec[0];
+  for (int i = 0; i < n; i++) {
+    if (vec[i] < min)
+      min = vec[i];
+    if (vec[i] > max)
+      max = vec[i];
+  }
+  return max - min;
 }
 
-template <class T>
-T compute_max_abs_value(const T * data, size_t n){
+template <class T> T compute_max_abs_value(const T *data, size_t n) {
   T max_val = 0;
-  for(int i=0; i<n; i++){
-      T val = fabs(data[i]);
-      if(val > max_val) max_val = val;
+  for (int i = 0; i < n; i++) {
+    T val = fabs(data[i]);
+    if (val > max_val)
+      max_val = val;
   }
   return max_val;
 }
 
 template <class T>
-void compute_VTOT(const T * Vx, const T * Vy, const T * Vz, size_t n, T * V_TOT_){
-	for(int i=0; i<n; i++){
-		double V_TOT_2 = Vx[i]*Vx[i] + Vy[i]*Vy[i] + Vz[i]*Vz[i];
-		double V_TOT = sqrt(V_TOT_2);
-		V_TOT_[i] = V_TOT;
-	}
+void compute_VTOT(const T *Vx, const T *Vy, const T *Vz, size_t n, T *V_TOT_) {
+  for (int i = 0; i < n; i++) {
+    double V_TOT_2 = Vx[i] * Vx[i] + Vy[i] * Vy[i] + Vz[i] * Vz[i];
+    double V_TOT = sqrt(V_TOT_2);
+    V_TOT_[i] = V_TOT;
+  }
 }
 
 int launch_reconstruct(std::string input_file, std::string output_file,
@@ -475,7 +481,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
                        std::vector<double> tols, double s,
                        enum mgard_x::error_bound_type mode,
                        bool adaptive_resolution,
-                       enum mgard_x::device_type dev_type, int verbose, int decrease_method = 0) {
+                       enum mgard_x::device_type dev_type, int verbose,
+                       int decrease_method = 0) {
 
   double bitrate = 0;
   mgard_x::Config config;
@@ -488,7 +495,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   config.mdr_qoi_num_variables = shape.size();
   config.domain_decomposition = mgard_x::domain_decomposition_type::Variable;
   config.domain_decomposition_dim = 0;
-  config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3, shape[0] / 3};
+  config.domain_decomposition_sizes = {shape[0] / 3, shape[0] / 3,
+                                       shape[0] / 3};
 
   mgard_x::Byte *original_data;
   size_t in_size = 0;
@@ -534,46 +542,63 @@ int launch_reconstruct(std::string input_file, std::string output_file,
       in_size = loaded_size;
     }
   }
-  mgard_x::Byte * V_TOT_ori;
+  mgard_x::Byte *V_TOT_ori;
   std::vector<double> ebs;
   size_t num_elements;
   double tau = 0;
   V_TOT_ori = (mgard_x::Byte *)malloc(in_size / config.mdr_qoi_num_variables);
-  mgard_x::Byte* org_Vx_ptr = original_data + original_size/3 * 0;
-  mgard_x::Byte* org_Vy_ptr = original_data + original_size/3 * 1;
-  mgard_x::Byte* org_Vz_ptr = original_data + original_size/3 * 2;
-  if (dtype == mgard_x::data_type::Float){
+  mgard_x::Byte *org_Vx_ptr = original_data + original_size / 3 * 0;
+  mgard_x::Byte *org_Vy_ptr = original_data + original_size / 3 * 1;
+  mgard_x::Byte *org_Vz_ptr = original_data + original_size / 3 * 2;
+  if (dtype == mgard_x::data_type::Float) {
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(float);
-    compute_VTOT<float>((float *) org_Vx_ptr, (float *) org_Vy_ptr, (float *) org_Vz_ptr, num_elements, (float *) V_TOT_ori);
-    tau = compute_value_range((float *) V_TOT_ori, num_elements) * tols[0];
+    compute_VTOT<float>((float *)org_Vx_ptr, (float *)org_Vy_ptr,
+                        (float *)org_Vz_ptr, num_elements, (float *)V_TOT_ori);
+    tau = compute_value_range((float *)V_TOT_ori, num_elements) * tols[0];
     if (decrease_method < 4) {
-      ebs.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
-      ebs.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
-      ebs.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+      ebs.push_back(compute_value_range((float *)org_Vx_ptr, num_elements) *
+                    tols[0]);
+      ebs.push_back(compute_value_range((float *)org_Vy_ptr, num_elements) *
+                    tols[0]);
+      ebs.push_back(compute_value_range((float *)org_Vz_ptr, num_elements) *
+                    tols[0]);
     } else {
       std::vector<float> var_value_range;
-      var_value_range.push_back(compute_value_range((float *) org_Vx_ptr, num_elements) * tols[0]);
-      var_value_range.push_back(compute_value_range((float *) org_Vy_ptr, num_elements) * tols[0]);
-      var_value_range.push_back(compute_value_range((float *) org_Vz_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(
+          compute_value_range((float *)org_Vx_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(
+          compute_value_range((float *)org_Vy_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(
+          compute_value_range((float *)org_Vz_ptr, num_elements) * tols[0]);
       for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
-        ebs.push_back(*std::min_element(var_value_range.begin(), var_value_range.end()));
+        ebs.push_back(
+            *std::min_element(var_value_range.begin(), var_value_range.end()));
       }
     }
-  } else if (dtype == mgard_x::data_type::Double){
+  } else if (dtype == mgard_x::data_type::Double) {
     num_elements = (in_size / config.mdr_qoi_num_variables) / sizeof(double);
-    compute_VTOT<double>((double *) org_Vx_ptr, (double *) org_Vy_ptr, (double *) org_Vz_ptr, num_elements, (double *) V_TOT_ori);
-    tau = compute_value_range((double *) V_TOT_ori, num_elements) * tols[0];
+    compute_VTOT<double>((double *)org_Vx_ptr, (double *)org_Vy_ptr,
+                         (double *)org_Vz_ptr, num_elements,
+                         (double *)V_TOT_ori);
+    tau = compute_value_range((double *)V_TOT_ori, num_elements) * tols[0];
     if (decrease_method < 2) {
-      ebs.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
-      ebs.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
-      ebs.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+      ebs.push_back(compute_value_range((double *)org_Vx_ptr, num_elements) *
+                    tols[0]);
+      ebs.push_back(compute_value_range((double *)org_Vy_ptr, num_elements) *
+                    tols[0]);
+      ebs.push_back(compute_value_range((double *)org_Vz_ptr, num_elements) *
+                    tols[0]);
     } else {
       std::vector<double> var_value_range;
-      var_value_range.push_back(compute_value_range((double *) org_Vx_ptr, num_elements) * tols[0]);
-      var_value_range.push_back(compute_value_range((double *) org_Vy_ptr, num_elements) * tols[0]);
-      var_value_range.push_back(compute_value_range((double *) org_Vz_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(
+          compute_value_range((double *)org_Vx_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(
+          compute_value_range((double *)org_Vy_ptr, num_elements) * tols[0]);
+      var_value_range.push_back(
+          compute_value_range((double *)org_Vz_ptr, num_elements) * tols[0]);
       for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
-        ebs.push_back(*std::min_element(var_value_range.begin(), var_value_range.end()));
+        ebs.push_back(
+            *std::min_element(var_value_range.begin(), var_value_range.end()));
       }
     }
   }
@@ -581,7 +606,8 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   mgard_x::MDR::RefactoredMetadata refactored_metadata;
   mgard_x::MDR::RefactoredData refactored_data;
   mgard_x::MDR::ReconstructedData reconstructed_data;
-  size_t metadata_size = read_mdr_metadata(refactored_metadata, refactored_data, input_file);
+  size_t metadata_size =
+      read_mdr_metadata(refactored_metadata, refactored_data, input_file);
   refactored_metadata.total_size += metadata_size;
 
   refactored_metadata.relative_eb = tols[0];
@@ -590,26 +616,30 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     refactored_metadata.metadata[i].num_elements = num_elements;
     if (decrease_method == 0) {
       refactored_metadata.metadata[i].requested_tol = ebs[i];
-    } else if(decrease_method == 1) {
+    } else if (decrease_method == 1) {
       refactored_metadata.metadata[i].requested_size = 1;
       refactored_metadata.metadata[i].segmented = true;
-    } else if(decrease_method >= 2) {
+    } else if (decrease_method >= 2) {
       refactored_metadata.metadata[i].requested_tol = ebs[i];
       refactored_metadata.metadata[i].corresponding_error_return = true;
     }
     refactored_metadata.metadata[i].tau = tau;
     refactored_metadata.metadata[i].requested_s = s;
   }
-  // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
+  // std::cout << "refactored_metadata.total_size = " <<
+  // refactored_metadata.total_size << std::endl;
   mgard_x::MDR::MDRequest(refactored_metadata, config);
-  // refactored_metadata.total_size += refactored_metadata.metadata[0].retrieved_size
-  //                                   + refactored_metadata.metadata[1].retrieved_size
-  //                                   + refactored_metadata.metadata[2].retrieved_size;
+  // refactored_metadata.total_size +=
+  // refactored_metadata.metadata[0].retrieved_size
+  //                                   +
+  //                                   refactored_metadata.metadata[1].retrieved_size
+  //                                   +
+  //                                   refactored_metadata.metadata[2].retrieved_size;
   // for (auto &metadata : refactored_metadata.metadata) {
   //   metadata.PrintStatus();
   // }
-  size_t size_read = read_mdr(refactored_metadata, refactored_data, input_file,
-            true, config);
+  size_t size_read =
+      read_mdr(refactored_metadata, refactored_data, input_file, true, config);
   // refactored_metadata.total_size += size_read;
 
   mgard_x::MDR::MDReconstruct(refactored_metadata, refactored_data,
@@ -620,31 +650,38 @@ int launch_reconstruct(std::string input_file, std::string output_file,
   // std::cout << mgard_x::log::log_info << "Additional " << size_read
   //           << " bytes read for reconstruction\n";
 
-  std::vector<mgard_x::Byte*> rec_var_ptrs;
+  std::vector<mgard_x::Byte *> rec_var_ptrs;
   if (original_file.compare("none") != 0 && !config.mdr_adaptive_resolution) {
     for (int i = 0; i < config.mdr_qoi_num_variables; i++) {
       std::vector<mgard_x::SIZE> var_shape = shape;
       var_shape[0] /= config.mdr_qoi_num_variables;
-      mgard_x::Byte* org_var_ptr = original_data + original_size/3 * i;
-      mgard_x::Byte* rec_var_ptr = reconstructed_data.data[0] + original_size/3 * i;
+      mgard_x::Byte *org_var_ptr = original_data + original_size / 3 * i;
+      mgard_x::Byte *rec_var_ptr =
+          reconstructed_data.data[0] + original_size / 3 * i;
       rec_var_ptrs.push_back(rec_var_ptr);
       // if (dtype == mgard_x::data_type::Float) {
       //   print_statistics<float>(s, mode, var_shape, (float *)org_var_ptr,
-      //                           (float *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
+      //                           (float *)rec_var_ptr,
+      //                           refactored_metadata.metadata[i].requested_tol,
       //                           config.normalize_coordinates);
       // } else if (dtype == mgard_x::data_type::Double) {
       //   print_statistics<double>(s, mode, var_shape, (double *)org_var_ptr,
-      //                           (double *)rec_var_ptr, refactored_metadata.metadata[i].requested_tol,
+      //                           (double *)rec_var_ptr,
+      //                           refactored_metadata.metadata[i].requested_tol,
       //                           config.normalize_coordinates);
       // }
     }
   }
-  mgard_x::Byte* V_TOT_rec;
+  mgard_x::Byte *V_TOT_rec;
   V_TOT_rec = (mgard_x::Byte *)malloc(in_size / config.mdr_qoi_num_variables);
-  if (dtype == mgard_x::data_type::Float){
-    compute_VTOT<float>((float *) rec_var_ptrs[0], (float *) rec_var_ptrs[1], (float *) rec_var_ptrs[2], num_elements, (float *) V_TOT_rec);
-  } else if (dtype == mgard_x::data_type::Double){
-    compute_VTOT<double>((double *) rec_var_ptrs[0], (double *) rec_var_ptrs[1], (double *) rec_var_ptrs[2], num_elements, (double *) V_TOT_rec);
+  if (dtype == mgard_x::data_type::Float) {
+    compute_VTOT<float>((float *)rec_var_ptrs[0], (float *)rec_var_ptrs[1],
+                        (float *)rec_var_ptrs[2], num_elements,
+                        (float *)V_TOT_rec);
+  } else if (dtype == mgard_x::data_type::Double) {
+    compute_VTOT<double>((double *)rec_var_ptrs[0], (double *)rec_var_ptrs[1],
+                         (double *)rec_var_ptrs[2], num_elements,
+                         (double *)V_TOT_rec);
   }
   std::vector<mgard_x::SIZE> var_shape = shape;
   var_shape[0] /= config.mdr_qoi_num_variables;
@@ -655,20 +692,27 @@ int launch_reconstruct(std::string input_file, std::string output_file,
     // print_statistics<float>(s, mode, var_shape, (float *) V_TOT_ori,
     //                         (float *) V_TOT_rec, tau,
     //                         config.normalize_coordinates);
-    bitrate = 32 / ((double) in_size / refactored_metadata.total_size);
+    bitrate = 32 / ((double)in_size / refactored_metadata.total_size);
   } else if (dtype == mgard_x::data_type::Double) {
     // print_statistics<double>(s, mode, var_shape, (double *) V_TOT_ori,
     //                         (double *) V_TOT_rec, tau,
     //                         config.normalize_coordinates);
-    bitrate = 64 / ((double) in_size / refactored_metadata.total_size);
+    bitrate = 64 / ((double)in_size / refactored_metadata.total_size);
   }
-  // std::cout << "refactored_metadata.total_size = " << refactored_metadata.total_size << std::endl;
-  // std::cout << "in_size = " << in_size << std::endl;
+  // std::cout << "refactored_metadata.total_size = " <<
+  // refactored_metadata.total_size << std::endl; std::cout << "in_size = " <<
+  // in_size << std::endl;
   std::cout << "Bitrate = " << bitrate << std::endl;
-  // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ", Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] << std::endl;
+  // std::cout << "Original Vx[35345] = " << ((float*) org_Vx_ptr)[35345] << ",
+  // Reconstructed Vx[35345] = " << ((float*) rec_var_ptrs[0])[35345] <<
+  // std::endl;
   std::cout << "Requested_Tau = " << tau << std::endl;
-  std::cout << "Est_max_error = " << refactored_metadata.max_est_error << std::endl;
-  std::cout << "Real_max_error = " << compute_max_abs_error((float*) V_TOT_ori, (float*)V_TOT_rec, num_elements) << std::endl;
+  std::cout << "Est_max_error = " << refactored_metadata.max_est_error
+            << std::endl;
+  std::cout << "Real_max_error = "
+            << compute_max_abs_error((float *)V_TOT_ori, (float *)V_TOT_rec,
+                                     num_elements)
+            << std::endl;
   return 0;
 }
 
@@ -768,12 +812,13 @@ bool try_reconstruction(int argc, char *argv[]) {
   if (verbose)
     std::cout << mgard_x::log::log_info << "verbose: enabled.\n";
   int decrease_method;
-  if (has_arg(argc, argv, "-dm", "--decrease-method")){
-    decrease_method = get_arg<int>(argc, argv, "Decrease method", "-dm",
-                                   "--decrease-method");
+  if (has_arg(argc, argv, "-dm", "--decrease-method")) {
+    decrease_method =
+        get_arg<int>(argc, argv, "Decrease method", "-dm", "--decrease-method");
   }
   launch_reconstruct(input_file, output_file, original_file, dtype, shape, tols,
-                     s, mode, adaptive_resolution, dev_type, verbose, decrease_method);
+                     s, mode, adaptive_resolution, dev_type, verbose,
+                     decrease_method);
   return true;
 }
 

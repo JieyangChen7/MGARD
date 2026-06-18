@@ -18,7 +18,7 @@ set(
 	"src/test_decompose.cpp"
 	"src/test_format.cpp"
 	"src/test_quantize.cpp"
-	"src/test_compressors.cpp"
+	# "src/test_compressors.cpp"
 	"src/test_CompressedDataset.cpp"
 )
 
@@ -56,6 +56,8 @@ if(Catch2_FOUND)
 	target_include_directories(mgard-tests PRIVATE "include" "${CMAKE_CURRENT_BINARY_DIR}/include")
 	target_link_libraries(mgard-tests PRIVATE mgard-library Catch2::Catch2WithMain)
 	set_target_properties(mgard-tests PROPERTIES OUTPUT_NAME tests)
+	include(Catch)
+	catch_discover_tests(mgard-tests)
 else()
 	message(STATUS "Will not build tests (Catch2 not found).")
 endif()

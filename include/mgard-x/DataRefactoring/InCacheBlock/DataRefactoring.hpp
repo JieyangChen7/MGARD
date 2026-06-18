@@ -29,8 +29,7 @@ void decompose(SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
                SubArray<1, T, DeviceType> coeff, int queue_idx) {
   if constexpr (D <= 3) {
     DeviceLauncher<DeviceType>::Execute(
-        Decompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff),
-        queue_idx);
+        Decompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff), queue_idx);
 
     // Array<D, T, DeviceType> ac_x({(v.shape(0)-1)/8+1, (v.shape(1)-1)/8+1,
     // (v.shape(2)-1)/8+1}, false, false); Array<D, T, DeviceType>
@@ -60,8 +59,7 @@ void recompose(SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
   if constexpr (D <= 3) {
     std::cout << "recompose start\n";
     DeviceLauncher<DeviceType>::Execute(
-        Recompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff),
-        queue_idx);
+        Recompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff), queue_idx);
     std::cout << "recompose end\n";
   }
 }

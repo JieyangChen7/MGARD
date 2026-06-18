@@ -50,10 +50,11 @@ public:
   MGARDX_CONT
   BPEncoderBaselineFunctor() {}
   MGARDX_CONT
-  BPEncoderBaselineFunctor(SIZE n, SIZE num_batches_per_TB, int num_bitplanes,
-                        SubArray<1, T, DeviceType> abs_max, SubArray<1, T, DeviceType> v,
-                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                        SubArray<2, T_error, DeviceType> level_errors_workspace)
+  BPEncoderBaselineFunctor(
+      SIZE n, SIZE num_batches_per_TB, int num_bitplanes,
+      SubArray<1, T, DeviceType> abs_max, SubArray<1, T, DeviceType> v,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<2, T_error, DeviceType> level_errors_workspace)
       : n(n), num_bitplanes(num_bitplanes),
         num_batches_per_TB(num_batches_per_TB), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), v(v),
@@ -138,7 +139,7 @@ public:
 
   MGARDX_EXEC void Operation2() {
     // __syncthreads();
-    frexp(*abs_max((IDX)0), &exp);  
+    frexp(*abs_max((IDX)0), &exp);
 
     if (BinaryType == NEGABINARY)
       exp += 2;
@@ -432,10 +433,11 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   MGARDX_CONT
-  BPEncoderBaselineKernel(SIZE n, SIZE num_batches_per_TB, int num_bitplanes,
-                       SubArray<1, T, DeviceType> abs_max, SubArray<1, T, DeviceType> v,
-                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                       SubArray<2, T_error, DeviceType> level_errors_workspace)
+  BPEncoderBaselineKernel(
+      SIZE n, SIZE num_batches_per_TB, int num_bitplanes,
+      SubArray<1, T, DeviceType> abs_max, SubArray<1, T, DeviceType> v,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<2, T_error, DeviceType> level_errors_workspace)
       : n(n), num_bitplanes(num_bitplanes),
         num_batches_per_TB(num_batches_per_TB), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), v(v),
@@ -447,8 +449,8 @@ public:
                                          uint64_t, uint32_t>::type;
   using FunctorType =
       BPEncoderBaselineFunctor<T, T_fp, T_sfp, T_bitplane, T_error, BinaryType,
-                            EncodingAlgorithm, ErrorColectingAlgorithm,
-                            CollectError, DeviceType>;
+                               EncodingAlgorithm, ErrorColectingAlgorithm,
+                               CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -484,14 +486,15 @@ public:
   MGARDX_CONT
   BPDecoderBaselineFunctor() {}
   MGARDX_CONT
-  BPDecoderBaselineFunctor(SIZE n, SIZE num_batches_per_TB, int starting_bitplane,
-                        int num_bitplanes, SubArray<1, T, DeviceType> abs_max,
-                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                        SubArray<1, bool, DeviceType> signs,
-                        SubArray<1, T, DeviceType> v)
+  BPDecoderBaselineFunctor(
+      SIZE n, SIZE num_batches_per_TB, int starting_bitplane, int num_bitplanes,
+      SubArray<1, T, DeviceType> abs_max,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<1, bool, DeviceType> signs, SubArray<1, T, DeviceType> v)
       : n(n), num_batches_per_TB(num_batches_per_TB),
         starting_bitplane(starting_bitplane), num_bitplanes(num_bitplanes),
-        abs_max(abs_max), encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {
+        abs_max(abs_max), encoded_bitplanes(encoded_bitplanes), signs(signs),
+        v(v) {
     Functor<DeviceType>();
     if (BinaryType == BINARY) {
       max_length_per_TB = num_batches_per_TB * 2;
@@ -538,7 +541,7 @@ public:
 
     ending_bitplane = starting_bitplane + num_bitplanes;
 
-    frexp(*abs_max((IDX)0), &exp);  
+    frexp(*abs_max((IDX)0), &exp);
     if (BinaryType == NEGABINARY)
       exp += 2;
     // data
@@ -768,14 +771,16 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   MGARDX_CONT
-  BPDecoderBaselineKernel(SIZE n, SIZE num_batches_per_TB, int starting_bitplane,
-                       int num_bitplanes, SubArray<1, T, DeviceType> abs_max,
-                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                       SubArray<1, bool, DeviceType> signs,
-                       SubArray<1, T, DeviceType> v)
+  BPDecoderBaselineKernel(SIZE n, SIZE num_batches_per_TB,
+                          int starting_bitplane, int num_bitplanes,
+                          SubArray<1, T, DeviceType> abs_max,
+                          SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+                          SubArray<1, bool, DeviceType> signs,
+                          SubArray<1, T, DeviceType> v)
       : n(n), num_batches_per_TB(num_batches_per_TB),
         starting_bitplane(starting_bitplane), num_bitplanes(num_bitplanes),
-        abs_max(abs_max), encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
+        abs_max(abs_max), encoded_bitplanes(encoded_bitplanes), signs(signs),
+        v(v) {}
 
   using T_sfp = typename std::conditional<std::is_same<T, double>::value,
                                           int64_t, int32_t>::type;
@@ -783,7 +788,7 @@ public:
                                          uint64_t, uint32_t>::type;
   using FunctorType =
       BPDecoderBaselineFunctor<T, T_fp, T_sfp, T_bitplane, BinaryType,
-                            DecodingAlgorithm, DeviceType>;
+                               DecodingAlgorithm, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -873,7 +878,8 @@ public:
     return size;
   }
 
-  void encode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  void encode(SIZE n, int num_bitplanes,
+              SubArray<1, T_data, DeviceType> abs_max,
               SubArray<1, T_data, DeviceType> v,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
               SubArray<1, T_error, DeviceType> level_errors, int queue_idx) {
@@ -901,7 +907,8 @@ public:
     }
   }
 
-  void decode(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+  void decode(SIZE n, int num_bitplanes,
+              SubArray<1, T_data, DeviceType> abs_max,
               SubArray<2, T_bitplane, DeviceType> encoded_bitplanes, int level,
               SubArray<1, T_data, DeviceType> v, int queue_idx) {}
 
@@ -914,7 +921,7 @@ public:
     if (num_bitplanes > 0) {
       DeviceLauncher<DeviceType>::Execute(
           BPDecoderBaselineKernel<T_data, T_bitplane, BINARY_TYPE,
-                               DATA_DECODING_ALGORITHM, DeviceType>(
+                                  DATA_DECODING_ALGORITHM, DeviceType>(
               n, num_batches_per_TB, starting_bitplane, num_bitplanes, abs_max,
               encoded_bitplanes, level_signs, v),
           queue_idx);

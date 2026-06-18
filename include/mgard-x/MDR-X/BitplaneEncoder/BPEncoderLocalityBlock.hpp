@@ -17,10 +17,11 @@ public:
   MGARDX_CONT
   BPEncoderLocalityBlockFunctor() {}
   MGARDX_CONT
-  BPEncoderLocalityBlockFunctor(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
-                        SubArray<1, T_data, DeviceType> v,
-                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                        SubArray<2, T_error, DeviceType> level_errors_workspace)
+  BPEncoderLocalityBlockFunctor(
+      SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+      SubArray<1, T_data, DeviceType> v,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<2, T_error, DeviceType> level_errors_workspace)
       : n(n), num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), v(v),
         level_errors_workspace(level_errors_workspace) {
@@ -307,17 +308,18 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp encoder";
   MGARDX_CONT
-  BPEncoderLocalityBlockKernel(SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
-                       SubArray<1, T_data, DeviceType> v,
-                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                       SubArray<2, T_error, DeviceType> level_errors_workspace)
+  BPEncoderLocalityBlockKernel(
+      SIZE n, int num_bitplanes, SubArray<1, T_data, DeviceType> abs_max,
+      SubArray<1, T_data, DeviceType> v,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<2, T_error, DeviceType> level_errors_workspace)
       : n(n), num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), v(v),
         level_errors_workspace(level_errors_workspace) {}
 
   using FunctorType =
       BPEncoderLocalityBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                            NegaBinary, CollectError, DeviceType>;
+                                    NegaBinary, CollectError, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -354,11 +356,11 @@ public:
   MGARDX_CONT
   BPDecoderLocalityBlockFunctor() {}
   MGARDX_CONT
-  BPDecoderLocalityBlockFunctor(SIZE n, SIZE starting_bitplane, int num_bitplanes,
-                        SubArray<1, T_data, DeviceType> abs_max,
-                        SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                        SubArray<1, bool, DeviceType> signs,
-                        SubArray<1, T_data, DeviceType> v)
+  BPDecoderLocalityBlockFunctor(
+      SIZE n, SIZE starting_bitplane, int num_bitplanes,
+      SubArray<1, T_data, DeviceType> abs_max,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<1, bool, DeviceType> signs, SubArray<1, T_data, DeviceType> v)
       : n(n), starting_bitplane(starting_bitplane),
         num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {
@@ -509,17 +511,18 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "grouped bp decoder";
   MGARDX_CONT
-  BPDecoderLocalityBlockKernel(SIZE n, SIZE starting_bitplane, int num_bitplanes,
-                       SubArray<1, T_data, DeviceType> abs_max,
-                       SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
-                       SubArray<1, bool, DeviceType> signs,
-                       SubArray<1, T_data, DeviceType> v)
+  BPDecoderLocalityBlockKernel(
+      SIZE n, SIZE starting_bitplane, int num_bitplanes,
+      SubArray<1, T_data, DeviceType> abs_max,
+      SubArray<2, T_bitplane, DeviceType> encoded_bitplanes,
+      SubArray<1, bool, DeviceType> signs, SubArray<1, T_data, DeviceType> v)
       : n(n), starting_bitplane(starting_bitplane),
         num_bitplanes(num_bitplanes), abs_max(abs_max),
         encoded_bitplanes(encoded_bitplanes), signs(signs), v(v) {}
 
-  using FunctorType = BPDecoderLocalityBlockFunctor<T_data, T_fp, T_sfp, T_bitplane,
-                                            NegaBinary, DeviceType>;
+  using FunctorType =
+      BPDecoderLocalityBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
+                                    DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -640,7 +643,7 @@ public:
 
     DeviceLauncher<DeviceType>::Execute(
         BPEncoderLocalityBlockKernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                             NegaBinary, CollectError, DeviceType>(
+                                     NegaBinary, CollectError, DeviceType>(
             n, num_bitplanes, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
 
@@ -671,10 +674,10 @@ public:
 
     if (num_bitplanes > 0) {
       DeviceLauncher<DeviceType>::Execute(
-          BPDecoderLocalityBlockKernel<T_data, T_fp, T_sfp, T_bitplane, NegaBinary,
-                               DeviceType>(n, starting_bitplane, num_bitplanes,
-                                           abs_max, encoded_bitplanes,
-                                           level_signs, v),
+          BPDecoderLocalityBlockKernel<T_data, T_fp, T_sfp, T_bitplane,
+                                       NegaBinary, DeviceType>(
+              n, starting_bitplane, num_bitplanes, abs_max, encoded_bitplanes,
+              level_signs, v),
           queue_idx);
     }
   }
