@@ -106,7 +106,7 @@ void test_qoi_norm_equality(std::default_random_engine &generator,
 
 } // namespace
 
-TEST_CASE("Riesz representative norm equality", "[qoi]") {
+TEST_CASE("Riesz representative norm equality", "[mgard][qoi]") {
   std::default_random_engine gen;
   // Node spacing distribution.
   std::uniform_real_distribution<double> dis(0.05, 0.075);
@@ -144,7 +144,7 @@ void test_average_norms(const std::array<std::size_t, N> shape) {
 
 } // namespace
 
-TEST_CASE("average quantity of interest", "[qoi]") {
+TEST_CASE("average quantity of interest", "[mgard][qoi]") {
   // Could be any function contained in the coarsest function space here.
   test_average_norms<1, float>({25});
   test_average_norms<2, double>({12, 14});

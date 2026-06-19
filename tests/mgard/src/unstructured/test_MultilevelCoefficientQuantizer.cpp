@@ -20,7 +20,7 @@
 #include "mgard/unstructured/norms.hpp"
 
 TEST_CASE("multilevel coefficient (de)quantization iteration",
-          "[MultilevelCoefficientQuantizer]") {
+          "[mgard][MultilevelCoefficientQuantizer]") {
   const std::string filename = GENERATE("triangle.msh", "tetrahedron.msh");
   moab::Core mbcore;
   const moab::ErrorCode ecode = mbcore.load_file(mesh_path(filename).c_str());
@@ -60,7 +60,7 @@ TEST_CASE("multilevel coefficient (de)quantization iteration",
 }
 
 TEST_CASE("quantization respects error bound",
-          "[MultilevelCoefficientQuantizer]") {
+          "[mgard][MultilevelCoefficientQuantizer]") {
   const std::string filename = GENERATE("lopsided.msh", "hexahedron.msh");
   moab::Core mbcore;
   const moab::ErrorCode ecode = mbcore.load_file(mesh_path(filename).c_str());
@@ -109,7 +109,7 @@ TEST_CASE("quantization respects error bound",
 }
 
 TEST_CASE("multilevel coefficient (de)quantization inversion",
-          "[MultilevelCoefficientQuantizer]") {
+          "[mgard][MultilevelCoefficientQuantizer]") {
   const std::string filename = GENERATE("triangle.msh", "tetrahedron.msh");
   moab::Core mbcore;
   const moab::ErrorCode ecode = mbcore.load_file(mesh_path(filename).c_str());

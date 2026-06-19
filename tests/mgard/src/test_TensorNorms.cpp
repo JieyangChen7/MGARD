@@ -76,7 +76,7 @@ void test_tensor_basic_norm_properties(
 
 } // namespace
 
-TEST_CASE("tensor basic norm properties", "[norms]") {
+TEST_CASE("tensor basic norm properties", "[mgard][norms]") {
   std::default_random_engine generator;
   {
     std::uniform_real_distribution<float> node_spacing_distribution(1, 3);
@@ -114,7 +114,7 @@ float f(const std::array<float, 3> xyz) {
 
 } // namespace
 
-TEST_CASE("comparison with Python implementation: tensor norms", "[norms]") {
+TEST_CASE("comparison with Python implementation: tensor norms", "[mgard][norms]") {
   const mgard::TensorMeshHierarchy<3, float> hierarchy({9, 9, 9});
   const std::size_t ndof = hierarchy.ndof();
   std::vector<float> u_(ndof);
@@ -181,7 +181,7 @@ void test_component_norms_sum(
 
 } // namespace
 
-TEST_CASE("orthogonal component norms", "[norms]") {
+TEST_CASE("orthogonal component norms", "[mgard][norms]") {
   std::default_random_engine gen;
   // Node spacing distribution.
   std::uniform_real_distribution<float> dis(0.01, 0.02);

@@ -24,7 +24,7 @@
 
 static const double inf = std::numeric_limits<double>::infinity();
 
-TEST_CASE("unstructured basic norm properties", "[norms]") {
+TEST_CASE("unstructured basic norm properties", "[mgard][norms]") {
   const std::string filename = GENERATE("pyramid.msh", "tetrahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;
@@ -95,7 +95,7 @@ TEST_CASE("unstructured basic norm properties", "[norms]") {
 }
 
 TEST_CASE("comparison with Python implementation: unstructured norms",
-          "[norms]") {
+          "[mgard][norms]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("circle.msh").c_str());

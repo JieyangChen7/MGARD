@@ -11,7 +11,7 @@
 #include "mgard/utilities.hpp"
 
 TEST_CASE("TensorIndexRange size and iteration",
-          "[TensorMeshHierarchyIteration]") {
+          "[mgard][TensorMeshHierarchyIteration]") {
   // Dyadic.
   {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({17});
@@ -93,7 +93,7 @@ void increment_and_test_neighbors(
 } // namespace
 
 TEST_CASE("TensorNode predecessors and successors",
-          "[TensorMeshHierarchyIteration]") {
+          "[mgard][TensorMeshHierarchyIteration]") {
   const mgard::TensorMeshHierarchy<2, float> hierarchy({3, 3});
   SECTION("'normal' nodes") {
     // Finest level.
@@ -216,7 +216,7 @@ void test_shuffled_dereferencing(
 } // namespace
 
 TEST_CASE("ShuffledTensorNodeRange dereferencing",
-          "[TensorMeshHierarchyIteration]") {
+          "[mgard][TensorMeshHierarchyIteration]") {
   SECTION("1D") {
     const std::vector<std::array<std::size_t, 1>> expected = {{0}, {5}, {2},
                                                               {1}, {3}, {4}};

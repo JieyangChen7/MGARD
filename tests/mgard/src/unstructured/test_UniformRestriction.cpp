@@ -8,7 +8,7 @@
 
 #include "testing_utilities.hpp"
 
-TEST_CASE("uniform functional restriction", "[UniformRestriction]") {
+TEST_CASE("uniform functional restriction", "[mgard][UniformRestriction]") {
   SECTION("triangles") {
     moab::Core mbcore;
     moab::ErrorCode ecode;

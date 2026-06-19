@@ -11,7 +11,7 @@ private:
                                        double *const) const override {}
 };
 
-TEST_CASE("basic member functions", "[LinearOperator]") {
+TEST_CASE("basic member functions", "[mgard][LinearOperator]") {
   {
     DoNothingOperator A(5, 4);
     REQUIRE(!A.is_square());

@@ -72,7 +72,7 @@ void test_compression_decompression(
 
 } // namespace
 
-TEMPLATE_TEST_CASE("compression followed by decompression", "[compress]", float,
+TEMPLATE_TEST_CASE("compression followed by decompression", "[mgard][compress]", float,
                    double) {
   std::default_random_engine gen(343873);
   const std::vector<TestType> smoothness_parameters = {
@@ -117,7 +117,7 @@ void test_compression_error_bound(
 
 } // namespace
 
-TEST_CASE("1D quadratic data", "[compress]") {
+TEST_CASE("1D quadratic data", "[mgard][compress]") {
   {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({64});
     const std::size_t ndof = hierarchy.ndof();
@@ -144,7 +144,7 @@ TEST_CASE("1D quadratic data", "[compress]") {
   }
 }
 
-TEST_CASE("3D constant data", "[compress]") {
+TEST_CASE("3D constant data", "[mgard][compress]") {
   const mgard::TensorMeshHierarchy<3, float> hierarchy({16, 16, 16});
   const std::size_t ndof = hierarchy.ndof();
   float *const v = new float[ndof];
@@ -155,7 +155,7 @@ TEST_CASE("3D constant data", "[compress]") {
   delete[] v;
 }
 
-TEST_CASE("1D cosine data", "[compress]") {
+TEST_CASE("1D cosine data", "[mgard][compress]") {
   const mgard::TensorMeshHierarchy<1, double> hierarchy({4096});
   const std::size_t ndof = hierarchy.ndof();
   double *const v = new double[ndof];
@@ -169,7 +169,7 @@ TEST_CASE("1D cosine data", "[compress]") {
   delete[] v;
 }
 
-TEST_CASE("2D cosine data", "[compress]") {
+TEST_CASE("2D cosine data", "[mgard][compress]") {
   const mgard::TensorMeshHierarchy<2, float> hierarchy({256, 16});
   const std::size_t ndof = hierarchy.ndof();
   float *const v = new float[ndof];
@@ -211,7 +211,7 @@ void test_compression_on_flat_mesh(
 
 } // namespace
 
-TEST_CASE("compressing on 'flat' meshes", "[compress]") {
+TEST_CASE("compressing on 'flat' meshes", "[mgard][compress]") {
   std::default_random_engine gen(799875);
   std::uniform_real_distribution<float> dis(0.01, 0.011);
   const mgard::TensorMeshHierarchy<2, float> hierarchy =
@@ -293,7 +293,7 @@ void test_decompression_on_flat_mesh(
 
 } // namespace
 
-TEST_CASE("decompressing on 'flat' meshes", "[compress]") {
+TEST_CASE("decompressing on 'flat' meshes", "[mgard][compress]") {
   std::default_random_engine gen(780037);
   std::uniform_real_distribution<double> dis(2, 3);
   const mgard::TensorMeshHierarchy<3, double> hierarchy =
@@ -396,7 +396,7 @@ void test_self_describing_decompression(
 
 } // namespace
 
-TEMPLATE_TEST_CASE("decompressing self-describing buffer", "[compress]", float,
+TEMPLATE_TEST_CASE("decompressing self-describing buffer", "[mgard][compress]", float,
                    double) {
   std::default_random_engine gen(32094);
   const std::vector<TestType> smoothness_parameters = {

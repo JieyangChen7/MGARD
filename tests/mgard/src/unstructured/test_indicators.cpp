@@ -38,7 +38,7 @@ unscaled_indicator(const mgard::MultilevelCoefficients<double> u_mc,
   return std::sqrt(unscaled_square_indicator);
 }
 
-TEST_CASE("comparison with Python implementation: indicators", "[indicators]") {
+TEST_CASE("comparison with Python implementation: indicators", "[mgard][indicators]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("seated.msh").c_str());
@@ -76,7 +76,7 @@ TEST_CASE("comparison with Python implementation: indicators", "[indicators]") {
           Catch::Approx(112.02614999556158));
 }
 
-TEST_CASE("indicators should track estimators", "[indicators]") {
+TEST_CASE("indicators should track estimators", "[mgard][indicators]") {
   const std::string filename = GENERATE("lopsided.msh", "hexahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;

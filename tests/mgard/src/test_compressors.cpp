@@ -30,7 +30,7 @@ void test_huffman_identity(std::default_random_engine &gen,
 
 } // namespace
 
-TEST_CASE("Huffman compression", "[compressors] [!mayfail]") {
+TEST_CASE("Huffman compression", "[mgard][compressors] [!mayfail]") {
   std::default_random_engine gen(257100);
   const std::size_t n = 5000;
   SECTION("signed characters") { test_huffman_identity<signed char>(gen, n); }
@@ -60,7 +60,7 @@ void test_zstd_identity(std::uniform_int_distribution<unsigned char> &dis,
 } // namespace
 
 #ifdef MGARD_ZSTD
-TEST_CASE("zstd compression", "[compressors]") {
+TEST_CASE("zstd compression", "[mgard][compressors]") {
   std::uniform_int_distribution<unsigned char> dis;
   std::default_random_engine gen(158648);
   const std::vector<std::size_t> ns{10, 10, 1000, 10000};
@@ -90,7 +90,7 @@ void test_zlib_identity(std::uniform_int_distribution<unsigned char> &dis,
 
 } // namespace
 
-TEST_CASE("zlib compression", "[compressors]") {
+TEST_CASE("zlib compression", "[mgard][compressors]") {
   std::uniform_int_distribution<unsigned char> dis;
   std::default_random_engine gen(252315);
   const std::vector<std::size_t> ns{10, 10, 1000, 10000};
@@ -99,7 +99,7 @@ TEST_CASE("zlib compression", "[compressors]") {
   }
 }
 
-TEST_CASE("compression with header configuration", "[compressors]") {
+TEST_CASE("compression with header configuration", "[mgard][compressors]") {
   mgard::pb::Header header;
   // TODO: Once Huffman trees can be built for types other than `long int`, use
   // something other than `std::int64_t` here.
@@ -137,7 +137,7 @@ TEST_CASE("compression with header configuration", "[compressors]") {
   delete[] quantized;
 }
 
-TEST_CASE("decompression with header configuration", "[compressors]") {
+TEST_CASE("decompression with header configuration", "[mgard][compressors]") {
   mgard::pb::Header header;
   // TODO: Once Huffman trees can be built for types other than `long int`, use
   // something other than `std::int64_t` here.
@@ -216,7 +216,7 @@ TEST_CASE("decompression with header configuration", "[compressors]") {
   delete[] quantized;
 }
 
-TEST_CASE("compression and decompression with header", "[compressors]") {
+TEST_CASE("compression and decompression with header", "[mgard][compressors]") {
   mgard::pb::Header header;
   // TODO: Once Huffman trees can be built for types other than `long int`, use
   // something other than `std::int64_t` here.

@@ -273,7 +273,7 @@ void test_recomposition_with_zero_coefficients(
 
 } // namespace
 
-TEST_CASE("decomposition", "[decompose]") {
+TEST_CASE("decomposition", "[mgard][decompose]") {
   SECTION("1D, dyadic, uniform") {
     const std::vector<float> u_ = {10, 3,   -8,  -6, 3,  0, -5, 0, 0,  -2, -8,
                                    -5, -10, -7,  8,  -2, 3, -1, 0, 9,  -4, -6,
@@ -456,7 +456,7 @@ TEST_CASE("decomposition", "[decompose]") {
     REQUIRE(tracker);
   }
 
-  SECTION("linear dependence on input", "[decompose]") {
+  SECTION("linear dependence on input", "[mgard][decompose]") {
     std::default_random_engine generator(469957);
     std::uniform_real_distribution<float> node_spacing_distribution(0.2, 1.1);
     std::uniform_real_distribution<float> nodal_coefficient_distribution(0.5,
@@ -474,7 +474,7 @@ TEST_CASE("decomposition", "[decompose]") {
   }
 
   // Piecewise linear on a coarser grid.
-  SECTION("coefficients of linear functions", "[decompose]") {
+  SECTION("coefficients of linear functions", "[mgard][decompose]") {
     std::default_random_engine generator(841397);
     std::uniform_real_distribution<double> node_spacing_distribution(0.1, 0.3);
     std::uniform_real_distribution<double> nodal_coefficient_distribution(-2,
@@ -491,7 +491,7 @@ TEST_CASE("decomposition", "[decompose]") {
         {14, 10, 17});
   }
 
-  SECTION("on 'flat' meshes", "[decompose]") {
+  SECTION("on 'flat' meshes", "[mgard][decompose]") {
     std::default_random_engine gen(731641);
     // Node spacing distribution.
     std::uniform_real_distribution<double> dis(1, 1.1);
@@ -546,7 +546,7 @@ TEST_CASE("decomposition", "[decompose]") {
   }
 }
 
-TEST_CASE("recomposition", "[decompose]") {
+TEST_CASE("recomposition", "[mgard][decompose]") {
   SECTION("1D, dyadic, uniform") {
     const std::vector<double> u_ = {-4, 2,  -4, 2, 7, -10, -4, -9, 9,
                                     6,  -1, 7,  9, 2, -9,  -8, -1};
@@ -744,7 +744,7 @@ TEST_CASE("recomposition", "[decompose]") {
     test_dyadic_uniform_recomposition<4, float>(u_, expecteds);
   }
 
-  SECTION("linear dependence on input", "[decompose]") {
+  SECTION("linear dependence on input", "[mgard][decompose]") {
     std::default_random_engine generator(860343);
     std::uniform_real_distribution<float> node_spacing_distribution(0.1, 0.3);
     std::uniform_real_distribution<float> multilevel_coefficient_distribution(
@@ -761,7 +761,7 @@ TEST_CASE("recomposition", "[decompose]") {
                                            {10, 15, 10});
   }
 
-  SECTION("zero coefficients", "[decompose]") {
+  SECTION("zero coefficients", "[mgard][decompose]") {
     std::default_random_engine generator(848733);
     std::uniform_real_distribution<double> node_spacing_distribution(1, 1.1);
     std::uniform_real_distribution<double> multilevel_coefficient_distribution(
@@ -778,7 +778,7 @@ TEST_CASE("recomposition", "[decompose]") {
         multilevel_coefficient_distribution, {17, 15, 9});
   }
 
-  SECTION("on 'flat' meshes", "[decompose]") {
+  SECTION("on 'flat' meshes", "[mgard][decompose]") {
     std::default_random_engine gen(679382);
     // Node spacing distribution.
     std::uniform_real_distribution<float> dis(0.25, 0.35);
@@ -837,7 +837,7 @@ TEST_CASE("recomposition", "[decompose]") {
   }
 }
 
-TEST_CASE("configuration by header", "[decompose]") {
+TEST_CASE("configuration by header", "[mgard][decompose]") {
   mgard::pb::Header header;
   header.mutable_function_decomposition()->set_transform(
       mgard::pb::FunctionDecomposition::MULTILEVEL_COEFFICIENTS);

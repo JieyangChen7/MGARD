@@ -20,7 +20,7 @@ using SizeBytes = std::array<unsigned char, mgard::HEADER_SIZE_SIZE>;
 using CRC32Bytes = std::array<unsigned char, mgard::HEADER_CRC32_SIZE>;
 } // namespace
 
-TEST_CASE("header size and CRC32 deserialization", "[format]") {
+TEST_CASE("header size and CRC32 deserialization", "[mgard][format]") {
   {
     const SizeBytes bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf7};
     REQUIRE(mgard::deserialize_header_size(bytes) == 247ULL);
@@ -35,7 +35,7 @@ TEST_CASE("header size and CRC32 deserialization", "[format]") {
   }
 }
 
-TEST_CASE("header size and CRC32 serialization", "[format]") {
+TEST_CASE("header size and CRC32 serialization", "[mgard][format]") {
   {
     const SizeBytes expected{0x02, 0x03, 0x05, 0x07, 0x0b, 0x0d, 0x11, 0x13};
     REQUIRE(mgard::serialize_header_size(144965140814303507ULL) == expected);
@@ -50,7 +50,7 @@ TEST_CASE("header size and CRC32 serialization", "[format]") {
   }
 }
 
-TEST_CASE("deserialization inverts serialization", "[format]") {
+TEST_CASE("deserialization inverts serialization", "[mgard][format]") {
   const std::size_t ntrials = 500;
   std::default_random_engine gen(963912);
   {
@@ -78,7 +78,7 @@ TEST_CASE("deserialization inverts serialization", "[format]") {
   }
 }
 
-TEST_CASE("checking alignment", "[format]") {
+TEST_CASE("checking alignment", "[mgard][format]") {
   double x;
   double const *const p = &x;
   REQUIRE_NOTHROW(mgard::check_alignment<double>(p));
@@ -100,7 +100,7 @@ void check_version_number(const mgard::pb::VersionNumber &version_number,
 
 } // namespace
 
-TEST_CASE("setting version numbers", "[format]") {
+TEST_CASE("setting version numbers", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::populate_version_numbers(header);
   check_version_number(header.mgard_version(), MGARD_VERSION_MAJOR,
@@ -109,7 +109,7 @@ TEST_CASE("setting version numbers", "[format]") {
                        MGARD_FILE_VERSION_MINOR, MGARD_FILE_VERSION_PATCH);
 }
 
-TEST_CASE("advancing buffer windows", "[format]") {
+TEST_CASE("advancing buffer windows", "[mgard][format]") {
   const std::size_t N = 10;
   unsigned char const *const p = new unsigned char[N];
   mgard::BufferWindow window(p, N);
@@ -122,7 +122,7 @@ TEST_CASE("advancing buffer windows", "[format]") {
   delete[] p;
 }
 
-TEST_CASE("magic number", "[format]") {
+TEST_CASE("magic number", "[mgard][format]") {
   unsigned char buffer[5];
   for (std::size_t i = 0; i < 5; ++i) {
     buffer[i] = i;
@@ -139,7 +139,7 @@ TEST_CASE("magic number", "[format]") {
   REQUIRE(window.current == buffer + 5);
 }
 
-TEST_CASE("reading header size and CRC32", "[format]") {
+TEST_CASE("reading header size and CRC32", "[mgard][format]") {
   const std::uint_least64_t header_size = 20;
   const std::uint_least32_t header_crc32 = 0x670b;
   const std::size_t n = mgard::HEADER_SIZE_SIZE + mgard::HEADER_CRC32_SIZE;
@@ -160,7 +160,7 @@ TEST_CASE("reading header size and CRC32", "[format]") {
   REQUIRE(mgard::read_header_crc32(window) == header_crc32);
 }
 
-TEST_CASE("checking header CRC32", "[format]") {
+TEST_CASE("checking header CRC32", "[mgard][format]") {
   const std::uint_least64_t header_size = 40;
   unsigned char buffer[header_size];
   for (std::uint_least64_t i = 0; i < header_size; ++i) {
@@ -175,12 +175,12 @@ TEST_CASE("checking header CRC32", "[format]") {
   REQUIRE_NOTHROW(check_header_crc32(window, header_size, header_crc32));
 }
 
-TEST_CASE("dataset types", "[format]") {
+TEST_CASE("dataset types", "[mgard][format]") {
   REQUIRE(mgard::type_to_dataset_type<float>() == mgard::pb::Dataset::FLOAT);
   REQUIRE(mgard::type_to_dataset_type<double>() == mgard::pb::Dataset::DOUBLE);
 }
 
-TEST_CASE("quantization type sizes", "[format]") {
+TEST_CASE("quantization type sizes", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::pb::Quantization &quantization = *header.mutable_quantization();
   const std::size_t ndof = 1;
@@ -218,7 +218,7 @@ TEST_CASE("quantization type sizes", "[format]") {
   }
 }
 
-TEST_CASE("reading topology and geometry", "[format]") {
+TEST_CASE("reading topology and geometry", "[mgard][format]") {
   mgard::pb::Domain domain;
   const std::size_t dimension = 3;
   const std::vector<std::size_t> shape{5, 5, 6};
@@ -271,7 +271,7 @@ TEST_CASE("reading topology and geometry", "[format]") {
   // TODO: Test storage of coefficients in separate file.
 }
 
-TEST_CASE("reading dataset type", "[format]") {
+TEST_CASE("reading dataset type", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::pb::Dataset &d = *header.mutable_dataset();
   d.set_dimension(1);
@@ -285,7 +285,7 @@ TEST_CASE("reading dataset type", "[format]") {
   }
 }
 
-TEST_CASE("reading error control parameters", "[format]") {
+TEST_CASE("reading error control parameters", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::pb::ErrorControl &e = *header.mutable_error_control();
   {
@@ -316,7 +316,7 @@ TEST_CASE("reading error control parameters", "[format]") {
   }
 }
 
-TEST_CASE("checking decomposition parameters", "[format]") {
+TEST_CASE("checking decomposition parameters", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::pb::FunctionDecomposition &d =
       *header.mutable_function_decomposition();
@@ -337,7 +337,7 @@ TEST_CASE("checking decomposition parameters", "[format]") {
   }
 }
 
-TEST_CASE("reading quantization parameters", "[format]") {
+TEST_CASE("reading quantization parameters", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::pb::Quantization &q = *header.mutable_quantization();
   q.set_method(mgard::pb::Quantization::COEFFICIENTWISE_LINEAR);
@@ -356,7 +356,7 @@ TEST_CASE("reading quantization parameters", "[format]") {
   }
 }
 
-TEST_CASE("reading encoding compressor", "[format]") {
+TEST_CASE("reading encoding compressor", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::pb::Encoding &e = *header.mutable_encoding();
   e.set_preprocessor(mgard::pb::Encoding::SHUFFLE);
@@ -384,7 +384,7 @@ template <typename Int> void test_big_endian() {
 
 } // namespace
 
-TEST_CASE("endianness", "[format]") {
+TEST_CASE("endianness", "[mgard][format]") {
   test_big_endian<std::int8_t>();
   test_big_endian<std::int16_t>();
   test_big_endian<std::int32_t>();
@@ -406,7 +406,7 @@ void test_serialization_deserialization(const mgard::pb::Header &header) {
 
 } // namespace
 
-TEST_CASE("metadata (de)serialization", "[format]") {
+TEST_CASE("metadata (de)serialization", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::populate_defaults(header);
   {

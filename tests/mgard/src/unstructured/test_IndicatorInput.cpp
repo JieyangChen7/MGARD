@@ -24,7 +24,7 @@ static double f(const mgard::MeshLevel &mesh, const moab::EntityHandle node) {
   return (2 * xyz[0] + 1) * (0.5 * xyz[1] - 1) / (std::abs(xyz[2]) + 1);
 }
 
-TEST_CASE("IndicatorInput iteration", "[IndicatorInput]") {
+TEST_CASE("IndicatorInput iteration", "[mgard][IndicatorInput]") {
   const std::string filename = GENERATE("triangle.msh", "tetrahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;

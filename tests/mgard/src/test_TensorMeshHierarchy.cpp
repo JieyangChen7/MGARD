@@ -16,7 +16,7 @@
 #include "mgard/shuffle.hpp"
 #include "mgard/utilities.hpp"
 
-TEST_CASE("hierarchy mesh shapes", "[TensorMeshHierarchy]") {
+TEST_CASE("hierarchy mesh shapes", "[mgard][TensorMeshHierarchy]") {
   {
     const std::array<std::size_t, 1> shape = {5};
     const mgard::TensorMeshHierarchy<1, float> hierarchy(shape);
@@ -50,7 +50,7 @@ TEST_CASE("hierarchy mesh shapes", "[TensorMeshHierarchy]") {
   REQUIRE_THROWS(mgard::TensorMeshHierarchy<2, float>({17, 0}));
 }
 
-TEST_CASE("TensorMeshHierarchy construction", "[TensorMeshHierarchy]") {
+TEST_CASE("TensorMeshHierarchy construction", "[mgard][TensorMeshHierarchy]") {
   {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({17});
     REQUIRE(hierarchy.uniform);
@@ -266,7 +266,7 @@ void test_entry_indexing_exhaustive(const std::array<std::size_t, N> shape) {
 
 } // namespace
 
-TEST_CASE("TensorMeshHierarchy indexing", "[TensorMeshHierarchy]") {
+TEST_CASE("TensorMeshHierarchy indexing", "[mgard][TensorMeshHierarchy]") {
   SECTION("accessing elements") {
     {
       const std::vector<std::array<std::size_t, 1>> multiindices = {
@@ -379,7 +379,7 @@ void test_index_iteration(
 
 } // namespace
 
-TEST_CASE("index iteration", "[TensorMeshHierarchy]") {
+TEST_CASE("index iteration", "[mgard][TensorMeshHierarchy]") {
   {
     const std::array<std::size_t, 2> shape = {9, 5};
     const std::vector<std::array<std::vector<std::size_t>, 2>> expected = {
@@ -407,7 +407,7 @@ TEST_CASE("index iteration", "[TensorMeshHierarchy]") {
   }
 }
 
-TEST_CASE("node iteration", "[TensorMeshHierarchy]") {
+TEST_CASE("node iteration", "[mgard][TensorMeshHierarchy]") {
   // The largest of the mesh sizes used below.
   const std::size_t N = 11 * 14;
   float *const buffer = new float[N];
@@ -523,7 +523,7 @@ TEST_CASE("node iteration", "[TensorMeshHierarchy]") {
   delete[] buffer;
 }
 
-TEST_CASE("dates of birth", "[TensorMeshHierarchy]") {
+TEST_CASE("dates of birth", "[mgard][TensorMeshHierarchy]") {
   {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({9});
     std::vector<std::size_t> encountered;
@@ -593,7 +593,7 @@ void check_decomposition_hierarchy(const mgard::pb::Header &header) {
 
 } // namespace
 
-TEST_CASE("header field population", "[TensorMeshHierarchy]") {
+TEST_CASE("header field population", "[mgard][TensorMeshHierarchy]") {
   {
     mgard::pb::Header header;
     const std::array<std::size_t, 1> shape{123};

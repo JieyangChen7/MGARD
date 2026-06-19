@@ -25,7 +25,7 @@
 // These tests call `decompose` and `recompose` in the old style and read the
 // transformed coefficients from the same identifier.
 
-TEST_CASE("basic properties", "[UniformMeshHierarchy]") {
+TEST_CASE("basic properties", "[mgard][UniformMeshHierarchy]") {
   const std::string filename = GENERATE("pyramid.msh", "hexahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;
@@ -103,7 +103,7 @@ TEST_CASE("basic properties", "[UniformMeshHierarchy]") {
 }
 
 TEST_CASE("comparison with Python implementation: refinement and decomposition",
-          "[UniformMeshHierarchy]") {
+          "[mgard][UniformMeshHierarchy]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("circle.msh").c_str());
@@ -184,7 +184,7 @@ static double f(const mgard::MeshLevel &mesh, const moab::EntityHandle node) {
   return 4.27 * square(xyz[0]) - 9.28 * square(xyz[1]) + 0.288 * square(xyz[2]);
 }
 
-TEST_CASE("iteration over nodes and values", "[UniformMeshHierarchy]") {
+TEST_CASE("iteration over nodes and values", "[mgard][UniformMeshHierarchy]") {
   const std::string filename = GENERATE("slope.msh", "hexahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;

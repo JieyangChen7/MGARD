@@ -9,7 +9,7 @@
 
 #include "testing_random.hpp"
 
-TEST_CASE("data buffers and sizes", "[CompressedDataset]") {
+TEST_CASE("data buffers and sizes", "[mgard][CompressedDataset]") {
   {
     const mgard::TensorMeshHierarchy<2, float> hierarchy({6, 3});
     const float s = 0.25;
@@ -76,7 +76,7 @@ void test_serialization(const mgard::TensorMeshHierarchy<N, Real> &hierarchy,
 
 } // namespace
 
-TEST_CASE("compressed dataset (de)serialization", "[CompressedDataset]") {
+TEST_CASE("compressed dataset (de)serialization", "[mgard][CompressedDataset]") {
   std::default_random_engine gen(534393);
   {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({381});

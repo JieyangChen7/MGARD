@@ -67,14 +67,14 @@ static void test_dequantization_inversion(const Real quantum,
   REQUIRE(tracker);
 }
 
-TEST_CASE("quantization error", "[LinearQuantizer]") {
+TEST_CASE("quantization error", "[mgard][LinearQuantizer]") {
   test_quantization_error<float, int>(0.01);
   test_quantization_error<float, long int>(2.4);
   test_quantization_error<double, int>(0.5);
   test_quantization_error<double, long int>(0.89327);
 }
 
-TEST_CASE("quantization exceptions", "[LinearQuantizer]") {
+TEST_CASE("quantization exceptions", "[mgard][LinearQuantizer]") {
   SECTION("quantum must be positive") {
     REQUIRE_THROWS(mgard::LinearQuantizer<float, long int>(-12.2));
     REQUIRE_THROWS(mgard::LinearQuantizer<double, int>(0));
@@ -89,7 +89,7 @@ TEST_CASE("quantization exceptions", "[LinearQuantizer]") {
   }
 }
 
-TEST_CASE("quantization of a range", "[LinearQuantizer]") {
+TEST_CASE("quantization of a range", "[mgard][LinearQuantizer]") {
   // This originally tested a quantizer applied to a range 'in its entirety'
   // (rather than element-by-element).
   SECTION("basic quantization iteration") {

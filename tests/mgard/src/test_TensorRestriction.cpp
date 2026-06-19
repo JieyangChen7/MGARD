@@ -15,7 +15,7 @@
 #include "mgard/shuffle.hpp"
 #include "mgard/utilities.hpp"
 
-TEST_CASE("constituent restrictions", "[TensorRestriction]") {
+TEST_CASE("constituent restrictions", "[mgard][TensorRestriction]") {
   SECTION("1D and default spacing") {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({9});
     const std::size_t ndof = 9;
@@ -197,7 +197,7 @@ void test_tensor_projection_identity(std::default_random_engine &generator,
 
 } // namespace
 
-TEST_CASE("tensor product restrictions", "[TensorRestriction]") {
+TEST_CASE("tensor product restrictions", "[mgard][TensorRestriction]") {
   {
     const mgard::TensorMeshHierarchy<2, double> hierarchy(
         {3, 3}, {{{0, 0.5, 1}, {-1, -0.5, 1}}});
@@ -236,7 +236,7 @@ TEST_CASE("tensor product restrictions", "[TensorRestriction]") {
   }
 }
 
-TEST_CASE("restrictions on 'flat' meshes", "[TensorRestriction]") {
+TEST_CASE("restrictions on 'flat' meshes", "[mgard][TensorRestriction]") {
   const std::size_t ndof = 90;
   const std::size_t l = 2;
   std::vector<float> u_(ndof);

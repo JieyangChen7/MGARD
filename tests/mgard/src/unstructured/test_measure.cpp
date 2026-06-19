@@ -7,7 +7,7 @@
 
 #include "mgard/unstructured/measure.hpp"
 
-TEST_CASE("`orient_2d`", "[measure]") {
+TEST_CASE("`orient_2d`", "[mgard][measure]") {
   // Just basic tests. Relying mostly on `test_tri_measure`.
   const std::size_t N = 2;
   const double a[N] = {5, 3};
@@ -18,7 +18,7 @@ TEST_CASE("`orient_2d`", "[measure]") {
   REQUIRE(mgard::orient_2d(a, a, c) == 0);
 }
 
-TEST_CASE("`orient_3d`", "[measure]") {
+TEST_CASE("`orient_3d`", "[mgard][measure]") {
   // Just basic tests. Relying mostly on `test_tet_measure`.
   const std::size_t N = 3;
   const double a[N] = {0, 23, 1};
@@ -30,7 +30,7 @@ TEST_CASE("`orient_3d`", "[measure]") {
   REQUIRE(mgard::orient_3d(a, b, d, c) == -determinant);
 }
 
-TEST_CASE("edge measure", "[measure]") {
+TEST_CASE("edge measure", "[mgard][measure]") {
   const std::size_t N = 6;
   const double a[N] = {0, 0, 0, 1, -2, 3};
   const double base_length = mgard::edge_measure(a);
@@ -67,7 +67,7 @@ TEST_CASE("edge measure", "[measure]") {
   }
 }
 
-TEST_CASE("triangle measure", "[measure]") {
+TEST_CASE("triangle measure", "[mgard][measure]") {
   const std::size_t N = 9;
   const double a[N] = {3, 1, 1, 0, 2, 0, 0, 4, -2};
   const double base_area = mgard::tri_measure(a);
@@ -107,7 +107,7 @@ TEST_CASE("triangle measure", "[measure]") {
   }
 }
 
-TEST_CASE("tetrahedron measure", "[measure]") {
+TEST_CASE("tetrahedron measure", "[mgard][measure]") {
   const std::size_t N = 12;
   const double a[N] = {0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, -4};
   const double base_volume = mgard::tet_measure(a);

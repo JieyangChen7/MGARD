@@ -13,7 +13,7 @@
 #include "mgard/shuffle.hpp"
 #include "mgard/utilities.hpp"
 
-TEST_CASE("constituent prolongations", "[TensorProlongation]") {
+TEST_CASE("constituent prolongations", "[mgard][TensorProlongation]") {
   SECTION("1D and default spacing") {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({9});
     const std::size_t ndof = 9;
@@ -196,7 +196,7 @@ void test_tensor_product_prolongations(std::default_random_engine &generator,
 
 } // namespace
 
-TEST_CASE("tensor product prolongations", "[TensorProlongation]") {
+TEST_CASE("tensor product prolongations", "[mgard][TensorProlongation]") {
   std::default_random_engine generator(176067);
 
   SECTION("dyadic") {
@@ -216,7 +216,7 @@ TEST_CASE("tensor product prolongations", "[TensorProlongation]") {
   }
 }
 
-TEST_CASE("prolongations on 'flat' meshes", "[TensorProlongation]") {
+TEST_CASE("prolongations on 'flat' meshes", "[mgard][TensorProlongation]") {
   const std::size_t ndof = 12;
   const std::size_t l = 3;
   std::vector<float> u_(ndof);

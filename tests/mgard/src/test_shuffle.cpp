@@ -30,7 +30,7 @@ void test_shuffle(const std::array<std::size_t, N> shape,
 
 } // namespace
 
-TEST_CASE("shuffle behavior", "[shuffle]") {
+TEST_CASE("shuffle behavior", "[mgard][shuffle]") {
   SECTION("1D") {
     const std::vector<float> expected = {0, 8, 4, 2, 6, 1, 3, 5, 7};
     test_shuffle<1, float>({9}, expected);
@@ -71,7 +71,7 @@ void test_unshuffle(const std::array<std::size_t, N> shape,
 
 } // namespace
 
-TEST_CASE("unshuffle behavior", "[shuffle]") {
+TEST_CASE("unshuffle behavior", "[mgard][shuffle]") {
   SECTION("1D") {
     const std::vector<double> expected = {0, 3, 5, 2, 6, 4, 7, 1};
     test_unshuffle<1, double>({8}, expected);
@@ -126,7 +126,7 @@ void test_inversion(const std::array<std::size_t, N> shape) {
 
 } // namespace
 
-TEST_CASE("shuffle inversion", "[shuffle]") {
+TEST_CASE("shuffle inversion", "[mgard][shuffle]") {
   SECTION("1D") {
     test_inversion<1, float>({27});
     // test_inversion<1, double>({33});

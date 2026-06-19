@@ -103,7 +103,7 @@ private:
 
 } // namespace
 
-TEST_CASE("simple constituent operators", "[TensorLinearOperator]") {
+TEST_CASE("simple constituent operators", "[mgard][TensorLinearOperator]") {
   SECTION("diagonal constituent operators") {
     const mgard::TensorMeshHierarchy<2, float> hierarchy({3, 3});
     const std::size_t ndof = 3 * 3;
@@ -178,7 +178,7 @@ TEST_CASE("simple constituent operators", "[TensorLinearOperator]") {
 }
 
 TEST_CASE("tensor products of simple constituent operators",
-          "[TensorLinearOperator]") {
+          "[mgard][TensorLinearOperator]") {
   {
     const mgard::TensorMeshHierarchy<3, float> hierarchy({2, 2, 2});
     const std::size_t ndof = 2 * 2 * 2;
@@ -235,7 +235,7 @@ TEST_CASE("tensor products of simple constituent operators",
 }
 
 TEST_CASE("tensor product linear operators on 'flat' meshes",
-          "[TensorLinearOperator]") {
+          "[mgard][TensorLinearOperator]") {
   const std::vector<float> A_diagonal = {2, 2, 3, 5};
   const std::vector<float> B_diagonal = {-2, -1, 0, 1, 2};
   const std::size_t L = 2;

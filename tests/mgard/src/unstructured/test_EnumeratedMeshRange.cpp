@@ -11,7 +11,7 @@
 #include "mgard/unstructured/MeshLevel.hpp"
 #include "mgard/unstructured/UniformMeshHierarchy.hpp"
 
-TEST_CASE("EnumeratedMeshRange iteration", "[EnumeratedMeshRange]") {
+TEST_CASE("EnumeratedMeshRange iteration", "[mgard][EnumeratedMeshRange]") {
   const auto [filename, expected_ndofs] =
       GENERATE(table<std::string, std::vector<std::size_t>>(
           {{"seated.msh", {5, 12, 35}}, {"tetrahedron.msh", {4, 10, 35}}}));

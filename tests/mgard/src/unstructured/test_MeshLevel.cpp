@@ -44,7 +44,7 @@ static moab::ErrorCode check_edges(mgard::MeshLevel &mesh,
   return moab::MB_SUCCESS;
 }
 
-TEST_CASE("MeshLevel construction", "[MeshLevel]") {
+TEST_CASE("MeshLevel construction", "[mgard][MeshLevel]") {
   const std::size_t num_nodes = 6;
   const std::size_t num_edges = 9;
   const std::size_t num_tris = 4;
@@ -110,7 +110,7 @@ TEST_CASE("MeshLevel construction", "[MeshLevel]") {
   }
 }
 
-TEST_CASE("edge generation", "[MeshLevel]") {
+TEST_CASE("edge generation", "[mgard][MeshLevel]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
 

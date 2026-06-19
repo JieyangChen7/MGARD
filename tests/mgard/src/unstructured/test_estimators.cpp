@@ -25,7 +25,7 @@
 
 static const double inf = std::numeric_limits<double>::infinity();
 
-TEST_CASE("comparison with Python implementation: estimators", "[estimators]") {
+TEST_CASE("comparison with Python implementation: estimators", "[mgard][estimators]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("slope.msh").c_str());
@@ -72,7 +72,7 @@ TEST_CASE("comparison with Python implementation: estimators", "[estimators]") {
           Catch::Approx(914.1806446523887));
 }
 
-TEST_CASE("estimators should track norms", "[estimators]") {
+TEST_CASE("estimators should track norms", "[mgard][estimators]") {
   const std::string filename = GENERATE("pyramid.msh", "hexahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;

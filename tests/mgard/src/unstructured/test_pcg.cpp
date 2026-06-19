@@ -80,7 +80,7 @@ static void diagonal_scaling(double const *const x, double *const y) {
   y[3] = x[3] / (1);
 }
 
-TEST_CASE("preconditioned conjugate gradient algorithm", "[pcg]") {
+TEST_CASE("preconditioned conjugate gradient algorithm", "[mgard][pcg]") {
   SECTION("diagonal system") {
     const std::size_t Ns[4] = {1, 11, 111, 1111};
     for (std::size_t N : Ns) {

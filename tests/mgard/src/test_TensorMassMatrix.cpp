@@ -18,7 +18,7 @@
 #include "mgard/shuffle.hpp"
 #include "mgard/utilities.hpp"
 
-TEST_CASE("constituent mass matrices", "[TensorMassMatrix]") {
+TEST_CASE("constituent mass matrices", "[mgard][TensorMassMatrix]") {
   SECTION("1D and default spacing") {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({9});
     const std::size_t ndof = 9;
@@ -206,7 +206,7 @@ TEST_CASE("constituent mass matrices", "[TensorMassMatrix]") {
   }
 }
 
-TEST_CASE("tensor product mass matrices", "[TensorMassMatrix]") {
+TEST_CASE("tensor product mass matrices", "[mgard][TensorMassMatrix]") {
   const mgard::TensorMeshHierarchy<2, double> hierarchy(
       {3, 3}, {{{0, 0.5, 1}, {1, 1.25, 2}}});
   const std::size_t ndof = 3 * 3;
@@ -301,7 +301,7 @@ void exhaustive_constituent_inverse_test(
 
 } // namespace
 
-TEST_CASE("constituent mass matrix inverses", "[TensorMassMatrix]") {
+TEST_CASE("constituent mass matrix inverses", "[mgard][TensorMassMatrix]") {
   SECTION("1D and default spacing") {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({9});
     const std::size_t ndof = 9;
@@ -425,7 +425,7 @@ void test_mass_matrix_inversion(
 
 } // namespace
 
-TEST_CASE("tensor product mass matrix inverses", "[TensorMassMatrix]") {
+TEST_CASE("tensor product mass matrix inverses", "[mgard][TensorMassMatrix]") {
   std::default_random_engine generator(741495);
   std::array<float, 1089> u_;
   {
@@ -451,7 +451,7 @@ TEST_CASE("tensor product mass matrix inverses", "[TensorMassMatrix]") {
   }
 }
 
-TEST_CASE("mass matrices and inverses on 'flat' meshes", "[TensorMassMatrix]") {
+TEST_CASE("mass matrices and inverses on 'flat' meshes", "[mgard][TensorMassMatrix]") {
   const std::size_t ndof = 36;
   const std::size_t l = 2;
   std::vector<float> u_(ndof);

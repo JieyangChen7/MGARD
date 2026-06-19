@@ -40,7 +40,7 @@ check_elements(mgard::MeshLevel &MESH,
   return moab::MB_SUCCESS;
 }
 
-TEST_CASE("refining multiple triangles", "[UniformMeshRefiner]") {
+TEST_CASE("refining multiple triangles", "[mgard][UniformMeshRefiner]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("seated.msh").c_str());
@@ -73,7 +73,7 @@ TEST_CASE("refining multiple triangles", "[UniformMeshRefiner]") {
   require_moab_success(ecode);
 }
 
-TEST_CASE("refining multiple tetrahedra", "[UniformMeshRefiner]") {
+TEST_CASE("refining multiple tetrahedra", "[mgard][UniformMeshRefiner]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("hexahedron.msh").c_str());
@@ -113,7 +113,7 @@ TEST_CASE("refining multiple tetrahedra", "[UniformMeshRefiner]") {
   require_moab_success(ecode);
 }
 
-TEST_CASE("refining triangle multiply", "[UniformMeshRefiner]") {
+TEST_CASE("refining triangle multiply", "[mgard][UniformMeshRefiner]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("triangle.msh").c_str());
@@ -159,7 +159,7 @@ TEST_CASE("refining triangle multiply", "[UniformMeshRefiner]") {
   require_moab_success(ecode);
 }
 
-TEST_CASE("refining tetrahedron multiply", "[UniformMeshRefiner]") {
+TEST_CASE("refining tetrahedron multiply", "[mgard][UniformMeshRefiner]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("tetrahedron.msh").c_str());

@@ -21,7 +21,7 @@
 
 #include "testing_utilities.hpp"
 
-TEST_CASE("mass matrix and mass matrix preconditioner", "[MassMatrix]") {
+TEST_CASE("mass matrix and mass matrix preconditioner", "[mgard][MassMatrix]") {
   SECTION("triangles") {
     moab::ErrorCode ecode;
     const std::size_t num_nodes = 5;
@@ -157,7 +157,7 @@ TEST_CASE("mass matrix and mass matrix preconditioner", "[MassMatrix]") {
   }
 }
 
-TEST_CASE("contiguous subset mass matrix", "[MassMatrix]") {
+TEST_CASE("contiguous subset mass matrix", "[mgard][MassMatrix]") {
   const auto [filename, i, n] =
       GENERATE(table<std::string, std::size_t, std::size_t>(
           {{"circle.msh", 10, 30},

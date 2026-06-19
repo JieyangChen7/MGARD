@@ -57,7 +57,7 @@ void test_mc_quantization_iteration(const std::array<std::size_t, N> shape,
 } // namespace
 
 TEST_CASE("tensor multilevel coefficient (de)quantization iteration",
-          "[TensorMultilevelCoefficientQuantizer]") {
+          "[mgard][TensorMultilevelCoefficientQuantizer]") {
   test_mc_quantization_iteration<1, float, int>(
       {65}, std::numeric_limits<float>::infinity(), 0.1);
   test_mc_quantization_iteration<2, double, long int>(
@@ -170,7 +170,7 @@ void test_mc_quantization_error(const std::array<std::size_t, N> shape,
 } // namespace
 
 TEST_CASE("tensor multilevel coefficient (de)quantization inversion",
-          "[TensorMultilevelCoefficientQuantizer]") {
+          "[mgard][TensorMultilevelCoefficientQuantizer]") {
   std::default_random_engine generator;
   const std::vector<float> smoothness_parameters = {
       std::numeric_limits<float>::infinity(), -0.75, 0, 1.5};
@@ -189,7 +189,7 @@ TEST_CASE("tensor multilevel coefficient (de)quantization inversion",
 }
 
 TEST_CASE("tensor multilevel coefficient (de)quantization error",
-          "[TensorMultilevelCoefficientQuantizer]") {
+          "[mgard][TensorMultilevelCoefficientQuantizer]") {
   std::default_random_engine generator;
   const std::vector<double> smoothness_parameters = {
       std::numeric_limits<double>::infinity(), -3, 0, 0.75};

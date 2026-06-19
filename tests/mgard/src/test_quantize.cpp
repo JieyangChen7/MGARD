@@ -11,7 +11,7 @@
 #include "mgard/format.hpp"
 #include "mgard/quantize.hpp"
 
-TEST_CASE("quantization", "[quantize]") {
+TEST_CASE("quantization", "[mgard][quantize]") {
   const mgard::TensorMeshHierarchy<2, float> hierarchy({9, 10});
   const std::size_t ndof = hierarchy.ndof();
   const float s = 0;
@@ -42,7 +42,7 @@ TEST_CASE("quantization", "[quantize]") {
   delete[] coefficients;
 }
 
-TEST_CASE("dequantization", "[quantize]") {
+TEST_CASE("dequantization", "[mgard][quantize]") {
   const mgard::TensorMeshHierarchy<1, double> hierarchy({148});
   const std::size_t ndof = hierarchy.ndof();
   const double s = 0.5;
@@ -79,7 +79,7 @@ TEST_CASE("dequantization", "[quantize]") {
   delete[] quantized;
 }
 
-TEST_CASE("alignment and endianness", "[quantize]") {
+TEST_CASE("alignment and endianness", "[mgard][quantize]") {
   const mgard::TensorMeshHierarchy<3, float> hierarchy({5, 12, 13});
   const std::size_t ndof = hierarchy.ndof();
   const float s = 0;

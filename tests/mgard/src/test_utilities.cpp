@@ -11,7 +11,7 @@
 
 #include "mgard/utilities.hpp"
 
-TEST_CASE("PseudoArray iteration", "[utilities]") {
+TEST_CASE("PseudoArray iteration", "[mgard][utilities]") {
   int values[10] = {0, 1, 4, 9, 16, 25, 36, 0, -2, 1};
 
   SECTION("comparison with manual iteration") {
@@ -41,7 +41,7 @@ TEST_CASE("PseudoArray iteration", "[utilities]") {
   }
 }
 
-TEST_CASE("Enumeration iteration", "[utilities]") {
+TEST_CASE("Enumeration iteration", "[mgard][utilities]") {
   const std::vector<float> xs = {-1.375, 0, 732.5, -0.875};
   std::vector<std::size_t> indices;
   std::vector<float> values;
@@ -64,7 +64,7 @@ TEST_CASE("Enumeration iteration", "[utilities]") {
   }
 }
 
-TEST_CASE("ZippedRange iteration", "[utilities]") {
+TEST_CASE("ZippedRange iteration", "[mgard][utilities]") {
   using T = std::vector<float>;
   using U = std::array<unsigned short int, 5>;
   const T xs = {-3.28, 17.37, 0, 0.2388, -99.1};
@@ -80,7 +80,7 @@ TEST_CASE("ZippedRange iteration", "[utilities]") {
   REQUIRE(tracker);
 }
 
-TEST_CASE("RangeSlice iteration", "[utilities]") {
+TEST_CASE("RangeSlice iteration", "[mgard][utilities]") {
   const std::array<int, 8> xs = {2, 3, 5, 7, 11, 13, 17, 19};
   using It = std::array<int, 8>::const_iterator;
   const mgard::RangeSlice<It> slice{xs.begin() + 2, xs.end() - 2};
@@ -89,7 +89,7 @@ TEST_CASE("RangeSlice iteration", "[utilities]") {
   REQUIRE(middle == expected_middle);
 }
 
-TEST_CASE("CartesianProduct iterator", "[utilities]") {
+TEST_CASE("CartesianProduct iterator", "[mgard][utilities]") {
   {
     const std::vector<int> a = {1, 3, 5};
     const std::vector<int> b = {2, 4, 6};
@@ -111,7 +111,7 @@ TEST_CASE("CartesianProduct iterator", "[utilities]") {
   }
 }
 
-TEST_CASE("CartesianProduct predecessors and successors", "[utilities]") {
+TEST_CASE("CartesianProduct predecessors and successors", "[mgard][utilities]") {
   const std::vector<char> a = {'a', 'b', 'c'};
   const std::vector<char> b = {'d', 'e'};
   const mgard::CartesianProduct<std::vector<char>, 2> product({a, b});
