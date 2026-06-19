@@ -6,9 +6,9 @@
 
 #include "testing_utilities.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMeshHierarchyIteration.hpp"
-#include "utilities.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchyIteration.hpp"
+#include "mgard/utilities.hpp"
 
 TEST_CASE("TensorIndexRange size and iteration",
           "[TensorMeshHierarchyIteration]") {

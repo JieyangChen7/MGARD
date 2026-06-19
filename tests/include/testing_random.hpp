@@ -4,7 +4,7 @@
 #include <array>
 #include <random>
 
-#include "TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
 
 //! Random polynomial with the exponent of each variable in each term being
 //! either zero or one.

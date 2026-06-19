@@ -9,16 +9,16 @@
 //!\file
 //!\brief Compression and decompression API.
 
-#include "CompressedDataset.hpp"
-#include "TensorMeshHierarchy.hpp"
-#include "utilities.hpp"
+#include "mgard/CompressedDataset.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/utilities.hpp"
 
 #ifdef __NVCC__
 #error "Please include `compress_x.hpp` instead of `compress.hpp` when "\
   "compiling with NVCC."
 #endif
 
-#include "adaptive_roi.hpp"
+#include "mgard/adaptive_roi.hpp"
 #include "compress_x.hpp"
 
 //! Implementation of the MGARD compression and decompression algorithms.

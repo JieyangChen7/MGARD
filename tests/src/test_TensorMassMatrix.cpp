@@ -12,11 +12,11 @@
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"
 
-#include "TensorMassMatrix.hpp"
-#include "TensorMeshHierarchy.hpp"
-#include "blas.hpp"
-#include "shuffle.hpp"
-#include "utilities.hpp"
+#include "mgard/TensorMassMatrix.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/blas.hpp"
+#include "mgard/shuffle.hpp"
+#include "mgard/utilities.hpp"
 
 TEST_CASE("constituent mass matrices", "[TensorMassMatrix]") {
   SECTION("1D and default spacing") {

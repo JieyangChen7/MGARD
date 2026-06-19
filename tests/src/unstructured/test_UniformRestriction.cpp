@@ -2,9 +2,9 @@
 
 #include "moab/Core.hpp"
 
-#include "unstructured/MeshLevel.hpp"
-#include "unstructured/UniformMeshHierarchy.hpp"
-#include "unstructured/UniformRestriction.hpp"
+#include "mgard/unstructured/MeshLevel.hpp"
+#include "mgard/unstructured/UniformMeshHierarchy.hpp"
+#include "mgard/unstructured/UniformRestriction.hpp"
 
 #include "testing_utilities.hpp"
 

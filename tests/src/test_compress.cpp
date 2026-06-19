@@ -13,12 +13,12 @@
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMeshHierarchyIteration.hpp"
-#include "TensorNorms.hpp"
-#include "blas.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchyIteration.hpp"
+#include "mgard/TensorNorms.hpp"
+#include "mgard/blas.hpp"
 #include "compress.hpp"
-#include "shuffle.hpp"
+#include "mgard/shuffle.hpp"
 
 namespace {
 

@@ -11,11 +11,11 @@
 #include <random>
 #include <vector>
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMeshHierarchyIteration.hpp"
-#include "TensorNorms.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchyIteration.hpp"
+#include "mgard/TensorNorms.hpp"
 
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"

@@ -6,12 +6,12 @@
 
 #include "proto/mgard.pb.h"
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMultilevelCoefficientQuantizer.hpp"
-#include "TensorNorms.hpp"
-#include "decompose.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMultilevelCoefficientQuantizer.hpp"
+#include "mgard/TensorNorms.hpp"
+#include "mgard/decompose.hpp"
 
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"

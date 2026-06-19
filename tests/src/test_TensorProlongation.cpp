@@ -7,11 +7,11 @@
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMeshHierarchyIteration.hpp"
-#include "TensorProlongation.hpp"
-#include "shuffle.hpp"
-#include "utilities.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchyIteration.hpp"
+#include "mgard/TensorProlongation.hpp"
+#include "mgard/shuffle.hpp"
+#include "mgard/utilities.hpp"
 
 TEST_CASE("constituent prolongations", "[TensorProlongation]") {
   SECTION("1D and default spacing") {

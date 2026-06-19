@@ -12,7 +12,7 @@
 
 #include "testing_utilities.hpp"
 
-#include "LinearQuantizer.hpp"
+#include "mgard/LinearQuantizer.hpp"
 
 // Not immediately seeing a way to handle these templates using Catch2 macros.
 

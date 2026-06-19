@@ -5,9 +5,9 @@
 
 #include "moab/Core.hpp"
 
-#include "utilities.hpp"
+#include "mgard/utilities.hpp"
 
-#include "unstructured/UniformMeshRefiner.hpp"
+#include "mgard/unstructured/UniformMeshRefiner.hpp"
 
 #include "testing_utilities.hpp"
 

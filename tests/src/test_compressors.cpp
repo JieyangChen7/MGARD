@@ -6,8 +6,8 @@
 #include <limits>
 #include <random>
 
-#include "compressors.hpp"
-#include "format.hpp"
+#include "mgard/compressors.hpp"
+#include "mgard/format.hpp"
 
 namespace {
 

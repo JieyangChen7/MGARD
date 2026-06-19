@@ -3,8 +3,8 @@
 #include <array>
 #include <vector>
 
-#include "TensorMeshHierarchy.hpp"
-#include "shuffle.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/shuffle.hpp"
 
 #include "testing_utilities.hpp"
 

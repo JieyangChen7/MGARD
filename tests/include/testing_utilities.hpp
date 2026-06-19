@@ -10,7 +10,7 @@
 
 static const double APPROX_MARGIN_DEFAULT = 0;
 
-#include "TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
 
 // TODO: Change these? See <https://github.com/catchorg/Catch2/pull/1499>.
 

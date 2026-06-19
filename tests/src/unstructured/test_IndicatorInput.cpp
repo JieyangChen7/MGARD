@@ -11,10 +11,10 @@
 
 #include "testing_utilities.hpp"
 
-#include "unstructured/IndicatorInput.hpp"
-#include "unstructured/MeshLevel.hpp"
-#include "unstructured/UniformMeshHierarchy.hpp"
-#include "unstructured/data.hpp"
+#include "mgard/unstructured/IndicatorInput.hpp"
+#include "mgard/unstructured/MeshLevel.hpp"
+#include "mgard/unstructured/UniformMeshHierarchy.hpp"
+#include "mgard/unstructured/data.hpp"
 
 // Function defined on the mesh.
 static double f(const mgard::MeshLevel &mesh, const moab::EntityHandle node) {

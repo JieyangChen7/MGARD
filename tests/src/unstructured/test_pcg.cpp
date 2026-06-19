@@ -4,10 +4,10 @@
 #include <cmath>
 #include <cstddef>
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "unstructured/LinearOperator.hpp"
-#include "unstructured/pcg.hpp"
+#include "mgard/unstructured/LinearOperator.hpp"
+#include "mgard/unstructured/pcg.hpp"
 
 #include "testing_utilities.hpp"
 

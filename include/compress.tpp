@@ -18,14 +18,14 @@
 #include <vector>
 
 #include "MGARDConfig.hpp"
-#include "TensorMultilevelCoefficientQuantizer.hpp"
-#include "TensorNorms.hpp"
-#include "adaptive_roi.hpp"
-#include "compressors.hpp"
-#include "decompose.hpp"
-#include "format.hpp"
-#include "quantize.hpp"
-#include "shuffle.hpp"
+#include "mgard/TensorMultilevelCoefficientQuantizer.hpp"
+#include "mgard/TensorNorms.hpp"
+#include "mgard/adaptive_roi.hpp"
+#include "mgard/compressors.hpp"
+#include "mgard/decompose.hpp"
+#include "mgard/format.hpp"
+#include "mgard/quantize.hpp"
+#include "mgard/shuffle.hpp"
 
 namespace mgard {
 

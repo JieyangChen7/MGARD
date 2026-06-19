@@ -3,9 +3,9 @@
 
 #include <cstddef>
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "unstructured/measure.hpp"
+#include "mgard/unstructured/measure.hpp"
 
 TEST_CASE("`orient_2d`", "[measure]") {
   // Just basic tests. Relying mostly on `test_tri_measure`.

@@ -13,7 +13,7 @@
 #include "testing_utilities.hpp"
 
 #include "MGARDConfig.hpp"
-#include "format.hpp"
+#include "mgard/format.hpp"
 
 namespace {
 using SizeBytes = std::array<unsigned char, mgard::HEADER_SIZE_SIZE>;

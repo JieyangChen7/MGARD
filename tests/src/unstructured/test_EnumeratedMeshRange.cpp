@@ -7,9 +7,9 @@
 
 #include "testing_utilities.hpp"
 
-#include "unstructured/EnumeratedMeshRange.hpp"
-#include "unstructured/MeshLevel.hpp"
-#include "unstructured/UniformMeshHierarchy.hpp"
+#include "mgard/unstructured/EnumeratedMeshRange.hpp"
+#include "mgard/unstructured/MeshLevel.hpp"
+#include "mgard/unstructured/UniformMeshHierarchy.hpp"
 
 TEST_CASE("EnumeratedMeshRange iteration", "[EnumeratedMeshRange]") {
   const auto [filename, expected_ndofs] =

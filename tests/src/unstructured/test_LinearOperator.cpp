@@ -1,6 +1,6 @@
 #include "catch2/catch_test_macros.hpp"
 
-#include "unstructured/LinearOperator.hpp"
+#include "mgard/unstructured/LinearOperator.hpp"
 
 class DoNothingOperator : public mgard::LinearOperator {
 public:

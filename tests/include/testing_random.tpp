@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "TensorMeshHierarchyIteration.hpp"
+#include "mgard/TensorMeshHierarchyIteration.hpp"
 #include "testing_utilities.hpp"
 
 template <typename Real, std::size_t N>

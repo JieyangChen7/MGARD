@@ -250,13 +250,7 @@ find_package(ZLIB REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 
-set(
-  MGARD_LIBRARY_CPP
-        src/compress.cpp
-        src/compress_internal.cpp
-  src/compressors.cpp
-  src/format.cpp
-)
+add_subdirectory(src/mgard)
 
 set(MAXIMUM_DIMENSION 4 CACHE STRING "Maximum supported dimension for self-describing decompression.")
 
@@ -422,7 +416,7 @@ install(DIRECTORY "include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/mgard")
 install(FILES "${MGARD_FILE_FORMAT_HPP}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/mgard/${MGARD_FILE_FORMAT_INCLUDESUBDIR_COMPONENT}")
 
 if(MGARD_ENABLE_UNSTRUCTURED)
-	add_subdirectory("src/unstructured")
+	add_subdirectory("src/mgard/unstructured")
 endif()
 
 if(MGARD_ENABLE_BENCHMARKS)
@@ -480,7 +474,7 @@ install(EXPORT mgard-targets NAMESPACE mgard::
 )
 
 if(MGARD_ENABLE_CLI)
-	add_subdirectory("src/cli")
+	add_subdirectory("src/mgard/cli")
 endif()
 
 message(STATUS "")

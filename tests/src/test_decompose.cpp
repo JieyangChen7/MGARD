@@ -13,12 +13,12 @@
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorProlongation.hpp"
-#include "blas.hpp"
-#include "decompose.hpp"
-#include "format.hpp"
-#include "shuffle.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorProlongation.hpp"
+#include "mgard/blas.hpp"
+#include "mgard/decompose.hpp"
+#include "mgard/format.hpp"
+#include "mgard/shuffle.hpp"
 
 namespace {
 

@@ -7,8 +7,8 @@
 
 #include "moab/Core.hpp"
 
-#include "unstructured/MeshLevel.hpp"
-#include "unstructured/pcg.hpp"
+#include "mgard/unstructured/MeshLevel.hpp"
+#include "mgard/unstructured/pcg.hpp"
 
 #include "testing_utilities.hpp"
 

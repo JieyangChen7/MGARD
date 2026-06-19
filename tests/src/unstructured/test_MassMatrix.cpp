@@ -14,10 +14,10 @@
 #include <utility>
 #include <vector>
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "unstructured/MassMatrix.hpp"
-#include "unstructured/pcg.hpp"
+#include "mgard/unstructured/MassMatrix.hpp"
+#include "mgard/unstructured/pcg.hpp"
 
 #include "testing_utilities.hpp"
 

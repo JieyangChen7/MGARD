@@ -126,7 +126,7 @@ g_name: str
 g_arguments: typing.Tuple[FunctionArgument, ...]
 
 if args.compress:
-    header = 'cli/cli_internal.hpp'
+    header = 'mgard/cli/cli_internal.hpp'
     namespace = 'cli'
     f_name = 'compress'
     f_ret_type = 'int'
@@ -138,7 +138,7 @@ if args.compress:
     g_name = 'compress_N'
     g_arguments = f_arguments[: 1]
 elif args.decompress:
-    header = 'compress_internal.hpp'
+    header = 'mgard/compress_internal.hpp'
     namespace = 'mgard'
     f_name = 'decompress'
     f_ret_type = 'MemoryBuffer<const unsigned char>'

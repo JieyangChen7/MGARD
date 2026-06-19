@@ -12,15 +12,15 @@
 #include <string>
 #include <vector>
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
 #include "moab/Core.hpp"
 
 #include "testing_utilities.hpp"
 
-#include "unstructured/MeshLevel.hpp"
-#include "unstructured/UniformMeshHierarchy.hpp"
-#include "unstructured/data.hpp"
+#include "mgard/unstructured/MeshLevel.hpp"
+#include "mgard/unstructured/UniformMeshHierarchy.hpp"
+#include "mgard/unstructured/data.hpp"
 
 // These tests call `decompose` and `recompose` in the old style and read the
 // transformed coefficients from the same identifier.

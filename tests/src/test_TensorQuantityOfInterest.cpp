@@ -8,10 +8,10 @@
 #include <random>
 #include <stdexcept>
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorNorms.hpp"
-#include "TensorQuantityOfInterest.hpp"
-#include "blas.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorNorms.hpp"
+#include "mgard/TensorQuantityOfInterest.hpp"
+#include "mgard/blas.hpp"
 
 #include "testing_random.hpp"
 

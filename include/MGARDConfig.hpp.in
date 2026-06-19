@@ -1,6 +1,8 @@
 #ifndef MGARDCONFIG_HPP
 #define MGARDCONFIG_HPP
 
+#include <array>
+
 /* MGARD Version Information */
 #define MGARD_VERSION_STR   "@MGARD_VERSION@"
 #define MGARD_VERSION_MAJOR @MGARD_VERSION_MAJOR@
@@ -14,5 +16,10 @@
 #define MGARD_FILE_VERSION_MINOR @MGARD_FILE_VERSION_MINOR@
 #define MGARD_FILE_VERSION_PATCH @MGARD_FILE_VERSION_PATCH@
 #cmakedefine MGARD_FILE_VERSION_TWEAK @MGARD_FILE_VERSION_TWEAK@
+
+namespace mgard {
+//! Magic bytes for MGARD file format ('MGARD' in ASCII).
+inline constexpr std::array<char, 5> SIGNATURE{0x4d, 0x47, 0x41, 0x52, 0x44};
+} // namespace mgard
 
 #endif /* MGARDCONFIG_HPP */

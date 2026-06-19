@@ -13,13 +13,13 @@
 
 #include "moab/Core.hpp"
 
-#include "blas.hpp"
+#include "mgard/blas.hpp"
 
-#include "unstructured/MeshLevel.hpp"
-#include "unstructured/UniformMeshHierarchy.hpp"
-#include "unstructured/data.hpp"
-#include "unstructured/estimators.hpp"
-#include "unstructured/norms.hpp"
+#include "mgard/unstructured/MeshLevel.hpp"
+#include "mgard/unstructured/UniformMeshHierarchy.hpp"
+#include "mgard/unstructured/data.hpp"
+#include "mgard/unstructured/estimators.hpp"
+#include "mgard/unstructured/norms.hpp"
 
 #include "testing_utilities.hpp"
 

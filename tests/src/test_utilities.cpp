@@ -9,7 +9,7 @@
 
 #include "testing_utilities.hpp"
 
-#include "utilities.hpp"
+#include "mgard/utilities.hpp"
 
 TEST_CASE("PseudoArray iteration", "[utilities]") {
   int values[10] = {0, 1, 4, 9, 16, 25, 36, 0, -2, 1};

@@ -6,7 +6,7 @@
  */
 
 #include "mgard-x/Metadata/Metadata.hpp"
-#include "format.hpp"
+#include "MGARDConfig.hpp"
 #include "proto/mgard.pb.h"
 
 #include <google/protobuf/io/coded_stream.h>

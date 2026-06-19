@@ -6,10 +6,10 @@
 
 #include "proto/mgard.pb.h"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMultilevelCoefficientQuantizer.hpp"
-#include "format.hpp"
-#include "quantize.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMultilevelCoefficientQuantizer.hpp"
+#include "mgard/format.hpp"
+#include "mgard/quantize.hpp"
 
 TEST_CASE("quantization", "[quantize]") {
   const mgard::TensorMeshHierarchy<2, float> hierarchy({9, 10});

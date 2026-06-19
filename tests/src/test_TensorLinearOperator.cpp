@@ -8,9 +8,9 @@
 
 #include "testing_utilities.hpp"
 
-#include "TensorLinearOperator.hpp"
-#include "TensorMeshHierarchy.hpp"
-#include "shuffle.hpp"
+#include "mgard/TensorLinearOperator.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/shuffle.hpp"
 
 namespace {
 

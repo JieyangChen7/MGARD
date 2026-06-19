@@ -4,7 +4,7 @@
 #include <random>
 #include <sstream>
 
-#include "CompressedDataset.hpp"
+#include "mgard/CompressedDataset.hpp"
 #include "compress.hpp"
 
 #include "testing_random.hpp"

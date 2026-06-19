@@ -1,5 +1,5 @@
 #include "catch2/catch_test_macros.hpp"
 
-#include "unstructured/data.hpp"
+#include "mgard/unstructured/data.hpp"
 
 // Empty.

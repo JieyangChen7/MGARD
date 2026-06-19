@@ -11,10 +11,10 @@
 
 #include "testing_utilities.hpp"
 
-#include "TensorMeshHierarchy.hpp"
-#include "TensorMeshHierarchyIteration.hpp"
-#include "shuffle.hpp"
-#include "utilities.hpp"
+#include "mgard/TensorMeshHierarchy.hpp"
+#include "mgard/TensorMeshHierarchyIteration.hpp"
+#include "mgard/shuffle.hpp"
+#include "mgard/utilities.hpp"
 
 TEST_CASE("hierarchy mesh shapes", "[TensorMeshHierarchy]") {
   {
