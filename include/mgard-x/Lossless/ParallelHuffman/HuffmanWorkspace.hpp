@@ -91,6 +91,7 @@ public:
                     DeviceRuntime<DeviceType>::GetWarpSize()) *
                    DeviceRuntime<DeviceType>::GetNumSMs();
     size += 2 * (mblocks + 1) * sizeof(uint32_t);
+    size += 7 * sizeof(Byte); // signature_verify_array
     return size;
   }
 
@@ -143,6 +144,9 @@ public:
                    DeviceRuntime<DeviceType>::GetNumSMs();
     diagonal_path_intersections_array =
         Array<1, uint32_t, DeviceType>({2 * (mblocks + 1)});
+
+    signature_verify_array = Array<1, Byte, DeviceType>({(SIZE)7});
+    signature_verify_array.hostAllocate(false);
 
     // outlier_count_array.memset(0);
     // outlier_idx_array.memset(0);
@@ -201,6 +205,10 @@ public:
                     DeviceRuntime<DeviceType>::GetWarpSize()) *
                    DeviceRuntime<DeviceType>::GetNumSMs();
     diagonal_path_intersections_array.resize({2 * (mblocks + 1)}, queue_idx);
+
+    signature_verify_array.resize({(SIZE)7}, queue_idx);
+    signature_verify_array.hostAllocate(false, queue_idx);
+
     // outlier_count_array.memset(0, queue_idx);
     // outlier_idx_array.memset(0, queue_idx);
     // outlier_array.memset(0, queue_idx);
@@ -256,6 +264,11 @@ public:
   Array<1, H, DeviceType> _d_codebook_array_org;
   Array<1, int, DeviceType, false, true> status_array;
   Array<1, uint32_t, DeviceType> diagonal_path_intersections_array;
+
+  // Holds the deserialized signature during Verify. Only its pinned host copy
+  // is used (read back via dataHost()); the device buffer is unused but comes
+  // along with the Array and is freed automatically with the workspace.
+  Array<1, Byte, DeviceType> signature_verify_array;
 
   SubArray<1, ATOMIC_IDX, DeviceType> outlier_count_subarray;
   SubArray<1, ATOMIC_IDX, DeviceType> outlier_idx_subarray;

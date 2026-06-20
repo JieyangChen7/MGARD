@@ -1,0 +1,104 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
+
+#include <cmath>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/DataRefactoring/DataRefactor.hpp"
+#include "mgard-x/Utilities/ErrorCalculator.h"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// Tolerance reflects floating-point accumulation over O(log N) decomposition
+// levels: tight for double (~1e-10), generous for float (~1e-3).
+template <DIM D, typename T, typename DevType>
+void run_refactoring_test(std::vector<SIZE> shape, bool orthogonal_projection) {
+  SIZE n = 1;
+  for (auto s : shape)
+    n *= s;
+
+  const double pi = std::acos(-1.0);
+  std::vector<T> original(n);
+  for (SIZE i = 0; i < n; i++)
+    original[i] = static_cast<T>(std::sin(2.0 * pi * i / n));
+
+  Config config;
+  Hierarchy<D, T, DevType> hierarchy(shape, config);
+
+  Array<D, T, DevType> data(shape);
+  data.load(original.data());
+
+  data_refactoring::DataRefactor<D, T, DevType> refactor(hierarchy, config);
+  SubArray<D, T, DevType> data_subarray(data);
+
+  refactor.Decompose(data_subarray, orthogonal_projection, 0);
+  refactor.Recompose(data_subarray, orthogonal_projection, 0);
+
+  T *result = data.hostCopy(false, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  const double tolerance =
+      std::is_same<T, double>::value ? 1e-10 : 1e-3;
+  double error =
+      L_inf_error(n, original.data(), result, error_bound_type::REL);
+  REQUIRE(error < tolerance);
+}
+
+TEMPLATE_TEST_CASE("Orthogonal Decomposition 1D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("small")  { run_refactoring_test<1, TestType, TestDevice>({33}, true); }
+  SECTION("medium") { run_refactoring_test<1, TestType, TestDevice>({129}, true); }
+  SECTION("large")  { run_refactoring_test<1, TestType, TestDevice>({4097}, true); }
+}
+
+TEMPLATE_TEST_CASE("Orthogonal Decomposition 2D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("small")  { run_refactoring_test<2, TestType, TestDevice>({33, 33}, true); }
+  SECTION("medium") { run_refactoring_test<2, TestType, TestDevice>({129, 129}, true); }
+  SECTION("large")  { run_refactoring_test<2, TestType, TestDevice>({513, 513}, true); }
+}
+
+TEMPLATE_TEST_CASE("Orthogonal Decomposition 3D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("small")  { run_refactoring_test<3, TestType, TestDevice>({17, 17, 17}, true); }
+  SECTION("medium") { run_refactoring_test<3, TestType, TestDevice>({33, 33, 33}, true); }
+  SECTION("large")  { run_refactoring_test<3, TestType, TestDevice>({65, 65, 65}, true); }
+}
+
+TEMPLATE_TEST_CASE("Hierarchical Decomposition 1D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("small")  { run_refactoring_test<1, TestType, TestDevice>({33}, false); }
+  SECTION("medium") { run_refactoring_test<1, TestType, TestDevice>({129}, false); }
+  SECTION("large")  { run_refactoring_test<1, TestType, TestDevice>({4097}, false); }
+}
+
+TEMPLATE_TEST_CASE("Hierarchical Decomposition 2D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("small")  { run_refactoring_test<2, TestType, TestDevice>({33, 33}, false); }
+  SECTION("medium") { run_refactoring_test<2, TestType, TestDevice>({129, 129}, false); }
+  SECTION("large")  { run_refactoring_test<2, TestType, TestDevice>({513, 513}, false); }
+}
+
+TEMPLATE_TEST_CASE("Hierarchical Decomposition 3D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("small")  { run_refactoring_test<3, TestType, TestDevice>({17, 17, 17}, false); }
+  SECTION("medium") { run_refactoring_test<3, TestType, TestDevice>({33, 33, 33}, false); }
+  SECTION("large")  { run_refactoring_test<3, TestType, TestDevice>({65, 65, 65}, false); }
+}
+
+} // namespace mgard_x

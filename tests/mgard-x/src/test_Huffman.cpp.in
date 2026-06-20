@@ -1,0 +1,131 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/ParallelHuffman/Huffman.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// Typical configuration matching DefaultLevelCompressor:
+//   Q = uint8_t (primary byte type)
+//   S = uint8_t (same — no signed outlier separation on primary path)
+//   H = uint64_t (Huffman codeword type)
+//   dict_size = 256, chunk_size = 1024
+TEST_CASE("Huffman CompressPrimary", "[mgard-x][@DEVICE_TYPE@]") {
+  using Q = uint8_t;
+  using S = uint8_t;
+  using H = uint64_t;
+
+  const int dict_size = 256;
+  const int chunk_size = 1024;
+  const SIZE n = 10000;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  // Skewed distribution (values 0–63) so Huffman achieves meaningful compression
+  std::vector<Q> original(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    original[i] = static_cast<Q>(std::rand() % 64);
+  }
+
+  // Compressor — use Resize so that signature_verify is allocated.
+  Huffman<Q, S, H, TestDevice> compressor;
+  compressor.Resize(n, dict_size, chunk_size, 0.0, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  // Primary path has no outliers — must be set to 0 before Serialize.
+  compressor.outlier_count = 0;
+
+  Array<1, Q, TestDevice> primary_data({n});
+  primary_data.load(original.data());
+
+  Array<1, Byte, TestDevice> compressed_data;
+  bool success = compressor.CompressPrimary(primary_data, compressed_data, 0.0, 0);
+  REQUIRE(success == true);
+
+  compressor.Serialize(compressed_data, 0);
+
+  // Decompressor — entirely separate object with no shared internal state.
+  Huffman<Q, S, H, TestDevice> decompressor;
+  decompressor.Resize(n, dict_size, chunk_size, 0.0, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  decompressor.Deserialize(compressed_data, 0);
+
+  Array<1, Q, TestDevice> decompressed_data;
+  decompressor.DecompressPrimary(compressed_data, decompressed_data, 0);
+
+  Q *result = decompressed_data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+
+// Tests the full pipeline: dictionary shift + outlier separation + Huffman coding.
+// Compress modifies the device input in-place, so original must be saved on host.
+// Decompress needs a pre-allocated output array because it wraps it via an
+// external pointer before calling DecompressPrimary internally.
+TEST_CASE("Huffman Compress", "[mgard-x][@DEVICE_TYPE@]") {
+  using Q = uint8_t;
+  using S = uint8_t;
+  using H = uint64_t;
+
+  const int dict_size = 256;
+  const int chunk_size = 1024;
+  const SIZE n = 10000;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  std::vector<S> original(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    original[i] = static_cast<S>(std::rand() % 64);
+  }
+
+  // Load to device before compressing; keep host copy for comparison since
+  // Compress shifts values in the device array in-place.
+  Array<1, S, TestDevice> input_data({n});
+  input_data.load(original.data());
+
+  Huffman<Q, S, H, TestDevice> compressor;
+  compressor.Resize(n, dict_size, chunk_size, 0.0, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  Array<1, Byte, TestDevice> compressed_data;
+  bool success = compressor.Compress(input_data, compressed_data, 0.0, 0);
+  REQUIRE(success == true);
+
+  compressor.Serialize(compressed_data, 0);
+
+  Huffman<Q, S, H, TestDevice> decompressor;
+  decompressor.Resize(n, dict_size, chunk_size, 0.0, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  decompressor.Deserialize(compressed_data, 0);
+
+  Array<1, S, TestDevice> decompressed_data({n});
+  decompressor.Decompress(compressed_data, decompressed_data, 0);
+
+  S *result = decompressed_data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+
+} // namespace mgard_x

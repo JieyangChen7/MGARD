@@ -1,0 +1,55 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/Zstd.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// Zstd is a host-side byte-stream codec that operates in place on an
+// Array<1, Byte>: Compress turns the array into the compressed stream (with a
+// size_t length prefix), Decompress turns it back into the original bytes.
+TEST_CASE("Zstd", "[mgard-x][@DEVICE_TYPE@]") {
+  const SIZE n = 100000;
+  const int compression_level = 3;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  // Low-entropy data (values 0-7) so Zstd achieves meaningful compression.
+  std::vector<Byte> original(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    original[i] = static_cast<Byte>(std::rand() % 8);
+  }
+
+  Array<1, Byte, TestDevice> data({n});
+  data.load(original.data());
+
+  // Separate codec objects so they share no internal state.
+  Zstd<TestDevice> compressor(n, compression_level);
+  compressor.Compress(data, 0);
+
+  Zstd<TestDevice> decompressor(n, compression_level);
+  decompressor.Decompress(data, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  REQUIRE(data.shape(0) == n);
+  Byte *result = data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+
+} // namespace mgard_x

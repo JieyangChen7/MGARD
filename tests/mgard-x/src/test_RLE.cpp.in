@@ -1,0 +1,71 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/ParallelRLE/RunLengthEncoding.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// Run-length encoding round trip. Compress encodes (count, symbol) runs into a
+// serialized byte stream; the decompressor Deserializes the metadata (which
+// zero-copies into the compressed stream) and Decompresses back to the symbols.
+TEST_CASE("RLE", "[mgard-x][@DEVICE_TYPE@]") {
+  using T_symbol = uint32_t;
+  using C_run = uint32_t;
+  using C_global = uint32_t;
+
+  const SIZE n = 100000;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  // Generate run-friendly data: repeated blocks of a small symbol set.
+  std::vector<T_symbol> original(n);
+  std::srand(42);
+  SIZE i = 0;
+  while (i < n) {
+    SIZE run = std::rand() % 20 + 1;
+    T_symbol val = static_cast<T_symbol>(std::rand() % 16);
+    for (SIZE j = 0; j < run && i < n; j++, i++) {
+      original[i] = val;
+    }
+  }
+
+  Array<1, T_symbol, TestDevice> original_data({n});
+  original_data.load(original.data());
+
+  // Separate compressor and decompressor objects.
+  parallel_rle::RunLengthEncoding<T_symbol, C_run, C_global, TestDevice>
+      compressor;
+  compressor.Resize(n, 0);
+  Array<1, Byte, TestDevice> compressed_data;
+  // target_cr == 0 disables the compression-ratio early-out, so it always runs.
+  bool success = compressor.Compress(original_data, compressed_data, 0.0, 0);
+  REQUIRE(success == true);
+
+  parallel_rle::RunLengthEncoding<T_symbol, C_run, C_global, TestDevice>
+      decompressor;
+  decompressor.Resize(n, 0);
+  decompressor.Deserialize(compressed_data, 0);
+  Array<1, T_symbol, TestDevice> decompressed_data;
+  decompressor.Decompress(compressed_data, decompressed_data, 0);
+
+  REQUIRE(decompressed_data.shape(0) == n);
+  T_symbol *result = decompressed_data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  for (SIZE k = 0; k < n; k++) {
+    REQUIRE(result[k] == original[k]);
+  }
+}
+
+} // namespace mgard_x

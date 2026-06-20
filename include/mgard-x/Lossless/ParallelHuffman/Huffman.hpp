@@ -47,8 +47,6 @@ public:
     this->max_size = max_size;
     this->dict_size = dict_size;
     this->chunk_size = chunk_size;
-    MemoryManager<DeviceType>::MallocHost(signature_verify, 7 * sizeof(char),
-                                          queue_idx);
     workspace.resize(max_size, dict_size, chunk_size, estimated_outlier_ratio,
                      queue_idx);
   }
@@ -381,6 +379,9 @@ public:
   bool Verify(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     SubArray compressed_subarray(compressed_data);
     SIZE byte_offset = 0;
+    // Deserialize the signature into the workspace's pinned host buffer; the
+    // device buffer of the Array is unused (the comparison happens on host).
+    Byte *signature_verify = workspace.signature_verify_array.dataHost();
     DeserializeArray<Byte>(compressed_subarray, signature_verify, 7,
                            byte_offset, false, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -591,7 +592,6 @@ public:
   S *outlier;
   H *ddata;
   Byte signature[7] = {'M', 'G', 'X', 'H', 'U', 'F', 'F'};
-  Byte *signature_verify = nullptr;
   HuffmanWorkspace<Q, S, H, DeviceType> workspace;
 };
 

@@ -1,0 +1,63 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/Lossless.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// ComposedLosslessCompressor with the Huffman + Zstd pipeline: Huffman codes
+// the integer symbols, then Zstd compresses the serialized Huffman stream.
+TEST_CASE("Composed Lossless Huffman+Zstd", "[mgard-x][@DEVICE_TYPE@]") {
+  using T = QUANTIZED_INT; // int64_t
+  using H = HUFFMAN_CODE;  // uint64_t
+
+  const SIZE n = 100000;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  Config config;
+  config.lossless = lossless_type::Huffman_Zstd;
+
+  // Skewed distribution (values 0-63) so Huffman achieves real compression.
+  std::vector<T> original(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    original[i] = static_cast<T>(std::rand() % 64);
+  }
+
+  // Keep the host copy: Huffman compression shifts the device array in place.
+  Array<1, T, TestDevice> original_data({n});
+  original_data.load(original.data());
+
+  // Use Adapt (not the parameterized constructor) so the Huffman workspace is
+  // fully set up. Separate compressor and decompressor objects.
+  ComposedLosslessCompressor<T, H, TestDevice> compressor;
+  compressor.Adapt(n, config, 0);
+  Array<1, Byte, TestDevice> compressed_data;
+  compressor.Compress(original_data, compressed_data, 0);
+
+  ComposedLosslessCompressor<T, H, TestDevice> decompressor;
+  decompressor.Adapt(n, config, 0);
+  Array<1, T, TestDevice> decompressed_data({n});
+  decompressor.Decompress(compressed_data, decompressed_data, 0);
+
+  T *result = decompressed_data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+
+} // namespace mgard_x

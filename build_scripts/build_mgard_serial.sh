@@ -51,15 +51,31 @@ cmake -S ${protobuf_src_dir}/cmake -B ${protobuf_build_dir}\
 cmake --build ${protobuf_build_dir} -j ${num_build_procs}
 cmake --install ${protobuf_build_dir}
 
+#build Catch2
+catch2_dir=${build_dir}/catch2
+catch2_src_dir=${catch2_dir}/src
+catch2_build_dir=${catch2_dir}/build
+catch2_install_dir=${install_dir}
+if [ ! -d "${catch2_src_dir}" ]; then
+  git clone -b v3.3.2 https://github.com/catchorg/Catch2.git ${catch2_src_dir}
+fi
+mkdir -p ${catch2_build_dir}
+cmake -S ${catch2_src_dir} -B ${catch2_build_dir}\
+    -DBUILD_TESTING=OFF\
+    -DCMAKE_INSTALL_PREFIX=${catch2_install_dir}
+cmake --build ${catch2_build_dir} -j ${num_build_procs}
+cmake --install ${catch2_build_dir} > /dev/null 2>&1
+
 #build MGARD
 mgard_x_build_dir=${build_dir}/mgard
 mgard_x_install_dir=${install_dir}
 mkdir -p ${mgard_x_build_dir}
 cmake -S ${mgard_x_src_dir} -B ${mgard_x_build_dir} \
-    -DCMAKE_PREFIX_PATH="${nvcomp_install_dir};${zstd_install_dir}/lib/cmake/zstd;${protobuf_install_dir}"\
+    -DCMAKE_PREFIX_PATH="${nvcomp_install_dir};${zstd_install_dir}/lib/cmake/zstd;${protobuf_install_dir};${catch2_install_dir}"\
     -DMGARD_ENABLE_SERIAL=ON\
     -DMGARD_ENABLE_DOCS=OFF\
     -DCMAKE_BUILD_TYPE=Release\
+    -DBUILD_TESTING=ON\
     -DCMAKE_INSTALL_PREFIX=${mgard_x_install_dir}
 cmake --build ${mgard_x_build_dir} -j ${num_build_procs}
 cmake --install ${mgard_x_build_dir}

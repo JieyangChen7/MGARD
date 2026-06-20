@@ -1,0 +1,147 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_approx.hpp"
+#include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
+#include "catch2/generators/catch_generators.hpp"
+
+#include <cmath>
+#include <limits>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/CompressionLowLevel/Compressor.hpp"
+#include "mgard-x/Utilities/ErrorCalculator.h"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// Smooth, multi-dimensional test data: a separable product of sines over the
+// normalized grid coordinates. Smoothness across the actual grid (not just the
+// linearized index) is what lets MGARD reach the requested error bound.
+template <DIM D, typename T>
+void fill_smooth_data(std::vector<T> &data, std::vector<SIZE> shape) {
+  const double pi = std::acos(-1.0);
+  SIZE n = data.size();
+  for (SIZE idx = 0; idx < n; idx++) {
+    SIZE r = idx;
+    double v = 1.0;
+    // Row-major: the last dimension is contiguous.
+    for (int d = static_cast<int>(D) - 1; d >= 0; d--) {
+      SIZE coord = r % shape[d];
+      r /= shape[d];
+      double x = static_cast<double>(coord) / static_cast<double>(shape[d]);
+      v *= std::sin(2.0 * pi * x + 0.5 * d);
+    }
+    data[idx] = static_cast<T>(v);
+  }
+}
+
+// Compress -> Decompress round trip for the low-level Compressor. Verifies, the
+// same way the mgard-x executable's print_statistics does:
+//   1. The true error stays under the requested error bound (tol).
+//   2. The norm returned by Compress matches the norm of the input data
+//      (L_inf when s == inf, L_2 when s == 0). The norm is only computed by
+//      Compress in REL mode, so it is only checked there.
+template <DIM D, typename T, typename DevType>
+void run_compressor_test(std::vector<SIZE> shape, enum error_bound_type ebtype,
+                         T s, T tol) {
+  SIZE n = 1;
+  for (auto sz : shape)
+    n *= sz;
+
+  std::vector<T> original(n);
+  fill_smooth_data<D, T>(original, shape);
+
+  Config config;
+
+  // Separate compressor and decompressor objects so they share no internal
+  // state — the round trip only communicates through the serialized bytes
+  // (and the norm, as it would be carried in metadata in real usage).
+  // Use Adapt (not the parameterized constructor) to initialize: only the
+  // Adapt path allocates the Huffman signature_verify buffer that Deserialize
+  // reads during decompression. This matches the high-level pipeline.
+  Hierarchy<D, T, DevType> hierarchy(shape, config);
+  Compressor<D, T, DevType> compressor;
+  compressor.Adapt(hierarchy, config, 0);
+  Compressor<D, T, DevType> decompressor;
+  decompressor.Adapt(hierarchy, config, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  // Compress modifies the device array in place (in-place decomposition), so
+  // keep the host copy in `original` for the error comparison below.
+  Array<D, T, DevType> original_array(shape);
+  original_array.load(original.data());
+
+  T norm = 0;
+  Array<1, Byte, DevType> compressed_array;
+  compressor.Compress(original_array, ebtype, tol, s, norm, compressed_array, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  Array<D, T, DevType> decompressed_array;
+  decompressor.Decompress(compressed_array, ebtype, tol, s, norm,
+                          decompressed_array, 0);
+  T *result = decompressed_array.hostCopy(false, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  // (1) True error under the requested bound. Mirrors print_statistics: L_inf
+  // metric when s == inf, L_2 metric otherwise; the metric already returns the
+  // relative error in REL mode, so comparing against tol works for both modes.
+  double actual_error;
+  if (s == std::numeric_limits<T>::infinity()) {
+    actual_error = L_inf_error(n, original.data(), result, ebtype);
+  } else {
+    actual_error = L_2_error(shape, original.data(), result, ebtype,
+                             config.normalize_coordinates);
+  }
+  REQUIRE(actual_error < static_cast<double>(tol));
+
+  // (2) Returned norm matches the input data norm (REL mode only).
+  if (ebtype == error_bound_type::REL) {
+    double expected_norm;
+    if (s == std::numeric_limits<T>::infinity()) {
+      expected_norm = L_inf_norm(n, original.data());
+    } else {
+      expected_norm =
+          L_2_norm(shape, original.data(), config.normalize_coordinates);
+    }
+    REQUIRE(static_cast<double>(norm) ==
+            Catch::Approx(expected_norm).epsilon(1e-4));
+  }
+}
+
+// Exercises the cartesian product of error_bound_type {REL, ABS}, s {inf, 0},
+// and tol {1e-2, 1e-3, 1e-4} via GENERATE, for each data type.
+#define MGARD_X_COMPRESSOR_TEST_BODY(D, SHAPE)                                  \
+  DeviceRuntime<TestDevice>::Initialize();                                      \
+  enum error_bound_type ebtype =                                               \
+      GENERATE(error_bound_type::REL, error_bound_type::ABS);                  \
+  TestType s = GENERATE(std::numeric_limits<TestType>::infinity(),             \
+                        static_cast<TestType>(0));                             \
+  TestType tol = GENERATE(static_cast<TestType>(1e-2),                         \
+                          static_cast<TestType>(1e-3),                         \
+                          static_cast<TestType>(1e-4));                        \
+  CAPTURE(static_cast<int>(ebtype), s, tol);                                   \
+  run_compressor_test<D, TestType, TestDevice>(SHAPE, ebtype, s, tol);
+
+TEMPLATE_TEST_CASE("Low-Level Compressor 1D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  MGARD_X_COMPRESSOR_TEST_BODY(1, (std::vector<SIZE>{4097}))
+}
+
+TEMPLATE_TEST_CASE("Low-Level Compressor 2D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  MGARD_X_COMPRESSOR_TEST_BODY(2, (std::vector<SIZE>{129, 129}))
+}
+
+TEMPLATE_TEST_CASE("Low-Level Compressor 3D", "[mgard-x][@DEVICE_TYPE@]",
+                   float, double) {
+  MGARD_X_COMPRESSOR_TEST_BODY(3, (std::vector<SIZE>{33, 33, 33}))
+}
+
+} // namespace mgard_x

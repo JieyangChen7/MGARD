@@ -1,0 +1,57 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/LZ4.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// LZ4 is an nvcomp-backed, CUDA-only byte-stream codec operating in place on an
+// Array<1, Byte>: Compress replaces the array with the compressed stream,
+// Decompress restores the original bytes (size recovered from the stream).
+TEST_CASE("LZ4", "[mgard-x][@DEVICE_TYPE@]") {
+  const SIZE n = 100000;
+  const SIZE chunk_size = 1 << 15;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  // Low-entropy data (values 0-7) so LZ4 achieves meaningful compression.
+  std::vector<Byte> original(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    original[i] = static_cast<Byte>(std::rand() % 8);
+  }
+
+  Array<1, Byte, TestDevice> data({n});
+  data.load(original.data());
+
+  // Separate codec objects; each needs its own scratch buffer via Resize.
+  LZ4<TestDevice> compressor;
+  compressor.Resize(n, chunk_size, 0);
+  compressor.Compress(data, 0);
+
+  LZ4<TestDevice> decompressor;
+  decompressor.Resize(n, chunk_size, 0);
+  decompressor.Decompress(data, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  REQUIRE(data.shape(0) == n);
+  Byte *result = data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+
+} // namespace mgard_x
