@@ -30,9 +30,20 @@ public:
 
   MGARDX_EXEC void Operation1() {
     if (CACHE_SINGLETION) {
+      // Opt 3: cooperatively stage only the small, hottest decodebook tables
+      // (first[] and entry[], together sizeof(H)*2*word_bw bytes ~ 1KB) into
+      // shared memory. These are touched on every decoded bit. The large keys[]
+      // table is left in global memory so caching never inflates the per-block
+      // shared-memory footprint and hurts occupancy (which is what made caching
+      // the whole decodebook a net loss for large dictionaries). All threads
+      // participate; the framework inserts a block sync before Operation2.
       _s_singleton = (uint8_t *)FunctorBase<DeviceType>::GetSharedMemory();
-      if (FunctorBase<DeviceType>::GetThreadIdX() == 0) {
-        memcpy(_s_singleton, singleton((IDX)0), singleton_size);
+      size_t fe_bytes = sizeof(H) * (2 * sizeof(H) * 8);
+      uint8_t *src = singleton((IDX)0);
+      SIZE tid = FunctorBase<DeviceType>::GetThreadIdX();
+      SIZE nthreads = FunctorBase<DeviceType>::GetBlockDimX();
+      for (SIZE b = tid; b < (SIZE)fe_bytes; b += nthreads) {
+        _s_singleton[b] = src[b];
       }
     } else {
       _s_singleton = singleton((IDX)0);
@@ -43,7 +54,6 @@ public:
     size_t chunk_id = FunctorBase<DeviceType>::GetBlockIdX() *
                           FunctorBase<DeviceType>::GetBlockDimX() +
                       FunctorBase<DeviceType>::GetThreadIdX();
-    // if (chunk_id == 0) printf("n_chunk: %lu\n", n_chunk);
     if (chunk_id >= n_chunk)
       return;
 
@@ -51,66 +61,47 @@ public:
     SIZE bcode_offset = chunk_size * chunk_id;
     size_t total_bw = *dH_meta(chunk_id);
 
-    uint8_t next_bit;
-    size_t idx_bit;
-    size_t idx_byte = 0;
-    size_t idx_bcoded = 0;
+    const size_t word_bw = sizeof(H) * 8;
+    // first[]/entry[] come from _s_singleton (shared when cached, else global);
+    // keys[] always stays in global memory.
     auto first = reinterpret_cast<H *>(_s_singleton);
     auto entry = first + sizeof(H) * 8;
     auto keys =
-        reinterpret_cast<Q *>(_s_singleton + sizeof(H) * (2 * sizeof(H) * 8));
-    H v = (*densely(densely_offset + idx_byte) >> (sizeof(H) * 8 - 1)) &
-          0x1; // get the first bit
+        reinterpret_cast<Q *>(singleton((IDX)0) + sizeof(H) * (2 * sizeof(H) * 8));
+
+    // Opt 2: hold the current densely word in a register and refetch from global
+    // memory only when the bit cursor crosses into the next word, instead of
+    // re-loading the same word once per bit (up to word_bw redundant loads).
+    size_t cached_word_idx = 0;
+    H cached_word = *densely(densely_offset);
+
+    H v = (cached_word >> (word_bw - 1)) & 0x1; // get the first bit
     size_t l = 1;
     size_t i = 0;
+    size_t idx_bcoded = 0;
     while (i < total_bw) {
       while (v < first[l]) { // append next i_cb bit
         ++i;
-        idx_byte = i / (sizeof(H) * 8);
-        idx_bit = i % (sizeof(H) * 8);
-        next_bit = ((*densely(densely_offset + idx_byte) >>
-                     (sizeof(H) * 8 - 1 - idx_bit)) &
-                    0x1);
+        size_t idx_word = i / word_bw;
+        if (idx_word != cached_word_idx) {
+          cached_word = *densely(densely_offset + idx_word);
+          cached_word_idx = idx_word;
+        }
+        H next_bit = (cached_word >> (word_bw - 1 - (i % word_bw))) & 0x1;
         v = (v << 1) | next_bit;
         ++l;
       }
-
-      // debug - start
-      // if (!chunk_id) {
-      // // if ((entry[l] + v - first[l])*sizeof(Q) + sizeof(H) * (2 * sizeof(H)
-      // * 8) >= 1280) {
-      //   printf("out of range: %llu\n", (entry[l] + v - first[l])*sizeof(Q) +
-      //   sizeof(H) * (2 * sizeof(H) * 8)); printf("l: %llu\n", l);
-      //   printf("entry[l]: %llu\n", entry[l]);
-      //   printf("v: %llu\n", v);
-      //   printf("first[l]: %llu\n", first[l]);
-      //   printf("entry:");
-      //   for (int i = 0; i < 64; i++) {
-      //     printf("%llu ", entry[i]);
-      //   }
-      //   printf("\n");
-      //   printf("first:");
-      //   for (int i = 0; i < 64; i++) {
-      //     printf("%llu ", first[i]);
-      //   }
-      //   printf("\n");
-      // }
-      // debug - end
-      // if (entry[l] + v - first[l] > 100000) {
-      //   printf("offset: %llu + %llu i: %llu l: %llu (%llu, %llu, %llu)\n",
-      //   sizeof(H) * (2 * sizeof(H) * 8), entry[l] + v - first[l], i, l,
-      //   entry[l], v, first[l]);
-      // }
       *bcode(bcode_offset + idx_bcoded) = keys[entry[l] + v - first[l]];
       idx_bcoded++;
       {
         ++i;
-        idx_byte = i / (sizeof(H) * 8);
-        idx_bit = i % (sizeof(H) * 8);
-        next_bit = ((*densely(densely_offset + idx_byte) >>
-                     (sizeof(H) * 8 - 1 - idx_bit)) &
-                    0x1);
-        v = 0x0 | next_bit;
+        size_t idx_word = i / word_bw;
+        if (idx_word != cached_word_idx) {
+          cached_word = *densely(densely_offset + idx_word);
+          cached_word_idx = idx_word;
+        }
+        H next_bit = (cached_word >> (word_bw - 1 - (i % word_bw))) & 0x1;
+        v = next_bit;
       }
       l = 1;
     }
@@ -118,7 +109,8 @@ public:
 
   MGARDX_CONT size_t shared_memory_size() {
     if (CACHE_SINGLETION) {
-      return singleton_size;
+      // Only first[]/entry[] are cached (see Operation1), not the full table.
+      return sizeof(H) * (2 * sizeof(H) * 8);
     } else {
       return 0;
     }
@@ -153,6 +145,12 @@ public:
         chunk_size(chunk_size), n_chunk(n_chunk), singleton(singleton),
         singleton_size(singleton_size) {}
 
+  // NOTE: decode is one independent thread per chunk and is dominated by warp
+  // straggler divergence (each thread loops until its own chunk's bits are
+  // exhausted, and the warp runs until its slowest chunk finishes). Larger
+  // (full-warp) blocks raise occupancy but put 32 chunks under one straggler
+  // group instead of 16, which measured ~15% SLOWER on NYX 512^3. The autotuned
+  // (half-warp) default is intentionally left in place.
   template <SIZE R, SIZE C, SIZE F>
   MGARDX_CONT Task<DecodeFunctor<Q, H, CACHE_SINGLETION, DeviceType>>
   GenTask(int queue_idx) {
@@ -190,29 +188,17 @@ void Decode(SubArray<1, H, DeviceType> densely,
             SubArray<1, Q, DeviceType> bcode, SIZE len, int chunk_size,
             int n_chunk, SubArray<1, uint8_t, DeviceType> singleton,
             size_t singleton_size, int queue_idx) {
-  int maxbytes = DeviceRuntime<DeviceType>::GetMaxSharedMemorySize();
-  // Shared memory is disabled as it does not provide better performance
-  // if (singleton_size <= maxbytes) {
-  //   if (DeviceRuntime<DeviceType>::PrintKernelConfig) {
-  //     std::cout << log::log_info
-  //               << "Decode: using share memory to cache decodebook\n";
-  //   }
-  //   DeviceLauncher<DeviceType>::Execute(
-  //       DecodeKernel<Q, H, true, DeviceType>(densely, dH_meta, bcode, len,
-  //                                            chunk_size, n_chunk, singleton,
-  //                                            singleton_size),
-  //       queue_idx);
-  // } else {
+  // Opt 3 caches only first[]/entry[] (~1KB) in shared memory, which always fits
+  // and never hurts occupancy, so the cached path is used unconditionally.
   if (DeviceRuntime<DeviceType>::PrintKernelConfig) {
     std::cout << log::log_info
-              << "Decode: not using share memory to cache decodebook\n";
+              << "Decode: caching first[]/entry[] in shared memory\n";
   }
   DeviceLauncher<DeviceType>::Execute(
-      DecodeKernel<Q, H, false, DeviceType>(densely, dH_meta, bcode, len,
-                                            chunk_size, n_chunk, singleton,
-                                            singleton_size),
+      DecodeKernel<Q, H, true, DeviceType>(densely, dH_meta, bcode, len,
+                                           chunk_size, n_chunk, singleton,
+                                           singleton_size),
       queue_idx);
-  // }
 }
 
 } // namespace mgard_x

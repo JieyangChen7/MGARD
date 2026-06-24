@@ -42,6 +42,11 @@ struct Atomic<T, MemoryType, Scope, SERIAL> {
     *result += value;
     return old;
   }
+  MGARDX_EXEC static T Or(T *result, T value) {
+    T old = *result;
+    *result |= value;
+    return old;
+  }
 };
 
 template <> struct Math<SERIAL> {

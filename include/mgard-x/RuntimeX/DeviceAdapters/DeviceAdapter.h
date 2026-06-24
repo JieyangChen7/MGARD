@@ -46,6 +46,7 @@ struct Atomic {
   MGARDX_EXEC static T Min(T *result, T value);
   MGARDX_EXEC static T Max(T *result, T value);
   MGARDX_EXEC static T Add(T *result, T value);
+  MGARDX_EXEC static T Or(T *result, T value);
 };
 
 // based on de Bruijn sequence:

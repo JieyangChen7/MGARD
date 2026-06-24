@@ -28,36 +28,84 @@ public:
     Functor<DeviceType>();
   }
 
+  // SEPARATE uses block-aggregated atomics: every outlier first reserves a slot
+  // in a block-local counter (shared memory, block scope), then a single thread
+  // reserves the whole block's contiguous output range with one device-scope
+  // atomic. This collapses up to blockDim global atomics on the single counter
+  // address into one per block, removing the contention that made this the
+  // bottleneck. The functor framework inserts a block barrier between
+  // consecutive Operation*() phases.
   MGARDX_EXEC void Operation1() {
-    SIZE id = FunctorBase<DeviceType>::GetBlockIdX() *
-                  FunctorBase<DeviceType>::GetBlockDimX() +
-              FunctorBase<DeviceType>::GetThreadIdX();
-    if (id < v.shape(0)) {
-      T value = *v(id);
-      if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
-        // printf("%d %lld %d\n", value, dict_size, value < 0 || value >=
-        // dict_size);
+    id = FunctorBase<DeviceType>::GetBlockIdX() *
+             FunctorBase<DeviceType>::GetBlockDimX() +
+         FunctorBase<DeviceType>::GetThreadIdX();
+    if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
+      // sm[0]: block-local outlier count, sm[1]: block base offset
+      sm = (ATOMIC_IDX *)FunctorBase<DeviceType>::GetSharedMemory();
+      if (FunctorBase<DeviceType>::GetThreadIdX() == 0) {
+        sm[0] = 0;
+      }
+      is_outlier = false;
+      if (id < v.shape(0)) {
+        value = *v(id);
         if (value < 0 || value >= dict_size) {
-          ATOMIC_IDX outlier_write_index =
-              Atomic<ATOMIC_IDX, AtomicGlobalMemory, AtomicDeviceScope,
-                     DeviceType>::Add(outlier_count((IDX)0), (ATOMIC_IDX)1);
-          if (outlier_write_index < outlier_index.shape(0)) {
-            *outlier_index(outlier_write_index) = id;
-            *outlier_value(outlier_write_index) = value;
-            *v(id) = 0;
-          }
+          is_outlier = true;
         }
-      } else if constexpr (OP == MGARDX_RESTORE_OUTLIER) {
-        if (id < outlier_value.shape(0)) {
-          ATOMIC_IDX index = *outlier_index(id);
-          QUANTIZED_INT value = *outlier_value(id);
-          *v(index) = value;
+      }
+    } else if constexpr (OP == MGARDX_RESTORE_OUTLIER) {
+      // Grid is sized to the outlier count, so this is a sparse scatter.
+      if (id < outlier_value.shape(0)) {
+        ATOMIC_IDX index = *outlier_index(id);
+        T val = *outlier_value(id);
+        *v(index) = val;
+      }
+    }
+  }
+
+  // Reserve a block-local slot for each outlier.
+  MGARDX_EXEC void Operation2() {
+    if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
+      if (is_outlier) {
+        local_offset =
+            Atomic<ATOMIC_IDX, AtomicSharedMemory, AtomicDeviceScope,
+                   DeviceType>::Add(&sm[0], (ATOMIC_IDX)1);
+      }
+    }
+  }
+
+  // One global atomic per block reserves the block's output range.
+  MGARDX_EXEC void Operation3() {
+    if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
+      if (FunctorBase<DeviceType>::GetThreadIdX() == 0) {
+        sm[1] = Atomic<ATOMIC_IDX, AtomicGlobalMemory, AtomicDeviceScope,
+                       DeviceType>::Add(outlier_count((IDX)0), sm[0]);
+      }
+    }
+  }
+
+  // Scatter outliers to their global slots and zero them in the primary stream.
+  MGARDX_EXEC void Operation4() {
+    if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
+      if (is_outlier) {
+        ATOMIC_IDX outlier_write_index = sm[1] + local_offset;
+        if (outlier_write_index < outlier_index.shape(0)) {
+          *outlier_index(outlier_write_index) = id;
+          *outlier_value(outlier_write_index) = value;
+          *v(id) = 0;
         }
       }
     }
   }
 
-  MGARDX_CONT size_t shared_memory_size() { return 0; }
+  MGARDX_EXEC void Operation5() {}
+
+  MGARDX_CONT size_t shared_memory_size() {
+    if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
+      return 2 * sizeof(ATOMIC_IDX);
+    } else {
+      return 0;
+    }
+  }
 
 private:
   SubArray<1, T, DeviceType> v;
@@ -65,6 +113,13 @@ private:
   SubArray<1, ATOMIC_IDX, DeviceType> outlier_count;
   SubArray<1, ATOMIC_IDX, DeviceType> outlier_index;
   SubArray<1, T, DeviceType> outlier_value;
+
+  // Per-thread state carried across the Operation*() phases (SEPARATE only).
+  SIZE id;
+  bool is_outlier;
+  T value;
+  ATOMIC_IDX local_offset;
+  ATOMIC_IDX *sm;
 };
 
 template <typename T, OPTION OP, typename DeviceType>
@@ -92,7 +147,16 @@ public:
     tbx = 256;
     gridz = 1;
     gridy = 1;
-    gridx = (v.shape(0) - 1) / tbx + 1;
+    // RESTORE is a sparse scatter over the outliers only (outlier_value is
+    // sized to the outlier count after deserialization), so launch just enough
+    // threads instead of one per element of the full array.
+    SIZE launch_count;
+    if constexpr (OP == MGARDX_RESTORE_OUTLIER) {
+      launch_count = outlier_value.shape(0);
+    } else {
+      launch_count = v.shape(0);
+    }
+    gridx = (launch_count == 0) ? 1 : (launch_count - 1) / tbx + 1;
     return Task(functor, gridz, gridy, gridx, tbz, tby, tbx, sm_size, queue_idx,
                 std::string(Name));
   }

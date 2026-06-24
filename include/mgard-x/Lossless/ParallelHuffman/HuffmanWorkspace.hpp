@@ -10,6 +10,7 @@
 
 #include "../../Hierarchy/Hierarchy.h"
 #include "../../RuntimeX/RuntimeXPublic.h"
+#include "ParallelDeflate.hpp"
 
 namespace mgard_x {
 
@@ -29,10 +30,15 @@ public:
     freq_subarray = SubArray(freq_array);
     codebook_subarray = SubArray(codebook_array);
     decodebook_subarray = SubArray(decodebook_array);
-    huff_subarray = SubArray(huff_array);
     huff_bitwidths_subarray = SubArray(huff_bitwidths_array);
     condense_write_offsets_subarray = SubArray(condense_write_offsets_array);
     condense_actual_lengths_subarray = SubArray(condense_actual_lengths_array);
+
+    deflate_group_bits_subarray = SubArray(deflate_group_bits_array);
+    deflate_group_offsets_subarray = SubArray(deflate_group_offsets_array);
+    deflate_chunk_words_subarray = SubArray(deflate_chunk_words_array);
+    deflate_chunk_word_offsets_subarray =
+        SubArray(deflate_chunk_word_offsets_array);
 
     // Codebook
     first_nonzero_index_subarray = SubArray(first_nonzero_index_array);
@@ -68,11 +74,29 @@ public:
     size_t type_bw = sizeof(H) * 8;
     size_t decodebook_size = sizeof(H) * (2 * type_bw) + sizeof(Q) * dict_size;
     size += decodebook_size * sizeof(uint8_t);
-    size += primary_count * sizeof(H);
     size_t nchunk = (primary_count - 1) / chunk_size + 1;
     size += nchunk * sizeof(size_t);
     size += nchunk * sizeof(size_t);
     size += nchunk * sizeof(size_t);
+
+    // Parallel deflate
+    SIZE groups_per_chunk = (chunk_size - 1) / DEFLATE_GROUP_SIZE + 1;
+    size_t ngroups = nchunk * groups_per_chunk;
+    size += ngroups * sizeof(size_t);       // group_bits
+    size += (ngroups + 1) * sizeof(size_t); // group_offsets
+    size += nchunk * sizeof(size_t);        // chunk_words
+    size += (nchunk + 1) * sizeof(size_t);  // chunk_word_offsets
+    {
+      Array<1, Byte, DeviceType> tmp_group_scan, tmp_chunk_scan;
+      DeviceCollective<DeviceType>::ScanSumExtended(
+          (SIZE)ngroups, SubArray<1, size_t, DeviceType>(),
+          SubArray<1, size_t, DeviceType>(), tmp_group_scan, false, 0);
+      DeviceCollective<DeviceType>::ScanSumExtended(
+          (SIZE)nchunk, SubArray<1, size_t, DeviceType>(),
+          SubArray<1, size_t, DeviceType>(), tmp_chunk_scan, false, 0);
+      size += tmp_group_scan.shape(0);
+      size += tmp_chunk_scan.shape(0);
+    }
 
     size += sizeof(unsigned int);
     Array<1, Byte, DeviceType> tmp;
@@ -110,12 +134,28 @@ public:
     size_t type_bw = sizeof(H) * 8;
     size_t decodebook_size = sizeof(H) * (2 * type_bw) + sizeof(Q) * dict_size;
     decodebook_array = Array<1, uint8_t, DeviceType>({(SIZE)decodebook_size});
-    huff_array = Array<1, H, DeviceType>({primary_count});
     size_t nchunk = (primary_count - 1) / chunk_size + 1;
     huff_bitwidths_array = Array<1, size_t, DeviceType>({(SIZE)nchunk});
     condense_write_offsets_array = Array<1, size_t, DeviceType>({(SIZE)nchunk});
     condense_actual_lengths_array =
         Array<1, size_t, DeviceType>({(SIZE)nchunk});
+
+    // Parallel deflate
+    SIZE groups_per_chunk = (chunk_size - 1) / DEFLATE_GROUP_SIZE + 1;
+    SIZE ngroups = (SIZE)(nchunk * groups_per_chunk);
+    deflate_group_bits_array = Array<1, size_t, DeviceType>({ngroups});
+    deflate_group_offsets_array = Array<1, size_t, DeviceType>({ngroups + 1});
+    deflate_chunk_words_array = Array<1, size_t, DeviceType>({(SIZE)nchunk});
+    deflate_chunk_word_offsets_array =
+        Array<1, size_t, DeviceType>({(SIZE)nchunk + 1});
+    DeviceCollective<DeviceType>::ScanSumExtended(
+        ngroups, SubArray<1, size_t, DeviceType>(),
+        SubArray<1, size_t, DeviceType>(), deflate_group_scan_workspace, false,
+        0);
+    DeviceCollective<DeviceType>::ScanSumExtended(
+        (SIZE)nchunk, SubArray<1, size_t, DeviceType>(),
+        SubArray<1, size_t, DeviceType>(), deflate_chunk_scan_workspace, false,
+        0);
     // Codebook
     first_nonzero_index_array = Array<1, unsigned int, DeviceType>({1});
     // first_nonzero_index_array.hostCopy(); // Create host allocation
@@ -172,11 +212,26 @@ public:
     size_t type_bw = sizeof(H) * 8;
     size_t decodebook_size = sizeof(H) * (2 * type_bw) + sizeof(Q) * dict_size;
     decodebook_array.resize({(SIZE)decodebook_size}, queue_idx);
-    huff_array.resize({primary_count}, queue_idx);
     size_t nchunk = (primary_count - 1) / chunk_size + 1;
     huff_bitwidths_array.resize({(SIZE)nchunk}, queue_idx);
     condense_write_offsets_array.resize({(SIZE)nchunk}, queue_idx);
     condense_actual_lengths_array.resize({(SIZE)nchunk}, queue_idx);
+
+    // Parallel deflate
+    SIZE groups_per_chunk = (chunk_size - 1) / DEFLATE_GROUP_SIZE + 1;
+    SIZE ngroups = (SIZE)(nchunk * groups_per_chunk);
+    deflate_group_bits_array.resize({ngroups}, queue_idx);
+    deflate_group_offsets_array.resize({ngroups + 1}, queue_idx);
+    deflate_chunk_words_array.resize({(SIZE)nchunk}, queue_idx);
+    deflate_chunk_word_offsets_array.resize({(SIZE)nchunk + 1}, queue_idx);
+    DeviceCollective<DeviceType>::ScanSumExtended(
+        ngroups, SubArray<1, size_t, DeviceType>(),
+        SubArray<1, size_t, DeviceType>(), deflate_group_scan_workspace, false,
+        queue_idx);
+    DeviceCollective<DeviceType>::ScanSumExtended(
+        (SIZE)nchunk, SubArray<1, size_t, DeviceType>(),
+        SubArray<1, size_t, DeviceType>(), deflate_chunk_scan_workspace, false,
+        queue_idx);
     // Codebook
     first_nonzero_index_array.resize({1}, queue_idx);
     // first_nonzero_index_array.hostCopy(); // Create host allocation
@@ -241,10 +296,20 @@ public:
   Array<1, unsigned int, DeviceType> freq_array;
   Array<1, H, DeviceType> codebook_array;
   Array<1, uint8_t, DeviceType> decodebook_array;
-  Array<1, H, DeviceType> huff_array;
   Array<1, size_t, DeviceType> huff_bitwidths_array;
   Array<1, size_t, DeviceType> condense_write_offsets_array;
   Array<1, size_t, DeviceType> condense_actual_lengths_array;
+
+  // Parallel deflate (cooperative bit-packing). group_bits holds per-group bit
+  // sums; group_offsets is their extended exclusive scan. chunk_words holds
+  // per-chunk H-word counts; chunk_word_offsets is their extended exclusive
+  // scan (the last element is the total ddata word count).
+  Array<1, size_t, DeviceType> deflate_group_bits_array;
+  Array<1, size_t, DeviceType> deflate_group_offsets_array;
+  Array<1, size_t, DeviceType> deflate_chunk_words_array;
+  Array<1, size_t, DeviceType> deflate_chunk_word_offsets_array;
+  Array<1, Byte, DeviceType> deflate_group_scan_workspace;
+  Array<1, Byte, DeviceType> deflate_chunk_scan_workspace;
 
   // Codebook
   Array<1, unsigned int, DeviceType> first_nonzero_index_array;
@@ -277,10 +342,14 @@ public:
   SubArray<1, unsigned int, DeviceType> freq_subarray;
   SubArray<1, H, DeviceType> codebook_subarray;
   SubArray<1, uint8_t, DeviceType> decodebook_subarray;
-  SubArray<1, H, DeviceType> huff_subarray;
   SubArray<1, size_t, DeviceType> huff_bitwidths_subarray;
   SubArray<1, size_t, DeviceType> condense_write_offsets_subarray;
   SubArray<1, size_t, DeviceType> condense_actual_lengths_subarray;
+
+  SubArray<1, size_t, DeviceType> deflate_group_bits_subarray;
+  SubArray<1, size_t, DeviceType> deflate_group_offsets_subarray;
+  SubArray<1, size_t, DeviceType> deflate_chunk_words_subarray;
+  SubArray<1, size_t, DeviceType> deflate_chunk_word_offsets_subarray;
 
   // Codebook
   SubArray<1, unsigned int, DeviceType> first_nonzero_index_subarray;

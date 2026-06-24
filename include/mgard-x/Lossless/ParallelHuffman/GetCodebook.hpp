@@ -20,7 +20,7 @@
 namespace mgard_x {
 // Parallel codebook generation wrapper
 template <typename Q, typename S, typename H, typename DeviceType>
-void GetCodebook(int dict_size,
+void GetCodebook(int dict_size, size_t primary_count,
                  SubArray<1, unsigned int, DeviceType> _d_freq_subarray,
                  SubArray<1, H, DeviceType> _d_codebook_subarray,
                  SubArray<1, uint8_t, DeviceType> _d_decode_meta_subarray,
@@ -98,12 +98,10 @@ void GetCodebook(int dict_size,
   if (log::level & log::INFO) {
     // PrintSubarray("GenerateCL::CL_subarray", workspace.CL_subarray);
     // std::cout << "GenerateCL: max_CL: " << max_CL << std::endl;
-    double LC =
-        CalculateLC(workspace.huff_array.shape(0), nz_dict_size,
-                    _nz_d_freq_subarray, workspace.CL_subarray, queue_idx);
-    double entropy =
-        CalculateEntropy(workspace.huff_array.shape(0), nz_dict_size,
-                         _nz_d_freq_subarray, queue_idx);
+    double LC = CalculateLC(primary_count, nz_dict_size, _nz_d_freq_subarray,
+                            workspace.CL_subarray, queue_idx);
+    double entropy = CalculateEntropy(primary_count, nz_dict_size,
+                                      _nz_d_freq_subarray, queue_idx);
     log::dbg("LC: " + std::to_string(LC));
     log::dbg("Entropy: " + std::to_string(entropy));
   }

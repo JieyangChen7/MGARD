@@ -150,6 +150,43 @@ struct Atomic<T, MemoryType, Scope, SYCL> {
       }
     }
   }
+  MGARDX_EXEC static T Or(T *result, T value) {
+    if constexpr (MemoryType == AtomicGlobalMemory) {
+      if constexpr (Scope == AtomicSystemScope) {
+        using AtomicRef = sycl::ext::oneapi::atomic_ref<
+            T, sycl::memory_order::relaxed, sycl::memory_scope::system,
+            sycl::access::address_space::global_space>;
+        return AtomicRef(result[0]).fetch_or(value);
+      } else if constexpr (Scope == AtomicDeviceScope) {
+        using AtomicRef = sycl::ext::oneapi::atomic_ref<
+            T, sycl::memory_order::relaxed, sycl::memory_scope::device,
+            sycl::access::address_space::global_space>;
+        return AtomicRef(result[0]).fetch_or(value);
+      } else {
+        using AtomicRef = sycl::ext::oneapi::atomic_ref<
+            T, sycl::memory_order::relaxed, sycl::memory_scope::work_group,
+            sycl::access::address_space::global_space>;
+        return AtomicRef(result[0]).fetch_or(value);
+      }
+    } else {
+      if constexpr (Scope == AtomicSystemScope) {
+        using AtomicRef = sycl::ext::oneapi::atomic_ref<
+            T, sycl::memory_order::relaxed, sycl::memory_scope::system,
+            sycl::access::address_space::local_space>;
+        return AtomicRef(result[0]).fetch_or(value);
+      } else if constexpr (Scope == AtomicDeviceScope) {
+        using AtomicRef = sycl::ext::oneapi::atomic_ref<
+            T, sycl::memory_order::relaxed, sycl::memory_scope::device,
+            sycl::access::address_space::local_space>;
+        return AtomicRef(result[0]).fetch_or(value);
+      } else {
+        using AtomicRef = sycl::ext::oneapi::atomic_ref<
+            T, sycl::memory_order::relaxed, sycl::memory_scope::work_group,
+            sycl::access::address_space::local_space>;
+        return AtomicRef(result[0]).fetch_or(value);
+      }
+    }
+  }
 };
 
 template <> struct Math<SYCL> {

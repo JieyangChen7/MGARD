@@ -145,6 +145,19 @@ struct Atomic<T, MemoryType, Scope, HIP> {
       return atomicAdd(result, value);
     }
   }
+  MGARDX_EXEC static T Or(T *result, T value) {
+    // Cast to the matching-width unsigned type for portability across
+    // H = uint32/64 (atomicOr is only defined for 32-/64-bit unsigned ints).
+    if constexpr (sizeof(T) == 8) {
+      using U = unsigned long long int;
+      return static_cast<T>(atomicOr(reinterpret_cast<U *>(result),
+                                     static_cast<U>(value)));
+    } else {
+      using U = unsigned int;
+      return static_cast<T>(atomicOr(reinterpret_cast<U *>(result),
+                                     static_cast<U>(value)));
+    }
+  }
 };
 
 template <> struct Math<HIP> {

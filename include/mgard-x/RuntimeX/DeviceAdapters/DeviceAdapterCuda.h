@@ -221,6 +221,41 @@ struct Atomic<T, MemoryType, Scope, CUDA> {
     return atomicAdd(result, value);
 #endif
   }
+  MGARDX_EXEC static T Or(T *result, T value) {
+    // atomicOr is only overloaded for 32-/64-bit unsigned integers, so cast to
+    // the matching-width unsigned type to stay portable across H = uint32/64.
+    if constexpr (sizeof(T) == 8) {
+      using U = unsigned long long int;
+      U *r = reinterpret_cast<U *>(result);
+      U v = static_cast<U>(value);
+#if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 600
+      if constexpr (Scope == AtomicSystemScope) {
+        return static_cast<T>(atomicOr_system(r, v));
+      } else if constexpr (Scope == AtomicDeviceScope) {
+        return static_cast<T>(atomicOr(r, v));
+      } else {
+        return static_cast<T>(atomicOr_block(r, v));
+      }
+#else
+      return static_cast<T>(atomicOr(r, v));
+#endif
+    } else {
+      using U = unsigned int;
+      U *r = reinterpret_cast<U *>(result);
+      U v = static_cast<U>(value);
+#if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 600
+      if constexpr (Scope == AtomicSystemScope) {
+        return static_cast<T>(atomicOr_system(r, v));
+      } else if constexpr (Scope == AtomicDeviceScope) {
+        return static_cast<T>(atomicOr(r, v));
+      } else {
+        return static_cast<T>(atomicOr_block(r, v));
+      }
+#else
+      return static_cast<T>(atomicOr(r, v));
+#endif
+    }
+  }
 };
 
 template <> struct Math<CUDA> {

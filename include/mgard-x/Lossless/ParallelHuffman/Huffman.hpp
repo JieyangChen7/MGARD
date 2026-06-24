@@ -17,6 +17,7 @@ static bool debug_print_huffman = false;
 #include "Decode.hpp"
 #include "Deflate.hpp"
 #include "DictionaryShift.hpp"
+#include "ParallelDeflate.hpp"
 #include "EncodeFixedLen.hpp"
 #include "GetCodebook.hpp"
 #include "Histogram.hpp"
@@ -168,16 +169,39 @@ public:
 
     primary_count = primary_subarray.shape(0);
 
+    // Per-stage timing scaffolding (disabled; uncomment the block below and the
+    // mark() calls to profile each stage under log::TIME). Each mark() syncs the
+    // queue, prints the elapsed time of the stage just finished against the
+    // primary input size, and restarts the stage timer. Note: this serializes
+    // the pipeline (one sync per stage).
+    // Timer timer_stage;
+    // auto mark = [&](const char *name) {
+    //   if (log::level & log::TIME) {
+    //     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //     timer_stage.end();
+    //     timer_stage.print(name, primary_count * sizeof(Q));
+    //     timer_stage.clear();
+    //     timer_stage.start();
+    //   }
+    // };
+    // if (log::level & log::TIME) {
+    //   DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    //   timer_stage.start();
+    // }
+
     Histogram<Q, unsigned int, DeviceType>(primary_subarray,
                                            workspace.freq_subarray,
                                            primary_count, dict_size, queue_idx);
+    // mark("Huffman stage: histogram");
 
     if (debug_print_huffman) {
       PrintSubarray("Histogram::freq_subarray", workspace.freq_subarray);
     }
 
-    GetCodebook(dict_size, workspace.freq_subarray, workspace.codebook_subarray,
-                workspace.decodebook_subarray, workspace, queue_idx);
+    GetCodebook(dict_size, primary_count, workspace.freq_subarray,
+                workspace.codebook_subarray, workspace.decodebook_subarray,
+                workspace, queue_idx);
+    // mark("Huffman stage: codebook");
 
     if (target_cr > 1.0) {
       workspace.freq_array.hostCopy(false, queue_idx);
@@ -204,26 +228,75 @@ public:
       PrintSubarray("GetCodebook::decodebook_subarray",
                     workspace.decodebook_subarray);
     }
-    DeviceLauncher<DeviceType>::Execute(
-        EncodeFixedLenKernel<Q, H, DeviceType>(primary_subarray,
-                                               workspace.huff_subarray,
-                                               workspace.codebook_subarray),
-        queue_idx);
+    // Encoding is fused into the deflate kernels below: instead of first
+    // materializing huff[i] = codebook[data[i]] into a primary_count-sized array
+    // and reading it back twice, GroupBits and Pack look up codebook[data[i]] on
+    // the fly. This removes a full pass and the huff_array allocation.
 
-    if (debug_print_huffman) {
-      PrintSubarray("EncodeFixedLen::huff_subarray", workspace.huff_subarray);
-    }
-    // deflate
+    // Parallel deflate sizing. The actual bit-packing into the final buffer is
+    // deferred to Serialize (once the output layout is known) so that each
+    // chunk can be written directly to its final offset, eliminating a separate
+    // condense/gather pass. Here we only compute the output geometry:
+    //   per-group bit sums -> scan -> per-chunk bit lengths + word counts
+    //   -> scan -> per-chunk word offsets (and the total ddata word count).
+    SIZE groups_per_chunk = (chunk_size - 1) / DEFLATE_GROUP_SIZE + 1;
+    auto nchunk = (primary_count - 1) / chunk_size + 1;
+    SIZE ngroups = (SIZE)(nchunk * groups_per_chunk);
+
     DeviceLauncher<DeviceType>::Execute(
-        DeflateKernel<H, DeviceType>(workspace.huff_subarray,
-                                     workspace.huff_bitwidths_subarray,
-                                     chunk_size),
+        DeflateGroupBitsKernel<Q, H, DeviceType>(
+            primary_subarray, workspace.codebook_subarray,
+            workspace.deflate_group_bits_subarray, primary_count, chunk_size,
+            groups_per_chunk, ngroups),
         queue_idx);
-    if (debug_print_huffman) {
-      PrintSubarray("Deflate::huff_subarray", workspace.huff_subarray);
-      PrintSubarray("Deflate::huff_bitwidths_subarray",
-                    workspace.huff_bitwidths_subarray);
-    }
+    // mark("Huffman stage: deflate group-bits");
+    DeviceCollective<DeviceType>::ScanSumExtended(
+        ngroups, workspace.deflate_group_bits_subarray,
+        workspace.deflate_group_offsets_subarray,
+        workspace.deflate_group_scan_workspace, true, queue_idx);
+    DeviceLauncher<DeviceType>::Execute(
+        DeflateChunkMetaKernel<H, DeviceType>(
+            workspace.deflate_group_offsets_subarray,
+            workspace.huff_bitwidths_subarray,
+            workspace.deflate_chunk_words_subarray, (SIZE)nchunk,
+            groups_per_chunk),
+        queue_idx);
+    DeviceCollective<DeviceType>::ScanSumExtended(
+        (SIZE)nchunk, workspace.deflate_chunk_words_subarray,
+        workspace.deflate_chunk_word_offsets_subarray,
+        workspace.deflate_chunk_scan_workspace, true, queue_idx);
+    // Total number of H-words in the densely packed stream.
+    MemoryManager<DeviceType>::Copy1D(
+        &ddata_size,
+        workspace.deflate_chunk_word_offsets_subarray.data() + nchunk, 1,
+        queue_idx);
+    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+    // mark("Huffman stage: deflate sizing (scans+meta)");
+
+    // Pack the densely-coded bitstream directly into its final location in the
+    // output buffer (zero-copy): the byte offset where the packed stream lands
+    // is fully determined by the sizes of the preceding sections, all known
+    // here, so we can size the output now and have the pack kernel write
+    // straight to it. Serialize then only fills in the surrounding metadata.
+    // Each group writes MSB-first to its final intra-chunk offset; words fully
+    // owned by a group use plain stores while the (<=2) words shared with
+    // neighbouring groups use atomicOr, so the destination must be zeroed first.
+    SIZE packed_byte_offset;
+    SIZE compressed_size = ComputeSerializedLayout(packed_byte_offset);
+    compressed_data.resize({compressed_size}, queue_idx);
+    SubArray<1, Byte, DeviceType> compressed_data_subarray(compressed_data);
+    SubArray<1, H, DeviceType> packed_subarray(
+        {(SIZE)ddata_size}, (H *)compressed_data_subarray(packed_byte_offset));
+    MemoryManager<DeviceType>::Memset1D(packed_subarray.data(), ddata_size, 0,
+                                        queue_idx);
+    DeviceLauncher<DeviceType>::Execute(
+        DeflatePackKernel<Q, H, DeviceType>(
+            primary_subarray, workspace.codebook_subarray,
+            workspace.deflate_group_offsets_subarray,
+            workspace.deflate_chunk_word_offsets_subarray, packed_subarray,
+            primary_count, chunk_size, groups_per_chunk, ngroups),
+        queue_idx);
+    // mark("Huffman stage: deflate pack");
 
     // Serialize(compressed_data, queue_idx);
 
@@ -236,49 +309,15 @@ public:
     return true;
   }
 
-  void Serialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
-    Timer timer;
-    if (log::level & log::TIME) {
-      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      timer.start();
-    }
+  // Walks the serialized layout, returning the total compressed size and, via
+  // packed_byte_offset, the byte offset at which the densely-packed Huffman
+  // stream lands. Must stay in lockstep with the section order written by
+  // Serialize. Depends only on values known after CompressPrimary's sizing
+  // pass (primary_count, dict_size, chunk_size, ddata_size, outlier_count).
+  SIZE ComputeSerializedLayout(SIZE &packed_byte_offset) {
     auto nchunk = (primary_count - 1) / chunk_size + 1;
-    size_t *h_meta = new size_t[nchunk * 3]();
-    size_t *dH_uInt_meta = h_meta;
-    size_t *dH_bit_meta = h_meta + nchunk;
-    size_t *dH_uInt_entry = h_meta + nchunk * 2;
-
-    MemoryManager<DeviceType>().Copy1D(dH_bit_meta,
-                                       workspace.huff_bitwidths_subarray.data(),
-                                       nchunk, queue_idx);
-    DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-    // transform in uInt
-    memcpy(dH_uInt_meta, dH_bit_meta, nchunk * sizeof(size_t));
-    std::for_each(dH_uInt_meta, dH_uInt_meta + nchunk,
-                  [&](size_t &i) { i = (i - 1) / (sizeof(H) * 8) + 1; });
-    // make it entries
-    memcpy(dH_uInt_entry + 1, dH_uInt_meta, (nchunk - 1) * sizeof(size_t));
-    for (auto i = 1; i < nchunk; i++)
-      dH_uInt_entry[i] += dH_uInt_entry[i - 1];
-
-    // sum bits from each chunk
-    auto total_bits =
-        std::accumulate(dH_bit_meta, dH_bit_meta + nchunk, (size_t)0);
-    auto total_uInts =
-        std::accumulate(dH_uInt_meta, dH_uInt_meta + nchunk, (size_t)0);
-
-    // printf("huffman encode time: %.6f s\n", time_span.count());
-
-    // out_meta: |outlier count|outlier idx|outlier data|primary count|dict
-    // size|chunk size|huffmeta size|huffmeta|decodebook size|decodebook|
-    // out_data: |huffman data|
-
     size_t type_bw = sizeof(H) * 8;
-    size_t decodebook_size = workspace.decodebook_subarray.shape(0);
     size_t huffmeta_size = 2 * nchunk;
-
-    size_t ddata_size = total_uInts;
-
     SIZE byte_offset = 0;
     advance_with_align<Byte>(byte_offset, 7); // signature
     advance_with_align<size_t>(byte_offset, 1);
@@ -290,16 +329,41 @@ public:
     advance_with_align<uint8_t>(
         byte_offset, (sizeof(H) * (2 * type_bw) + sizeof(Q) * dict_size));
     advance_with_align<size_t>(byte_offset, 1);
+    align_byte_offset<H>(byte_offset);
+    packed_byte_offset = byte_offset;
     advance_with_align<H>(byte_offset, ddata_size);
-    // outliter
+    // outlier
     advance_with_align<ATOMIC_IDX>(byte_offset, 1);
     advance_with_align<ATOMIC_IDX>(byte_offset, outlier_count);
     advance_with_align<S>(byte_offset, outlier_count);
+    return byte_offset;
+  }
 
-    compressed_data.resize({(SIZE)(byte_offset)});
+  void Serialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+    Timer timer;
+    if (log::level & log::TIME) {
+      DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
+      timer.start();
+    }
+    auto nchunk = (primary_count - 1) / chunk_size + 1;
+
+    // out_meta: |signature|primary count|dict size|chunk size|huffmeta size|
+    // huffmeta|decodebook size|decodebook|ddata size|
+    // out_data: |huffman data|
+    // huffmeta = |per-chunk bit lengths|per-chunk word offsets|, both already
+    // computed on the device during CompressPrimary. ddata_size (total packed
+    // word count) was also computed there.
+
+    size_t type_bw = sizeof(H) * 8;
+    size_t decodebook_size = workspace.decodebook_subarray.shape(0);
+    size_t huffmeta_size = 2 * nchunk;
+
+    // The output buffer was already sized and the packed Huffman stream already
+    // written into it by CompressPrimary (zero-copy). Here we only fill in the
+    // metadata sections around it; the packed region is skipped, not rewritten.
     SubArray compressed_data_subarray(compressed_data);
 
-    byte_offset = 0;
+    SIZE byte_offset = 0;
     SerializeArray<Byte>(compressed_data_subarray, signature, 7, byte_offset,
                          queue_idx);
     SerializeArray<size_t>(compressed_data_subarray, &primary_count, 1,
@@ -310,8 +374,16 @@ public:
                         queue_idx);
     SerializeArray<size_t>(compressed_data_subarray, &huffmeta_size, 1,
                            byte_offset, queue_idx);
-    SerializeArray<size_t>(compressed_data_subarray, dH_bit_meta, huffmeta_size,
+    // huffmeta first half: per-chunk bit lengths (device).
+    SerializeArray<size_t>(compressed_data_subarray,
+                           workspace.huff_bitwidths_subarray.data(), nchunk,
                            byte_offset, queue_idx);
+    // huffmeta second half: per-chunk word offsets (device). The extended scan
+    // holds nchunk+1 entries; the first nchunk are the chunk start offsets.
+    SerializeArray<size_t>(
+        compressed_data_subarray,
+        workspace.deflate_chunk_word_offsets_subarray.data(), nchunk,
+        byte_offset, queue_idx);
     SerializeArray<size_t>(compressed_data_subarray, &decodebook_size, 1,
                            byte_offset, queue_idx);
     SerializeArray<uint8_t>(compressed_data_subarray,
@@ -321,23 +393,8 @@ public:
     SerializeArray<size_t>(compressed_data_subarray, &ddata_size, 1,
                            byte_offset, queue_idx);
 
-    align_byte_offset<H>(byte_offset);
-
-    MemoryManager<DeviceType>::Copy1D(
-        workspace.condense_write_offsets_subarray.data(), dH_uInt_entry, nchunk,
-        queue_idx);
-    MemoryManager<DeviceType>::Copy1D(
-        workspace.condense_actual_lengths_subarray.data(), dH_uInt_meta, nchunk,
-        queue_idx);
-    SubArray<1, H, DeviceType> compressed_data_cast_subarray(
-        {(SIZE)ddata_size}, (H *)compressed_data_subarray(byte_offset));
-    DeviceLauncher<DeviceType>::Execute(
-        CondenseKernel<H, DeviceType>(
-            workspace.huff_subarray, workspace.condense_write_offsets_subarray,
-            workspace.condense_actual_lengths_subarray,
-            compressed_data_cast_subarray, chunk_size, nchunk),
-        queue_idx);
-
+    // The densely-packed Huffman stream is already in place (written directly by
+    // CompressPrimary); just advance past it. Must mirror ComputeSerializedLayout.
     advance_with_align<H>(byte_offset, ddata_size);
 
     // outlier
@@ -351,8 +408,6 @@ public:
                       byte_offset, queue_idx);
 
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-
-    delete[] h_meta;
 
     log::dbg("Huffman block size: " + std::to_string(chunk_size));
     log::dbg("Huffman dictionary size: " + std::to_string(dict_size));
@@ -507,10 +562,9 @@ public:
     MemoryManager<DeviceType>::Copy1D(workspace.outlier_count_subarray.data(),
                                       &zero, 1, queue_idx);
 
-    DeviceLauncher<DeviceType>::Execute(
-        DictionaryShiftKernel<S, MGARDX_SHIFT_DICT, DeviceType>(
-            SubArray(original_data), dict_size),
-        queue_idx);
+    // The dictionary shift (+dict_size/2) is folded into the quantizer, so the
+    // incoming data already lives in the non-negative dictionary range. A
+    // single block-aggregated pass separates the out-of-range outliers.
     DeviceLauncher<DeviceType>::Execute(
         OutlierSeparatorKernel<S, MGARDX_SEPARATE_OUTLIER, DeviceType>(
             SubArray(original_data), dict_size,
@@ -558,14 +612,12 @@ public:
       timer.start();
     }
 
+    // Restore the outliers; the dictionary shift is undone later in the
+    // dequantizer (mirroring the quantizer), so no shift pass is needed here.
     DeviceLauncher<DeviceType>::Execute(
         OutlierSeparatorKernel<S, MGARDX_RESTORE_OUTLIER, DeviceType>(
             decompressed_data, dict_size, workspace.outlier_count_subarray,
             workspace.outlier_idx_subarray, workspace.outlier_subarray),
-        queue_idx);
-    DeviceLauncher<DeviceType>::Execute(
-        DictionaryShiftKernel<S, MGARDX_RESTORE_DICT, DeviceType>(
-            decompressed_data, dict_size),
         queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 

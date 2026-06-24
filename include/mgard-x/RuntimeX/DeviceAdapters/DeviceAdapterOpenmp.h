@@ -56,6 +56,15 @@ struct Atomic<T, MemoryType, Scope, OPENMP> {
     }
     return old;
   }
+  MGARDX_EXEC static T Or(T *result, T value) {
+    T old = 0;
+#pragma omp atomic capture
+    {
+      old = *result;
+      *result |= value;
+    }
+    return old;
+  }
 };
 
 template <> struct Math<OPENMP> {

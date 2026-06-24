@@ -27,11 +27,13 @@ public:
       SubArray<1, T, DeviceType> quantizers,
       SubArray<3, T, DeviceType> level_volumes, bool calc_vol,
       SubArray<D, T, DeviceType> v,
-      SubArray<D, QUANTIZED_INT, DeviceType> quantized_v)
+      SubArray<D, QUANTIZED_INT, DeviceType> quantized_v, bool prep_huffman,
+      SIZE dict_size)
       : level_ranges(level_ranges), level_marks(level_marks),
         l_target(l_target), quantizers(quantizers),
         level_volumes(level_volumes), calc_vol(calc_vol), v(v),
-        quantized_v(quantized_v) {
+        quantized_v(quantized_v), prep_huffman(prep_huffman),
+        dict_size(dict_size) {
     Functor<DeviceType>();
   }
 
@@ -96,9 +98,22 @@ public:
         } else if constexpr (sizeof(T) == sizeof(float)) {
           quantized_data = copysign((T)0.5 + fabsf(t * quantizer * volume), t);
         }
+        // Shift quantized values into the non-negative dictionary range the
+        // Huffman coder expects. Folding the shift here makes it free (the
+        // element is already being written) and removes a standalone full-array
+        // pass. Gated by prep_huffman so an alternative lossless backend that
+        // does not need outlier handling keeps the raw signed values. The value
+        // stays signed (QUANTIZED_INT); out-of-range entries are detected later
+        // by the outlier separation pass.
+        if (prep_huffman) {
+          quantized_data += dict_size / 2;
+        }
         quantized_v[idx] = quantized_data;
       } else if constexpr (OP == MGARDX_DEQUANTIZE) {
         quantized_data = quantized_v[idx];
+        if (prep_huffman) {
+          quantized_data -= dict_size / 2;
+        }
         v[idx] = (quantizer * volume) * (T)quantized_data;
       }
     }
@@ -119,6 +134,8 @@ private:
   SubArray<D, T, DeviceType> v;
   SubArray<D, QUANTIZED_INT, DeviceType> quantized_v;
   bool calc_vol;
+  bool prep_huffman;
+  SIZE dict_size;
   SubArray<1, SIZE, DeviceType> shape;
 
   SIZE idx[D];  // thread global idx
@@ -140,11 +157,13 @@ public:
       SubArray<1, T, DeviceType> quantizers,
       SubArray<3, T, DeviceType> level_volumes, bool calc_vol,
       SubArray<D, T, DeviceType> v,
-      SubArray<D, QUANTIZED_INT, DeviceType> quantized_v)
+      SubArray<D, QUANTIZED_INT, DeviceType> quantized_v, bool prep_huffman,
+      SIZE dict_size)
       : level_ranges(level_ranges), level_marks(level_marks),
         l_target(l_target), quantizers(quantizers),
         level_volumes(level_volumes), calc_vol(calc_vol), v(v),
-        quantized_v(quantized_v) {}
+        quantized_v(quantized_v), prep_huffman(prep_huffman),
+        dict_size(dict_size) {}
 
   template <SIZE R, SIZE C, SIZE F>
   MGARDX_CONT
@@ -154,7 +173,8 @@ public:
         LevelwiseLinearQuantizerNDFunctor<D, T, R, C, F, OP, DeviceType>;
 
     FunctorType functor(level_ranges, level_marks, l_target, quantizers,
-                        level_volumes, calc_vol, v, quantized_v);
+                        level_volumes, calc_vol, v, quantized_v, prep_huffman,
+                        dict_size);
 
     SIZE total_thread_z = v.shape(D - 3);
     SIZE total_thread_y = v.shape(D - 2);
@@ -187,6 +207,8 @@ private:
   bool calc_vol;
   SubArray<D, T, DeviceType> v;
   SubArray<D, QUANTIZED_INT, DeviceType> quantized_v;
+  bool prep_huffman;
+  SIZE dict_size;
   bool level_linearize;
   SubArray<1, SIZE, DeviceType> shape;
 };
@@ -229,6 +251,8 @@ public:
           // xin
           // quantizers[l] = (tol) / ((l_target + 1) * (1 + 3 * std::sqrt(3) /
           // 4));
+          // quantizers[l] = (0.5 * abs_tol) / std::pow(2, l_target - 1);
+
         } else if (decomposition == decomposition_type::SingleDim) {
           // ken
           quantizers[l] =
@@ -283,8 +307,11 @@ public:
                 SubArray<D, Q, DeviceType> quantized_data,
                 LosslessCompressorType &lossless, int queue_idx) {
 
-    bool prep_huffman = false;
-    // config.lossless != lossless_type::CPU_Lossless; // always do Huffman
+    // Toggle controlled from outside via the configured lossless backend: when
+    // a backend needs a non-negative Huffman dictionary we fold the dictionary
+    // shift into quantization; alternative backends that handle signed values
+    // directly leave the quantized data untouched (no shift / no outliers).
+    bool prep_huffman = config.lossless != lossless_type::CPU_Lossless;
     SIZE total_elems = hierarchy->total_num_elems();
     SubArray<2, SIZE, DeviceType> level_ranges_subarray(
         hierarchy->level_ranges());
@@ -310,7 +337,7 @@ public:
         LevelwiseLinearQuantizerKernel<D, T, MGARDX_QUANTIZE, DeviceType>(
             level_ranges_subarray, level_marks_subarray, hierarchy->l_target(),
             quantizers_subarray, level_volumes_subarray, calc_vol,
-            original_data, quantized_data),
+            original_data, quantized_data, prep_huffman, config.huff_dict_size),
         queue_idx);
 
     if (log::level & log::TIME) {
@@ -336,8 +363,9 @@ public:
     SubArray<3, T, DeviceType> level_volumes_subarray(
         hierarchy->level_volumes(true));
 
-    bool prep_huffman = false; // config.lossless !=
-                               // lossless_type::CPU_Lossless;
+    // Must mirror the toggle used during Quantize so the dictionary shift is
+    // undone exactly when it was applied.
+    bool prep_huffman = config.lossless != lossless_type::CPU_Lossless;
 
     SubArray<1, T, DeviceType> quantizers_subarray(quantizers_array);
     T *quantizers = new T[hierarchy->l_target() + 1];
@@ -359,7 +387,7 @@ public:
         LevelwiseLinearQuantizerKernel<D, T, MGARDX_DEQUANTIZE, DeviceType>(
             level_ranges_subarray, level_marks_subarray, hierarchy->l_target(),
             quantizers_subarray, level_volumes_subarray, calc_vol,
-            original_data, quantized_data),
+            original_data, quantized_data, prep_huffman, config.huff_dict_size),
         queue_idx);
 
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
