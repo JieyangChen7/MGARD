@@ -202,8 +202,9 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Deserialize(
 
 template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::Recompose(
-    Array<D, T, DeviceType> &decompressed_data, int queue_idx) {
-  refactor.Recompose(decompressed_data, true, queue_idx);
+    Array<D, T, DeviceType> &decompressed_data, bool orthogonal_projection,
+    int queue_idx) {
+  refactor.Recompose(decompressed_data, orthogonal_projection, queue_idx);
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -251,7 +252,7 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Compress(
   LosslessCompress(compressed_data, queue_idx);
   if (config.compress_with_dryrun) {
     Dequantize(original_data, ebtype, tol, s, norm, queue_idx);
-    Recompose(original_data, queue_idx);
+    Recompose(original_data, true, queue_idx);
   }
 
   if (log::level & log::TIME) {
@@ -284,7 +285,7 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Decompress(
   decompressed_data.resize(hierarchy->level_shape(hierarchy->l_target()));
   LosslessDecompress(compressed_data, queue_idx);
   Dequantize(decompressed_data, ebtype, tol, s, norm, queue_idx);
-  Recompose(decompressed_data, queue_idx);
+  Recompose(decompressed_data, true, queue_idx);
 
   if (log::level & log::TIME) {
     DeviceRuntime<DeviceType>::SyncQueue(0);

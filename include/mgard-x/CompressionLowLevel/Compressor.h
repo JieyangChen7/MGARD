@@ -47,7 +47,8 @@ public:
   void CalculateNorm(Array<D, T, DeviceType> &original_data,
                      enum error_bound_type ebtype, T s, T &norm, int queue_idx);
 
-  void Decompose(Array<D, T, DeviceType> &original_data, int queue_idx);
+  void Decompose(Array<D, T, DeviceType> &original_data,
+                 bool orthogonal_projection, int queue_idx);
 
   void Quantize(Array<D, T, DeviceType> &original_data,
                 enum error_bound_type ebtype, T tol, T s, T norm,
@@ -60,7 +61,8 @@ public:
 
   void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx);
 
-  void Recompose(Array<D, T, DeviceType> &decompressed_data, int queue_idx);
+  void Recompose(Array<D, T, DeviceType> &decompressed_data,
+                 bool orthogonal_projection, int queue_idx);
 
   void Dequantize(Array<D, T, DeviceType> &decompressed_data,
                   enum error_bound_type ebtype, T tol, T s, T norm,

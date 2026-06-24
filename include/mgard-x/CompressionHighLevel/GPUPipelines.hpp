@@ -453,7 +453,7 @@ enum compress_status_type decompress_pipeline_gpu(
                                     current_queue);
       compressor.Dequantize(device_subdomain_buffer[current_buffer],
                             local_ebtype, local_tol, s, norm, current_queue);
-      compressor.Recompose(device_subdomain_buffer[current_buffer],
+      compressor.Recompose(device_subdomain_buffer[current_buffer], true,
                            current_queue);
     } else {
       log::info("Skipping decompression as original data was saved instead");

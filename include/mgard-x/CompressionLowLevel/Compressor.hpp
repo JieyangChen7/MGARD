@@ -130,8 +130,9 @@ void Compressor<D, T, DeviceType>::CalculateNorm(
 
 template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::Decompose(
-    Array<D, T, DeviceType> &original_data, int queue_idx) {
-  refactor.Decompose(SubArray(original_data), true, queue_idx);
+    Array<D, T, DeviceType> &original_data, bool orthogonal_projection,
+    int queue_idx) {
+  refactor.Decompose(SubArray(original_data), orthogonal_projection, queue_idx);
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -165,8 +166,10 @@ void Compressor<D, T, DeviceType>::Deserialize(
 
 template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::Recompose(
-    Array<D, T, DeviceType> &decompressed_data, int queue_idx) {
-  refactor.Recompose(SubArray(decompressed_data), true, queue_idx);
+    Array<D, T, DeviceType> &decompressed_data, bool orthogonal_projection,
+    int queue_idx) {
+  refactor.Recompose(SubArray(decompressed_data), orthogonal_projection,
+                     queue_idx);
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -212,13 +215,13 @@ void Compressor<D, T, DeviceType>::Compress(
   }
 
   CalculateNorm(original_data, ebtype, s, norm, queue_idx);
-  Decompose(original_data, queue_idx);
+  Decompose(original_data, true, queue_idx);
   Quantize(original_data, ebtype, tol, s, norm, queue_idx);
   LosslessCompress(compressed_data, queue_idx);
   Serialize(compressed_data, queue_idx);
   if (config.compress_with_dryrun) {
     Dequantize(original_data, ebtype, tol, s, norm, queue_idx);
-    Recompose(original_data, queue_idx);
+    Recompose(original_data, true, queue_idx);
   }
 
   if (log::level & log::TIME) {
@@ -250,7 +253,7 @@ void Compressor<D, T, DeviceType>::Decompress(
   Deserialize(compressed_data, queue_idx);
   LosslessDecompress(compressed_data, queue_idx);
   Dequantize(decompressed_data, ebtype, tol, s, norm, queue_idx);
-  Recompose(decompressed_data, queue_idx);
+  Recompose(decompressed_data, true, queue_idx);
 
   if (log::level & log::TIME) {
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
