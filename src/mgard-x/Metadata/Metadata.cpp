@@ -130,8 +130,20 @@ void MetadataBase::InitializeConfig(Config &config) {
   config.domain_decomposition = ddtype;
   config.decomposition = decomposition;
   config.lossless = ltype;
-  config.huff_dict_size = huff_dict_size;
-  config.huff_block_size = huff_block_size;
+  // Only overwrite a backend's parameters when the metadata actually carries
+  // them (non-zero). A file compressed with a non-Huffman backend leaves the
+  // Huffman fields at 0; copying those zeros would make HuffmanWorkspace::resize
+  // divide by a zero block size. Leaving config defaults intact avoids that
+  // (the unused backend's workspace is harmlessly sized with defaults).
+  if (huff_dict_size != 0) {
+    config.huff_dict_size = huff_dict_size;
+  }
+  if (huff_block_size != 0) {
+    config.huff_block_size = huff_block_size;
+  }
+  if (block_delta_block_size != 0) {
+    config.block_delta_block_size = block_delta_block_size;
+  }
   config.reorder = reorder;
 }
 
@@ -222,6 +234,9 @@ void MetadataBase::PrintSummary() {
     std::cout << "Huffman block size: " << huff_block_size << "\n";
   } else if (ltype == mgard_x::lossless_type::CPU_Lossless) {
     std::cout << "CPU_Lossless\n";
+  } else if (ltype == mgard_x::lossless_type::BlockDelta) {
+    std::cout << "BlockDelta\n";
+    std::cout << "BlockDelta block size: " << block_delta_block_size << "\n";
   }
 
   std::cout << "Backend:  ";
@@ -424,6 +439,9 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
       encoding.set_huffman_block_size(huff_block_size);
     } else if (ltype == mgard_x::lossless_type::CPU_Lossless) {
       encoding.set_compressor(mgard::pb::Encoding::CPU_HUFFMAN_ZSTD);
+    } else if (ltype == mgard_x::lossless_type::BlockDelta) {
+      encoding.set_compressor(mgard::pb::Encoding::X_BLOCK_DELTA);
+      encoding.set_block_delta_block_size(block_delta_block_size);
     }
   }
 
@@ -710,6 +728,9 @@ void MetadataBase::Deserialize(
       huff_block_size = encoding.huffman_block_size();
     } else if (encoding.compressor() == mgard::pb::Encoding::CPU_HUFFMAN_ZSTD) {
       ltype = mgard_x::lossless_type::CPU_Lossless;
+    } else if (encoding.compressor() == mgard::pb::Encoding::X_BLOCK_DELTA) {
+      ltype = mgard_x::lossless_type::BlockDelta;
+      block_delta_block_size = encoding.block_delta_block_size();
     } else {
       std::cout << log::log_err << "unknown lossless compressor type.\n";
       exit(-1);

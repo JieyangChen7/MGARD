@@ -185,6 +185,9 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
 
   // Estimate metadata size
   Metadata<DeviceType> m;
+  // FillForCompression does not carry the BlockDelta block size; set it here so
+  // it is persisted in (and restored from) the metadata header.
+  m.block_delta_block_size = config.block_delta_block_size;
   if (uniform) {
     m.FillForCompression(
         ebtype, tol, s, norm, config.decomposition, config.reorder,

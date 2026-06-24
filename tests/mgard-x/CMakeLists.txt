@@ -30,6 +30,7 @@ foreach(DEVICE_TYPE IN LISTS DEVICE_TYPE_LIST)
   set(MGARD_X_TEST_SOURCES "")
 
   mgard_x_add_test(test_Huffman         ${DEVICE_TYPE})
+  mgard_x_add_test(test_BlockDelta      ${DEVICE_TYPE})
   mgard_x_add_test(test_DataRefactoring ${DEVICE_TYPE})
   mgard_x_add_test(test_Compressor      ${DEVICE_TYPE})
   mgard_x_add_test(test_Zstd            ${DEVICE_TYPE})

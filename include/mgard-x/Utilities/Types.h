@@ -36,8 +36,15 @@ enum class lossless_type : uint8_t {
   Huffman,
   Huffman_LZ4,
   Huffman_Zstd,
-  CPU_Lossless
+  CPU_Lossless,
+  BlockDelta
 };
+
+// Encoding variant for the BlockDelta lossless backend (mirrors cuSZp):
+//   Fixed   - fixed-length encoding only (no delta)
+//   Delta   - per-block delta + zigzag + fixed-length encoding
+//   Outlier - Delta plus per-block outlier peeling (large values stored aside)
+enum class block_delta_mode_type : uint8_t { Fixed, Delta, Outlier };
 
 enum class data_type : uint8_t { Float, Double };
 enum class data_structure_type : uint8_t {

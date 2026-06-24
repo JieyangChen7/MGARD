@@ -57,8 +57,9 @@ struct MetadataBase {
   double s = 0; // optional
 
   enum lossless_type ltype;
-  uint32_t huff_dict_size = 0;  // optional (for Huffman)
-  uint32_t huff_block_size = 0; // optional (for Huffman)
+  uint32_t huff_dict_size = 0;         // optional (for Huffman)
+  uint32_t huff_block_size = 0;        // optional (for Huffman)
+  uint32_t block_delta_block_size = 0; // optional (for BlockDelta)
 
   enum processor_type ptype;
 

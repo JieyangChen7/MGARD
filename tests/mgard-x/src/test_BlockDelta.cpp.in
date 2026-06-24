@@ -1,0 +1,89 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/BlockDelta/BlockDelta.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+namespace {
+template <typename T>
+void roundtrip(const std::vector<T> &original, int block_size,
+               block_delta_mode_type mode) {
+  const SIZE n = (SIZE)original.size();
+  Array<1, T, TestDevice> input_data({n});
+  input_data.load(original.data());
+
+  BlockDeltaLossless<T, TestDevice> compressor;
+  compressor.Resize(n, block_size, mode, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  Array<1, Byte, TestDevice> compressed_data;
+  compressor.Compress(input_data, compressed_data, 0); // computation
+  compressor.Serialize(compressed_data, 0);            // memory movement
+
+  // Separate object: no shared internal state across compress/decompress.
+  BlockDeltaLossless<T, TestDevice> decompressor;
+  decompressor.Resize(n, block_size, mode, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  decompressor.Deserialize(compressed_data, 0);
+  Array<1, T, TestDevice> decompressed_data({n});
+  decompressor.Decompress(compressed_data, decompressed_data, 0);
+
+  T *result = decompressed_data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+} // namespace
+
+// Round-trip each mode on a signed quantized-integer stream with zero regions,
+// small values, and sparse wide outliers.
+TEST_CASE("BlockDelta round-trip (Fixed/Delta/Outlier)",
+          "[mgard-x][@DEVICE_TYPE@]") {
+  using T = QUANTIZED_INT;
+  const SIZE n = 10000;
+  DeviceRuntime<TestDevice>::Initialize();
+
+  std::vector<T> original(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    int r = std::rand() % 100;
+    if (r < 20)
+      original[i] = 0;
+    else if (r < 95)
+      original[i] = static_cast<T>(std::rand() % 128) - 64;
+    else
+      original[i] = static_cast<T>(std::rand()) - static_cast<T>(std::rand());
+  }
+
+  roundtrip<T>(original, 256, block_delta_mode_type::Fixed);
+  roundtrip<T>(original, 256, block_delta_mode_type::Delta);
+  roundtrip<T>(original, 256, block_delta_mode_type::Outlier);
+}
+
+// Edge case: all-zero input (every block has bit-width 0, packed size 0).
+TEST_CASE("BlockDelta all-zero input", "[mgard-x][@DEVICE_TYPE@]") {
+  using T = QUANTIZED_INT;
+  const SIZE n = 3000;
+  DeviceRuntime<TestDevice>::Initialize();
+  std::vector<T> original(n, 0);
+  roundtrip<T>(original, 256, block_delta_mode_type::Fixed);
+  roundtrip<T>(original, 256, block_delta_mode_type::Delta);
+  roundtrip<T>(original, 256, block_delta_mode_type::Outlier);
+}
+
+} // namespace mgard_x

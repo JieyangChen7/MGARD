@@ -5,6 +5,7 @@
  * Date: March 17, 2022
  */
 
+#include "BlockDelta/BlockDelta.hpp"
 #include "CPU.hpp"
 #include "Cascaded.hpp"
 #include "LZ4.hpp"
@@ -26,17 +27,32 @@ public:
 
   ComposedLosslessCompressor() : initialized(false) {}
 
+  // Whether the configured lossless path actually uses the (workspace-heavy)
+  // Huffman backend. BlockDelta has its own (de)compressor and never touches
+  // the Huffman workspace, so it is the one type that does not need it. Every
+  // other type either is Huffman/Huffman+LZ4/Huffman+Zstd or (CPU_Lossless on a
+  // GPU-pipeline backend) falls through to Huffman in Compress().
+  static bool uses_huffman(enum lossless_type lossless) {
+    return lossless != lossless_type::BlockDelta;
+  }
+
   ComposedLosslessCompressor(SIZE n, Config config)
-      : initialized(true), n(n), config(config),
-        huffman(n, config.huff_dict_size, config.huff_block_size,
-                config.estimate_outlier_ratio) {
+      : initialized(true), n(n), config(config) {
     static_assert(!std::is_floating_point<T>::value,
                   "ComposedLosslessCompressor: Type of T must be integer.");
+    if (uses_huffman(config.lossless)) {
+      huffman.Resize(n, config.huff_dict_size, config.huff_block_size,
+                     config.estimate_outlier_ratio, 0);
+    }
     if (config.lossless == lossless_type::Huffman_LZ4) {
       lz4.Resize(n * sizeof(H), config.lz4_block_size, 0);
     }
     if (config.lossless == lossless_type::Huffman_Zstd) {
       zstd.Resize(n * sizeof(H), config.zstd_compress_level, 0);
+    }
+    if (config.lossless == lossless_type::BlockDelta) {
+      blockdelta.Resize(n, config.block_delta_block_size,
+                        config.block_delta_mode, 0);
     }
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
@@ -45,20 +61,29 @@ public:
     this->initialized = true;
     this->n = n;
     this->config = config;
-    huffman.Resize(n, config.huff_dict_size, config.huff_block_size,
-                   config.estimate_outlier_ratio, queue_idx);
+    if (uses_huffman(config.lossless)) {
+      huffman.Resize(n, config.huff_dict_size, config.huff_block_size,
+                     config.estimate_outlier_ratio, queue_idx);
+    }
     if (config.lossless == lossless_type::Huffman_LZ4) {
       lz4.Resize(n * sizeof(H), config.lz4_block_size, queue_idx);
     }
     if (config.lossless == lossless_type::Huffman_Zstd) {
       zstd.Resize(n * sizeof(H), config.zstd_compress_level, queue_idx);
     }
+    if (config.lossless == lossless_type::BlockDelta) {
+      blockdelta.Resize(n, config.block_delta_block_size,
+                        config.block_delta_mode, queue_idx);
+    }
   }
 
   static size_t EstimateMemoryFootprint(SIZE primary_count, Config config) {
-    size_t size = Huffman<Q, S, H, DeviceType>::EstimateMemoryFootprint(
-        primary_count, config.huff_dict_size, config.huff_block_size,
-        config.estimate_outlier_ratio);
+    size_t size = 0;
+    if (uses_huffman(config.lossless)) {
+      size += Huffman<Q, S, H, DeviceType>::EstimateMemoryFootprint(
+          primary_count, config.huff_dict_size, config.huff_block_size,
+          config.estimate_outlier_ratio);
+    }
     if (config.lossless == lossless_type::Huffman_LZ4) {
       size += LZ4<DeviceType>::EstimateMemoryFootprint(
           primary_count * sizeof(H), config.lz4_block_size);
@@ -67,11 +92,20 @@ public:
       size +=
           Zstd<DeviceType>::EstimateMemoryFootprint(primary_count * sizeof(H));
     }
+    if (config.lossless == lossless_type::BlockDelta) {
+      size += BlockDeltaLossless<T, DeviceType>::EstimateMemoryFootprint(
+          primary_count, config.block_delta_block_size);
+    }
     return size;
   }
 
   void Compress(Array<1, T, DeviceType> &original_data,
                 Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+
+    if (config.lossless == lossless_type::BlockDelta) {
+      blockdelta.Compress(original_data, compressed_data, queue_idx);
+      return;
+    }
 
     huffman.Compress(original_data, compressed_data, 0.0, queue_idx);
 
@@ -90,16 +124,29 @@ public:
     if (config.lossless == lossless_type::Huffman) {
       huffman.Serialize(compressed_data, queue_idx);
     }
+    if (config.lossless == lossless_type::BlockDelta) {
+      blockdelta.Serialize(compressed_data, queue_idx);
+    }
   }
 
   void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
     if (config.lossless == lossless_type::Huffman) {
       huffman.Deserialize(compressed_data, queue_idx);
     }
+    if (config.lossless == lossless_type::BlockDelta) {
+      blockdelta.Deserialize(compressed_data, queue_idx);
+    }
   }
 
   void Decompress(Array<1, Byte, DeviceType> &compressed_data,
                   Array<1, T, DeviceType> &decompressed_data, int queue_idx) {
+
+    if (config.lossless == lossless_type::BlockDelta) {
+      // Deserialize (the memory-movement stage) was already run separately by
+      // the pipeline; Decompress is computation only.
+      blockdelta.Decompress(compressed_data, decompressed_data, queue_idx);
+      return;
+    }
 
     if (config.lossless == lossless_type::Huffman_LZ4) {
       lz4.Decompress(compressed_data, queue_idx);
@@ -120,6 +167,7 @@ public:
   Huffman<Q, S, H, DeviceType> huffman;
   LZ4<DeviceType> lz4;
   Zstd<DeviceType> zstd;
+  BlockDeltaLossless<T, DeviceType> blockdelta;
 };
 
 } // namespace mgard_x

@@ -16,6 +16,8 @@ struct Config {
   double estimate_outlier_ratio;
   SIZE huff_dict_size;
   SIZE huff_block_size;
+  SIZE block_delta_block_size;
+  enum block_delta_mode_type block_delta_mode;
   SIZE lz4_block_size;
   int zstd_compress_level;
   bool normalize_coordinates;

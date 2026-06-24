@@ -20,6 +20,8 @@ Config::Config() {
   estimate_outlier_ratio = 1.0;
   huff_dict_size = 8192;
   huff_block_size = 1024;
+  block_delta_block_size = 256;
+  block_delta_mode = block_delta_mode_type::Delta;
   lz4_block_size = 1 << 15;
   zstd_compress_level = 3;
   normalize_coordinates = true;

@@ -142,6 +142,7 @@ message Encoding {
     X_HUFFMAN = 3;
     X_HUFFMAN_LZ4 = 4;
     X_HUFFMAN_ZSTD = 5;
+    X_BLOCK_DELTA = 6;
   }
 
   Preprocessor preprocessor = 1;
@@ -150,6 +151,8 @@ message Encoding {
   // X_HUFFMAN_LZ4` or `compressor == X_HUFFMAN_ZSTD`
   uint64 huffman_dictionary_size = 3;
   uint64 huffman_block_size = 4;
+  // Only relevant when `compressor == X_BLOCK_DELTA`
+  uint64 block_delta_block_size = 5;
 }
 
 message Device {
