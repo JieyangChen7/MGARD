@@ -37,11 +37,9 @@ foreach(DEVICE_TYPE IN LISTS DEVICE_TYPE_LIST)
   mgard_x_add_test(test_RLE             ${DEVICE_TYPE})
   mgard_x_add_test(test_ComposedHuffmanZstd ${DEVICE_TYPE})
 
-  # LZ4 is nvcomp-backed and only available on the CUDA backend.
-  if(${DEVICE_TYPE} STREQUAL "CUDA")
-    mgard_x_add_test(test_LZ4               ${DEVICE_TYPE})
-    mgard_x_add_test(test_ComposedHuffmanLZ4 ${DEVICE_TYPE})
-  endif()
+  # Portable (nvcomp-free) LZ4 backend: available on every device type.
+  mgard_x_add_test(test_LZ4               ${DEVICE_TYPE})
+  mgard_x_add_test(test_ComposedHuffmanLZ4 ${DEVICE_TYPE})
 
   set(TEST_TARGET "mgard-x-tests-${DEVICE_TYPE}")
   add_executable(${TEST_TARGET} ${MGARD_X_TEST_SOURCES})

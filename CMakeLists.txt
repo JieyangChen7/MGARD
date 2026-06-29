@@ -179,7 +179,6 @@ if(MGARD_ENABLE_CUDA)
       set(CMAKE_CUDA_ARCHITECTURES 70)
   endif()
 
-  find_package(nvcomp REQUIRED)
   find_package(CUDAToolkit REQUIRED)
 
   target_compile_definitions(mgard-library PUBLIC MGARD_ENABLE_CUDA)
@@ -376,7 +375,9 @@ if(ZSTD_FOUND)
 endif()
 
 if(MGARD_ENABLE_CUDA)
-  target_link_libraries(mgard-library PUBLIC nvcomp::nvcomp CUDA::cudart)
+  # mgard-x no longer uses nvcomp (its LZ4 backend is portable); only the legacy
+  # CUDA backend below still needs it.
+  target_link_libraries(mgard-library PUBLIC CUDA::cudart)
 endif()
 
 if(MGARD_ENABLE_LEGACY_CUDA)

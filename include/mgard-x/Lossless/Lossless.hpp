@@ -7,8 +7,7 @@
 
 #include "BlockDelta/BlockDelta.hpp"
 #include "CPU.hpp"
-#include "Cascaded.hpp"
-#include "LZ4.hpp"
+#include "LZ4/LZ4.hpp"
 #include "LosslessCompressorInterface.hpp"
 #include "ParallelHuffman/Huffman.hpp"
 #include "Zstd.hpp"
@@ -28,12 +27,13 @@ public:
   ComposedLosslessCompressor() : initialized(false) {}
 
   // Whether the configured lossless path actually uses the (workspace-heavy)
-  // Huffman backend. BlockDelta has its own (de)compressor and never touches
-  // the Huffman workspace, so it is the one type that does not need it. Every
-  // other type either is Huffman/Huffman+LZ4/Huffman+Zstd or (CPU_Lossless on a
-  // GPU-pipeline backend) falls through to Huffman in Compress().
+  // Huffman backend. BlockDelta and standalone LZ4 have their own
+  // (de)compressors and never touch the Huffman workspace; every other type is
+  // Huffman / Huffman+LZ4 / Huffman+Zstd (or CPU_Lossless falling through to
+  // Huffman in Compress()).
   static bool uses_huffman(enum lossless_type lossless) {
-    return lossless != lossless_type::BlockDelta;
+    return lossless != lossless_type::BlockDelta &&
+           lossless != lossless_type::LZ4;
   }
 
   ComposedLosslessCompressor(SIZE n, Config config)
@@ -46,6 +46,9 @@ public:
     }
     if (config.lossless == lossless_type::Huffman_LZ4) {
       lz4.Resize(n * sizeof(H), config.lz4_block_size, 0);
+    }
+    if (config.lossless == lossless_type::LZ4) {
+      lz4.Resize(n * sizeof(T), config.lz4_block_size, 0);
     }
     if (config.lossless == lossless_type::Huffman_Zstd) {
       zstd.Resize(n * sizeof(H), config.zstd_compress_level, 0);
@@ -68,6 +71,9 @@ public:
     if (config.lossless == lossless_type::Huffman_LZ4) {
       lz4.Resize(n * sizeof(H), config.lz4_block_size, queue_idx);
     }
+    if (config.lossless == lossless_type::LZ4) {
+      lz4.Resize(n * sizeof(T), config.lz4_block_size, queue_idx);
+    }
     if (config.lossless == lossless_type::Huffman_Zstd) {
       zstd.Resize(n * sizeof(H), config.zstd_compress_level, queue_idx);
     }
@@ -88,6 +94,10 @@ public:
       size += LZ4<DeviceType>::EstimateMemoryFootprint(
           primary_count * sizeof(H), config.lz4_block_size);
     }
+    if (config.lossless == lossless_type::LZ4) {
+      size += LZ4<DeviceType>::EstimateMemoryFootprint(
+          primary_count * sizeof(T), config.lz4_block_size);
+    }
     if (config.lossless == lossless_type::Huffman_Zstd) {
       size +=
           Zstd<DeviceType>::EstimateMemoryFootprint(primary_count * sizeof(H));
@@ -104,6 +114,18 @@ public:
 
     if (config.lossless == lossless_type::BlockDelta) {
       blockdelta.Compress(original_data, compressed_data, queue_idx);
+      return;
+    }
+
+    if (config.lossless == lossless_type::LZ4) {
+      // LZ4 directly on the raw quantized stream (no Huffman). View the T array
+      // as bytes into compressed_data, then compress it in place.
+      SIZE nbytes = original_data.shape(0) * sizeof(T);
+      compressed_data.resize({nbytes}, queue_idx);
+      MemoryManager<DeviceType>::Copy1D(compressed_data.data(),
+                                        (Byte *)original_data.data(), nbytes,
+                                        queue_idx);
+      lz4.Compress(compressed_data, queue_idx);
       return;
     }
 
@@ -145,6 +167,18 @@ public:
       // Deserialize (the memory-movement stage) was already run separately by
       // the pipeline; Decompress is computation only.
       blockdelta.Decompress(compressed_data, decompressed_data, queue_idx);
+      return;
+    }
+
+    if (config.lossless == lossless_type::LZ4) {
+      // Inverse of the standalone LZ4 path: decompress to the raw byte stream,
+      // then reinterpret it back into the quantized T array.
+      lz4.Decompress(compressed_data, queue_idx);
+      SIZE nbytes = compressed_data.shape(0);
+      decompressed_data.resize({(SIZE)(nbytes / sizeof(T))}, queue_idx);
+      MemoryManager<DeviceType>::Copy1D((Byte *)decompressed_data.data(),
+                                        compressed_data.data(), nbytes,
+                                        queue_idx);
       return;
     }
 

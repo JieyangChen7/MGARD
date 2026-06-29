@@ -694,6 +694,22 @@ public:
 extern int cuda_dev_id;
 #pragma omp threadprivate(cuda_dev_id)
 
+// 32-lane warp sub-group (CUDA). Stateless: reads its lane from threadIdx.
+template <> struct SubGroup<CUDA> {
+  using mask_t = unsigned;
+  static constexpr int size() { return 32; }
+  __device__ int lane() const { return threadIdx.x & 31; }
+  __device__ mask_t full_mask() const { return 0xffffffffu; }
+  template <typename T> __device__ T shfl(T v, int src) const {
+    return __shfl_sync(0xffffffffu, v, src);
+  }
+  __device__ mask_t ballot(int pred) const {
+    return __ballot_sync(0xffffffffu, pred);
+  }
+  __device__ int ffs(mask_t m) const { return __ffs((int)m); }
+  __device__ void sync() const { __syncwarp(); }
+};
+
 template <> class DeviceRuntime<CUDA> {
 public:
   MGARDX_CONT

@@ -34,10 +34,13 @@ enum class error_bound_type : uint8_t { REL, ABS };
 enum class norm_type : uint8_t { L_Inf, L_2 };
 enum class lossless_type : uint8_t {
   Huffman,
-  Huffman_LZ4,
+  Huffman_LZ4, // Huffman, then the portable LZ4 backend (Lossless/LZ4/)
   Huffman_Zstd,
   CPU_Lossless,
-  BlockDelta
+  BlockDelta,
+  // Portable LZ4 applied directly to the (raw signed) quantized integer stream,
+  // with no Huffman entropy stage. Self-contained like BlockDelta.
+  LZ4
 };
 
 // Encoding variant for the BlockDelta lossless backend (mirrors cuSZp):

@@ -281,7 +281,8 @@ public:
                 LosslessCompressorType &lossless, int queue_idx) {
     bool prep_huffman =
         config.lossless != lossless_type::CPU_Lossless &&
-        config.lossless != lossless_type::BlockDelta; // raw signed for BlockDelta
+        config.lossless != lossless_type::BlockDelta &&
+        config.lossless != lossless_type::LZ4; // raw signed for BlockDelta, LZ4
 
     Array<D, T, DeviceType> coarse_data(coarse_shape, original_data.data());
     Array<D, Q, DeviceType> coarse_quantized_data(coarse_shape,

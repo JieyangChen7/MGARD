@@ -248,6 +248,10 @@ public:
 extern int openmp_dev_id;
 #pragma omp threadprivate(openmp_dev_id)
 
+// OpenMP parallelism is across the grid (work-groups over cores), not within a
+// sub-group, so its sub-group is the size-1 scalar group.
+template <> struct SubGroup<OPENMP> : SubGroupScalar {};
+
 template <> class DeviceRuntime<OPENMP> {
 public:
   MGARDX_CONT

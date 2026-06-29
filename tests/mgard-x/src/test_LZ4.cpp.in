@@ -11,16 +11,17 @@
 #include <vector>
 
 #include "mgard-x/RuntimeX/RuntimeX.h"
-#include "mgard-x/Lossless/LZ4.hpp"
+#include "mgard-x/Lossless/LZ4/LZ4.hpp"
 
 namespace mgard_x {
 
 using TestDevice = @DEVICE_TYPE@;
 
-// LZ4 is an nvcomp-backed, CUDA-only byte-stream codec operating in place on an
-// Array<1, Byte>: Compress replaces the array with the compressed stream,
-// Decompress restores the original bytes (size recovered from the stream).
-TEST_CASE("LZ4", "[mgard-x][@DEVICE_TYPE@]") {
+// LZ4 is the nvcomp-free, backend-portable byte-stream codec operating
+// in place on an Array<1, Byte>: Compress replaces the array with the
+// compressed stream (header + per-chunk sizes + packed LZ4 blocks), Decompress
+// restores the original bytes (size recovered from the stream).
+TEST_CASE("LZ4 round-trip", "[mgard-x][@DEVICE_TYPE@]") {
   const SIZE n = 100000;
   const SIZE chunk_size = 1 << 15;
 
@@ -37,6 +38,44 @@ TEST_CASE("LZ4", "[mgard-x][@DEVICE_TYPE@]") {
   data.load(original.data());
 
   // Separate codec objects; each needs its own scratch buffer via Resize.
+  LZ4<TestDevice> compressor;
+  compressor.Resize(n, chunk_size, 0);
+  compressor.Compress(data, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  // The compressed stream should be strictly smaller than the input.
+  REQUIRE(data.shape(0) < n);
+
+  LZ4<TestDevice> decompressor;
+  decompressor.Resize(n, chunk_size, 0);
+  decompressor.Decompress(data, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  REQUIRE(data.shape(0) == n);
+  Byte *result = data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  for (SIZE i = 0; i < n; i++) {
+    REQUIRE(result[i] == original[i]);
+  }
+}
+
+// Incompressible (high-entropy) data must still round-trip exactly, exercising
+// the literal-only / extension-length paths of the encoder and decoder.
+TEST_CASE("LZ4 incompressible round-trip", "[mgard-x][@DEVICE_TYPE@]") {
+  const SIZE n = 70000; // not a multiple of chunk_size -> exercises last chunk
+  const SIZE chunk_size = 1 << 14;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  std::vector<Byte> original(n);
+  std::srand(7);
+  for (SIZE i = 0; i < n; i++) {
+    original[i] = static_cast<Byte>(std::rand() % 256);
+  }
+
+  Array<1, Byte, TestDevice> data({n});
+  data.load(original.data());
+
   LZ4<TestDevice> compressor;
   compressor.Resize(n, chunk_size, 0);
   compressor.Compress(data, 0);

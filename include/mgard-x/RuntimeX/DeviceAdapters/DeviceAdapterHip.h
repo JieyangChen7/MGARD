@@ -587,6 +587,30 @@ public:
 extern int hip_dev_id;
 #pragma omp threadprivate(hip_dev_id)
 
+// AMD wavefront sub-group (HIP). UNTESTED -- no AMD hardware available here. See
+// the verification notes at the original definition: width via
+// __AMDGCN_WAVEFRONT_SIZE__ (64 CDNA / 32 RDNA), 64-bit ballot mask,
+// __ballot/__shfl/__ffsll/__syncwarp. If the project's "64 triggers a bug" note
+// bites, force size()=32 and launch half-wavefront blocks.
+template <> struct SubGroup<HIP> {
+  using mask_t = unsigned long long;
+#ifdef __AMDGCN_WAVEFRONT_SIZE__
+  static constexpr int size() { return __AMDGCN_WAVEFRONT_SIZE__; }
+#else
+  static constexpr int size() { return 64; }
+#endif
+  __device__ int lane() const { return threadIdx.x & (size() - 1); }
+  __device__ mask_t full_mask() const {
+    return size() == 64 ? ~0ull : ((1ull << size()) - 1);
+  }
+  template <typename T> __device__ T shfl(T v, int src) const {
+    return __shfl(v, src, size());
+  }
+  __device__ mask_t ballot(int pred) const { return (mask_t)__ballot(pred); }
+  __device__ int ffs(mask_t m) const { return __ffsll((long long)m); }
+  __device__ void sync() const { __syncwarp(); }
+};
+
 template <> class DeviceRuntime<HIP> {
 public:
   MGARDX_CONT

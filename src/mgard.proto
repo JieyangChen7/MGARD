@@ -140,9 +140,11 @@ message Encoding {
     CPU_HUFFMAN_ZLIB = 1;
     CPU_HUFFMAN_ZSTD = 2;
     X_HUFFMAN = 3;
-    X_HUFFMAN_LZ4 = 4;
+    X_HUFFMAN_LZ4 = 4; // Huffman + the portable (nvcomp-free) LZ4 backend
     X_HUFFMAN_ZSTD = 5;
     X_BLOCK_DELTA = 6;
+    reserved 7;        // was X_HUFFMAN_LZ4_PORTABLE (folded into X_HUFFMAN_LZ4)
+    X_LZ4 = 8;         // portable LZ4 directly on the quantized stream
   }
 
   Preprocessor preprocessor = 1;

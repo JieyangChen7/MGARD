@@ -312,7 +312,8 @@ public:
     // shift into quantization; alternative backends that handle signed values
     // directly leave the quantized data untouched (no shift / no outliers).
     bool prep_huffman = config.lossless != lossless_type::CPU_Lossless &&
-                        config.lossless != lossless_type::BlockDelta;
+                        config.lossless != lossless_type::BlockDelta &&
+                        config.lossless != lossless_type::LZ4;
     SIZE total_elems = hierarchy->total_num_elems();
     SubArray<2, SIZE, DeviceType> level_ranges_subarray(
         hierarchy->level_ranges());
@@ -367,7 +368,8 @@ public:
     // Must mirror the toggle used during Quantize so the dictionary shift is
     // undone exactly when it was applied.
     bool prep_huffman = config.lossless != lossless_type::CPU_Lossless &&
-                        config.lossless != lossless_type::BlockDelta;
+                        config.lossless != lossless_type::BlockDelta &&
+                        config.lossless != lossless_type::LZ4;
 
     SubArray<1, T, DeviceType> quantizers_subarray(quantizers_array);
     T *quantizers = new T[hierarchy->l_target() + 1];

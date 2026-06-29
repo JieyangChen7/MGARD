@@ -39,7 +39,7 @@ void print_usage_message(std::string error) {
 \t\t -em / --error-bound-mode <abs|rel>: error bound mode (abs: abolute; rel: relative)\n\
 \t\t -e / --error-bound <float>: error bound\n\
 \t\t -s / --smoothness <float>: smoothness parameter\n\
-\t\t -l / --lossless <huffman|huffman-lz4|huffman-zstd|blockdelta[-fixed|-delta|-outlier]>: lossless compression\n\
+\t\t -l / --lossless <huffman|huffman-lz4|lz4|huffman-zstd|blockdelta[-fixed|-delta|-outlier]>: lossless compression\n\
 \t\t -d / --device <auto|serial|cuda|hip>: device type\n\
 \t\t (optional) -v / --verbose <0|1|2|3> 0: error; 1: error+info; 2: error+timing; 3: all\n\
 \n\
@@ -226,6 +226,8 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
     config.lossless = mgard_x::lossless_type::Huffman;
   } else if (lossless == "huffman-lz4") {
     config.lossless = mgard_x::lossless_type::Huffman_LZ4;
+  } else if (lossless == "lz4") {
+    config.lossless = mgard_x::lossless_type::LZ4;
   } else if (lossless == "huffman-zstd") {
     config.lossless = mgard_x::lossless_type::Huffman_Zstd;
   } else if (lossless == "blockdelta" || lossless == "blockdelta-delta") {

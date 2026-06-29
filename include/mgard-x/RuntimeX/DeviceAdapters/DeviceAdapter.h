@@ -172,6 +172,34 @@ public:
   MGARDX_CONT static void Execute(KernelType kernel);
 };
 
+// ---------------------------------------------------------------------------
+// Portable sub-group abstraction. A "sub-group" is a set of lanes that run in
+// lockstep and can exchange values (shfl), vote (ballot -> mask), find the
+// first set lane (ffs, 1-indexed), and barrier (sync). It lets a cooperative
+// kernel be written once and lowered to each backend's native primitives:
+//   SubGroup<CUDA>  -> 32-lane warp        SubGroup<HIP>  -> wavefront
+//   SubGroup<SYCL>  -> sycl::sub_group     SubGroup<SERIAL/OPENMP> -> size 1
+// Each backend specializes SubGroup<DeviceType> in its DeviceAdapter file.
+//
+// SubGroupScalar is the size-1 group: every collective is an identity, so a
+// cooperative kernel run through it degenerates to the plain serial algorithm.
+// It is what the SERIAL/OPENMP specializations are, and what any
+// 1-thread-per-item (non-cooperative) kernel should use on ANY backend.
+struct SubGroupScalar {
+  using mask_t = uint32_t;
+  static constexpr int size() { return 1; }
+  MGARDX_EXEC int lane() const { return 0; }
+  MGARDX_EXEC mask_t full_mask() const { return 1u; }
+  template <typename T> MGARDX_EXEC T shfl(T v, int) const { return v; }
+  MGARDX_EXEC mask_t ballot(int pred) const { return pred ? 1u : 0u; }
+  MGARDX_EXEC int ffs(mask_t m) const { return m ? 1 : 0; }
+  MGARDX_EXEC void sync() const {}
+};
+
+// Primary template -- each backend provides an explicit specialization in its
+// DeviceAdapter file. Left undefined so an unsupported backend fails loudly.
+template <typename DeviceType> struct SubGroup;
+
 template <typename KeyT, typename ValueT> struct KeyValueComparator {
   bool operator()(std::pair<KeyT, ValueT> a, std::pair<KeyT, ValueT> b) const {
     return a.first < b.first;

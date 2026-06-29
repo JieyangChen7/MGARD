@@ -407,6 +407,31 @@ public:
 extern int sycl_dev_id;
 #pragma omp threadprivate(sycl_dev_id)
 
+// Intel sub-group (oneAPI/DPC++). UNTESTED -- no Intel GPU / SYCL toolchain
+// here. Holds the native sycl::sub_group (constructed from nd_item in the
+// kernel); width pinned to 32 by [[sycl::reqd_sub_group_size(32)]] at the launch
+// site so the ballot mask fits a uint32. See verification notes at the original
+// definition (group_ballot/extract_bits, select_from_group, group_barrier).
+template <> struct SubGroup<SYCL> {
+  sycl::sub_group sg_;
+  using mask_t = uint32_t;
+  MGARDX_EXEC SubGroup(sycl::sub_group s) : sg_(s) {}
+  static constexpr int size() { return 32; }
+  MGARDX_EXEC int lane() const { return (int)sg_.get_local_linear_id(); }
+  MGARDX_EXEC mask_t full_mask() const { return 0xffffffffu; }
+  template <typename T> MGARDX_EXEC T shfl(T v, int src) const {
+    return sycl::select_from_group(sg_, v, (size_t)src);
+  }
+  MGARDX_EXEC mask_t ballot(int pred) const {
+    auto m = sycl::ext::oneapi::group_ballot(sg_, pred != 0);
+    uint32_t bits = 0;
+    m.extract_bits(bits);
+    return bits;
+  }
+  MGARDX_EXEC int ffs(mask_t m) const { return __builtin_ffs((int)m); }
+  MGARDX_EXEC void sync() const { sycl::group_barrier(sg_); }
+};
+
 template <> class DeviceRuntime<SYCL> {
 public:
   MGARDX_CONT

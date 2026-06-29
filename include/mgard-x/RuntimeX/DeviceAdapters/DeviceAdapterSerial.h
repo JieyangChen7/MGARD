@@ -734,6 +734,10 @@ public:
 extern int serial_dev_id;
 #pragma omp threadprivate(serial_dev_id)
 
+// SERIAL has no SIMD lanes: its sub-group is the size-1 scalar group, so any
+// cooperative kernel degenerates to the plain serial algorithm.
+template <> struct SubGroup<SERIAL> : SubGroupScalar {};
+
 template <> class DeviceRuntime<SERIAL> {
 public:
   MGARDX_CONT
@@ -1411,7 +1415,14 @@ public:
                                            int queue_idx) {
 
     if (workspace_allocated) {
-      std::inclusive_scan(v((IDX)0), v((IDX)n), result((IDX)0));
+      // Serial inclusive scan: result[i] = sum(v[0..i]). Hand-rolled instead of
+      // std::inclusive_scan so the header parses under nvcc's default host
+      // compiler (older libstdc++ hides the C++17 <numeric> algorithms).
+      T acc = (T)0;
+      for (SIZE i = 0; i < n; i++) {
+        acc += *v((IDX)i);
+        *result((IDX)i) = acc;
+      }
     } else {
       workspace.resize({(SIZE)1}, queue_idx);
     }
@@ -1425,7 +1436,13 @@ public:
                                            int queue_idx) {
 
     if (workspace_allocated) {
-      std::exclusive_scan(v((IDX)0), v((IDX)n), result((IDX)0));
+      // Serial exclusive scan: result[0] = 0, result[i] = sum(v[0..i-1]).
+      // Hand-rolled in place of std::exclusive_scan (see ScanSumInclusive).
+      T acc = (T)0;
+      for (SIZE i = 0; i < n; i++) {
+        *result((IDX)i) = acc;
+        acc += *v((IDX)i);
+      }
     } else {
       workspace.resize({(SIZE)1}, queue_idx);
     }
@@ -1439,8 +1456,15 @@ public:
                                           int queue_idx) {
 
     if (workspace_allocated) {
-      std::inclusive_scan(v((IDX)0), v((IDX)n), result((IDX)1));
-      *result((IDX)0) = 0;
+      // Serial extended scan: result has n+1 entries with result[0] = 0 and
+      // result[i+1] = sum(v[0..i]) (exclusive prefix plus the grand total in the
+      // last slot). Hand-rolled in place of std::inclusive_scan into result+1.
+      T acc = (T)0;
+      *result((IDX)0) = (T)0;
+      for (SIZE i = 0; i < n; i++) {
+        acc += *v((IDX)i);
+        *result((IDX)(i + 1)) = acc;
+      }
     } else {
       workspace.resize({(SIZE)1}, queue_idx);
     }

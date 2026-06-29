@@ -17,9 +17,9 @@ namespace mgard_x {
 
 using TestDevice = @DEVICE_TYPE@;
 
-// ComposedLosslessCompressor with the Huffman + LZ4 pipeline (CUDA only, LZ4 is
-// nvcomp-backed): Huffman codes the integer symbols, then LZ4 compresses the
-// serialized Huffman stream.
+// ComposedLosslessCompressor with the Huffman + portable-LZ4 pipeline (nvcomp
+// free, runs on every backend): Huffman codes the integer symbols, then the
+// portable LZ4 backend compresses the serialized Huffman stream.
 TEST_CASE("Composed Lossless Huffman+LZ4", "[mgard-x][@DEVICE_TYPE@]") {
   using T = QUANTIZED_INT; // int64_t
   using H = HUFFMAN_CODE;  // uint64_t

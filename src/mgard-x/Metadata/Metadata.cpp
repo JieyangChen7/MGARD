@@ -228,6 +228,8 @@ void MetadataBase::PrintSummary() {
     std::cout << "Huffman_LZ4\n";
     std::cout << "Huffman dictionary size: " << huff_dict_size << "\n";
     std::cout << "Huffman block size: " << huff_block_size << "\n";
+  } else if (ltype == mgard_x::lossless_type::LZ4) {
+    std::cout << "LZ4\n";
   } else if (ltype == mgard_x::lossless_type::Huffman_Zstd) {
     std::cout << "Huffman_Zstd\n";
     std::cout << "Huffman dictionary size: " << huff_dict_size << "\n";
@@ -433,6 +435,8 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
       encoding.set_compressor(mgard::pb::Encoding::X_HUFFMAN_LZ4);
       encoding.set_huffman_dictionary_size(huff_dict_size);
       encoding.set_huffman_block_size(huff_block_size);
+    } else if (ltype == mgard_x::lossless_type::LZ4) {
+      encoding.set_compressor(mgard::pb::Encoding::X_LZ4);
     } else if (ltype == mgard_x::lossless_type::Huffman_Zstd) {
       encoding.set_compressor(mgard::pb::Encoding::X_HUFFMAN_ZSTD);
       encoding.set_huffman_dictionary_size(huff_dict_size);
@@ -722,6 +726,8 @@ void MetadataBase::Deserialize(
       ltype = mgard_x::lossless_type::Huffman_LZ4;
       huff_dict_size = encoding.huffman_dictionary_size();
       huff_block_size = encoding.huffman_block_size();
+    } else if (encoding.compressor() == mgard::pb::Encoding::X_LZ4) {
+      ltype = mgard_x::lossless_type::LZ4;
     } else if (encoding.compressor() == mgard::pb::Encoding::X_HUFFMAN_ZSTD) {
       ltype = mgard_x::lossless_type::Huffman_Zstd;
       huff_dict_size = encoding.huffman_dictionary_size();
