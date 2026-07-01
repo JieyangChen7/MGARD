@@ -233,7 +233,8 @@ public:
 
   void CalcQuantizers(size_t dof, T *quantizers, enum error_bound_type type,
                       T tol, T s, T norm, SIZE l_target,
-                      enum decomposition_type decomposition, bool reciprocal) {
+                      enum decomposition_type decomposition,
+                      bool orthogonal_projection, bool reciprocal) {
 
     double abs_tol = tol;
     if (type == error_bound_type::REL) {
@@ -246,8 +247,18 @@ public:
       for (int l = 0; l < l_target + 1; l++) {
         if (decomposition == decomposition_type::MultiDim ||
             decomposition == decomposition_type::Hybrid) {
-          // ben
-          quantizers[l] = (abs_tol) / ((l_target + 1) * (1 + std::pow(3, D)));
+          if (!orthogonal_projection) {
+            // Hierarchical basis (no mass-matrix correction): reconstruction is
+            // multilinear prolongation, a partition of unity, so a level-l
+            // quantization error propagates to any node with amplification
+            // <= 1. The max error is then bounded by sum over (l_target+1)
+            // levels of (step/2), i.e. the (1+3^D) orthogonal amplification
+            // drops out.
+            quantizers[l] = (abs_tol) / (l_target + 1);
+          } else {
+            // ben
+            quantizers[l] = (abs_tol) / ((l_target + 1) * (1 + std::pow(3, D)));
+          }
           // xin
           // quantizers[l] = (tol) / ((l_target + 1) * (1 + 3 * std::sqrt(3) /
           // 4));
@@ -305,7 +316,8 @@ public:
   void Quantize(SubArray<D, T, DeviceType> original_data,
                 enum error_bound_type ebtype, T tol, T s, T norm,
                 SubArray<D, Q, DeviceType> quantized_data,
-                LosslessCompressorType &lossless, int queue_idx) {
+                LosslessCompressorType &lossless, int queue_idx,
+                bool orthogonal_projection = true) {
 
     // Toggle controlled from outside via the configured lossless backend: when
     // a backend needs a non-negative Huffman dictionary we fold the dictionary
@@ -323,7 +335,8 @@ public:
     SubArray<1, T, DeviceType> quantizers_subarray(quantizers_array);
     T *quantizers = new T[hierarchy->l_target() + 1];
     CalcQuantizers(total_elems, quantizers, ebtype, tol, s, norm,
-                   hierarchy->l_target(), config.decomposition, true);
+                   hierarchy->l_target(), config.decomposition,
+                   orthogonal_projection, true);
     MemoryManager<DeviceType>::Copy1D(quantizers_subarray.data(), quantizers,
                                       hierarchy->l_target() + 1, queue_idx);
 
@@ -356,7 +369,8 @@ public:
   void Dequantize(SubArray<D, T, DeviceType> original_data,
                   enum error_bound_type ebtype, T tol, T s, T norm,
                   SubArray<D, Q, DeviceType> quantized_data,
-                  LosslessCompressorType &lossless_compressor, int queue_idx) {
+                  LosslessCompressorType &lossless_compressor, int queue_idx,
+                  bool orthogonal_projection = true) {
 
     SIZE total_elems = hierarchy->total_num_elems();
     SubArray<2, SIZE, DeviceType> level_ranges_subarray(
@@ -374,7 +388,8 @@ public:
     SubArray<1, T, DeviceType> quantizers_subarray(quantizers_array);
     T *quantizers = new T[hierarchy->l_target() + 1];
     CalcQuantizers(total_elems, quantizers, ebtype, tol, s, norm,
-                   hierarchy->l_target(), config.decomposition, false);
+                   hierarchy->l_target(), config.decomposition,
+                   orthogonal_projection, false);
     MemoryManager<DeviceType>::Copy1D(quantizers_subarray.data(), quantizers,
                                       hierarchy->l_target() + 1, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);

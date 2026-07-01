@@ -8,6 +8,8 @@
 #ifndef MGARD_X_COMPRESSOR_H
 #define MGARD_X_COMPRESSOR_H
 
+#include <limits>
+
 #include "../RuntimeX/RuntimeXPublic.h"
 
 #include "../DataRefactoring/DataRefactor.hpp"
@@ -24,6 +26,18 @@
 #include "LossyCompressorInterface.hpp"
 
 namespace mgard_x {
+
+// L-infinity error control (s == inf) can use the cheaper hierarchical basis
+// (no mass-matrix correction) instead of the orthogonal basis: the hierarchical
+// reconstruction is a partition-of-unity prolongation whose per-level error
+// amplification is 1, so the max error stays bounded while the correction step
+// is skipped. Only D <= 3 is supported because the multi-dimensional
+// decompose/recompose honor the flag only there; higher dimensions always apply
+// the correction. Kept here so the low-level compressor and quantizer agree on
+// exactly when correction is skipped.
+template <DIM D, typename T> inline bool infer_orthogonal_projection(T s) {
+  return !(s == std::numeric_limits<T>::infinity() && D <= 3);
+}
 
 template <DIM D, typename T, typename DeviceType>
 class Compressor : public LossyCompressorInterface<D, T, DeviceType> {
@@ -81,6 +95,12 @@ public:
   bool initialized;
   Hierarchy<D, T, DeviceType> *hierarchy;
   Config config;
+  // Whether the last (de)compose should use orthogonal projection. Derived from
+  // s (see infer_orthogonal_projection) during Compress/Decompress/(De)quantize
+  // and consumed by Recompose, which does not receive s. Defaults to true so
+  // the orthogonal path is used unless s explicitly enables the hierarchical
+  // fast path.
+  bool orthogonal_projection = true;
   Array<1, T, DeviceType> norm_tmp_array;
   Array<1, T, DeviceType> norm_array;
   Array<D, QUANTIZED_INT, DeviceType> quantized_array;
