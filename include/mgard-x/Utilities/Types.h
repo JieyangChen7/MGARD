@@ -40,7 +40,15 @@ enum class lossless_type : uint8_t {
   BlockDelta,
   // Portable LZ4 applied directly to the (raw signed) quantized integer stream,
   // with no Huffman entropy stage. Self-contained like BlockDelta.
-  LZ4
+  LZ4,
+  // Zero-run-length encoding (RLE0) of the quantized stream, then a byte-alphabet
+  // rANS entropy stage on the resulting (counts, symbols) blob. Breaks Huffman's
+  // ~1-bit/symbol ratio floor. Self-contained like LZ4.
+  ZeroRLE_Rans,
+  // Symbol-alphabet rANS: same model as Huffman (outlier separation + dict_size
+  // histogram) but rANS entropy coding instead of Huffman codes -> always <=
+  // Huffman size (fractional bits), uncapped. Self-contained.
+  SymbolRans
 };
 
 // Encoding variant for the BlockDelta lossless backend (mirrors cuSZp):

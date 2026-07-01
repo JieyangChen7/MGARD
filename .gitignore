@@ -54,3 +54,10 @@ CMakeSettings.json
 
 #'Tags' file.
 tags
+
+# Out-of-source build/install trees (this repo builds into ./build-*/ and installs into ./install-*/)
+/build-*/
+/install-*/
+# Editor / CLI artifacts
+/.vscode/
+/vscode_cli.tar.gz

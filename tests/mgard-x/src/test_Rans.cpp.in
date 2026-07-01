@@ -1,0 +1,141 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/rANS/Rans.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+namespace {
+
+// Compress a byte stream with rANS then decompress through a fresh object
+// (metadata travels inside the serialized stream) and return the bytes plus the
+// compressed size, so tests can assert both round-trip correctness and that the
+// codec actually shrinks compressible input.
+struct RansResult {
+  std::vector<Byte> bytes;
+  SIZE compressed_size;
+  SIZE original_size;
+};
+
+RansResult RoundTrip(const std::vector<Byte> &original) {
+  const SIZE n = static_cast<SIZE>(original.size());
+
+  Array<1, Byte, TestDevice> input_data({n});
+  if (n > 0) {
+    input_data.load(original.data());
+  }
+
+  rans::Rans<Byte, TestDevice> compressor;
+  compressor.Resize(n == 0 ? 1 : n, 256, 0, 0, /*interleaved=*/true);
+  Array<1, Byte, TestDevice> compressed_data;
+  bool success = compressor.Compress(input_data, compressed_data, 0);
+  REQUIRE(success == true);
+  SIZE compressed_size = compressed_data.shape(0);
+
+  rans::Rans<Byte, TestDevice> decompressor;
+  decompressor.Resize(n == 0 ? 1 : n, 256, 0, 0, /*interleaved=*/true);
+  decompressor.Deserialize(compressed_data, 0);
+  Array<1, Byte, TestDevice> decompressed_data;
+  decompressor.Decompress(compressed_data, decompressed_data, 0);
+
+  REQUIRE(decompressed_data.shape(0) == n);
+  RansResult res;
+  res.compressed_size = compressed_size;
+  res.original_size = n;
+  if (n > 0) {
+    Byte *result = decompressed_data.hostCopy(false, 0);
+    DeviceRuntime<TestDevice>::SyncQueue(0);
+    res.bytes.assign(result, result + n);
+  }
+  return res;
+}
+
+void RequireRoundTrip(const std::vector<Byte> &original) {
+  RansResult res = RoundTrip(original);
+  REQUIRE(res.bytes.size() == original.size());
+  for (SIZE k = 0; k < original.size(); k++) {
+    REQUIRE(res.bytes[k] == original[k]);
+  }
+}
+
+} // namespace
+
+TEST_CASE("Rans", "[mgard-x][@DEVICE_TYPE@]") {
+  DeviceRuntime<TestDevice>::Initialize();
+
+  SECTION("uniform random bytes (round trip, ~incompressible)") {
+    const SIZE n = 200000;
+    std::vector<Byte> original(n);
+    std::srand(1);
+    for (SIZE i = 0; i < n; i++) {
+      original[i] = static_cast<Byte>(std::rand() & 0xFF);
+    }
+    RequireRoundTrip(original);
+  }
+
+  SECTION("highly skewed (breaks the Huffman 1-bit floor)") {
+    // ~99% zeros: a per-symbol prefix code would spend >= 1 bit/symbol here;
+    // rANS should compress far past that.
+    const SIZE n = 200000;
+    std::vector<Byte> original(n, 0);
+    std::srand(2);
+    for (SIZE i = 0; i < n; i++) {
+      if (std::rand() % 100 == 0) {
+        original[i] = static_cast<Byte>(std::rand() % 255 + 1);
+      }
+    }
+    RansResult res = RoundTrip(original);
+    REQUIRE(res.bytes == original);
+    // Far better than the 32x/8 = ... ; for a byte alphabet Huffman floors at
+    // 8x (1 bit/byte). rANS must beat that comfortably on 99%-zero data.
+    REQUIRE(res.compressed_size * 8 < res.original_size);
+  }
+
+  SECTION("single symbol (near-unbounded ratio)") {
+    const SIZE n = 100000;
+    std::vector<Byte> original(n, 7);
+    RansResult res = RoundTrip(original);
+    REQUIRE(res.bytes == original);
+    REQUIRE(res.compressed_size * 50 < res.original_size);
+  }
+
+  SECTION("skewed multi-symbol distribution") {
+    const SIZE n = 150000;
+    std::vector<Byte> original(n);
+    std::srand(3);
+    for (SIZE i = 0; i < n; i++) {
+      int r = std::rand() % 100;
+      original[i] = static_cast<Byte>(r < 70 ? 0 : (r < 90 ? 1 : (r % 7) + 2));
+    }
+    RequireRoundTrip(original);
+  }
+
+  SECTION("size not a multiple of segment size") {
+    const SIZE n = 2048 * 3 + 17; // forces a short final segment
+    std::vector<Byte> original(n);
+    std::srand(4);
+    for (SIZE i = 0; i < n; i++) {
+      original[i] = static_cast<Byte>(std::rand() % 4);
+    }
+    RequireRoundTrip(original);
+  }
+
+  SECTION("small input (single partial segment)") {
+    std::vector<Byte> original = {3, 3, 3, 1, 2, 3, 0, 0, 0, 9, 9, 1};
+    RequireRoundTrip(original);
+  }
+}
+
+} // namespace mgard_x

@@ -239,6 +239,10 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   } else if (lossless == "blockdelta-outlier") {
     config.lossless = mgard_x::lossless_type::BlockDelta;
     config.block_delta_mode = mgard_x::block_delta_mode_type::Outlier;
+  } else if (lossless == "zerorle-rans") {
+    config.lossless = mgard_x::lossless_type::ZeroRLE_Rans;
+  } else if (lossless == "symbol-rans") {
+    config.lossless = mgard_x::lossless_type::SymbolRans;
   }
 
   size_t original_size = 1;

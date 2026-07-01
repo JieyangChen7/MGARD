@@ -145,6 +145,8 @@ message Encoding {
     X_BLOCK_DELTA = 6;
     reserved 7;        // was X_HUFFMAN_LZ4_PORTABLE (folded into X_HUFFMAN_LZ4)
     X_LZ4 = 8;         // portable LZ4 directly on the quantized stream
+    X_SYMBOL_RANS = 9; // symbol-alphabet rANS (outlier separation + rANS)
+    X_ZERORLE_RANS = 10; // zero-RLE then byte-alphabet rANS
   }
 
   Preprocessor preprocessor = 1;

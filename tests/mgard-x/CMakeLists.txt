@@ -35,6 +35,8 @@ foreach(DEVICE_TYPE IN LISTS DEVICE_TYPE_LIST)
   mgard_x_add_test(test_Compressor      ${DEVICE_TYPE})
   mgard_x_add_test(test_Zstd            ${DEVICE_TYPE})
   mgard_x_add_test(test_RLE             ${DEVICE_TYPE})
+  mgard_x_add_test(test_ZeroRLE         ${DEVICE_TYPE})
+  mgard_x_add_test(test_Rans            ${DEVICE_TYPE})
   mgard_x_add_test(test_ComposedHuffmanZstd ${DEVICE_TYPE})
 
   # Portable (nvcomp-free) LZ4 backend: available on every device type.

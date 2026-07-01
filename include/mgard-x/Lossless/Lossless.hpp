@@ -10,7 +10,10 @@
 #include "LZ4/LZ4.hpp"
 #include "LosslessCompressorInterface.hpp"
 #include "ParallelHuffman/Huffman.hpp"
+#include "ParallelRLE/ZeroRunLengthEncoding.hpp"
+#include "SymbolRans/SymbolRans.hpp"
 #include "Zstd.hpp"
+#include "rANS/Rans.hpp"
 
 #ifndef MGARD_X_LOSSLESS_TEMPLATE_HPP
 #define MGARD_X_LOSSLESS_TEMPLATE_HPP
@@ -33,7 +36,15 @@ public:
   // Huffman in Compress()).
   static bool uses_huffman(enum lossless_type lossless) {
     return lossless != lossless_type::BlockDelta &&
-           lossless != lossless_type::LZ4;
+           lossless != lossless_type::LZ4 &&
+           lossless != lossless_type::ZeroRLE_Rans &&
+           lossless != lossless_type::SymbolRans;
+  }
+
+  // Worst-case byte size of the RLE0 blob fed to rANS: a (count, symbol) pair
+  // per element when nothing repeats (uint32 count + T symbol), plus slack.
+  static SIZE rle_rans_bound(SIZE n) {
+    return n * (sizeof(uint32_t) + sizeof(T)) + 64;
   }
 
   ComposedLosslessCompressor(SIZE n, Config config)
@@ -56,6 +67,14 @@ public:
     if (config.lossless == lossless_type::BlockDelta) {
       blockdelta.Resize(n, config.block_delta_block_size,
                         config.block_delta_mode, 0);
+    }
+    if (config.lossless == lossless_type::ZeroRLE_Rans) {
+      zerorle.Resize(n, 0);
+      rans.Resize(rle_rans_bound(n), 256, 0);
+    }
+    if (config.lossless == lossless_type::SymbolRans) {
+      symbolrans.Resize(n, config.huff_dict_size, config.estimate_outlier_ratio,
+                        0);
     }
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
@@ -80,6 +99,14 @@ public:
     if (config.lossless == lossless_type::BlockDelta) {
       blockdelta.Resize(n, config.block_delta_block_size,
                         config.block_delta_mode, queue_idx);
+    }
+    if (config.lossless == lossless_type::ZeroRLE_Rans) {
+      zerorle.Resize(n, queue_idx);
+      rans.Resize(rle_rans_bound(n), 256, queue_idx);
+    }
+    if (config.lossless == lossless_type::SymbolRans) {
+      symbolrans.Resize(n, config.huff_dict_size, config.estimate_outlier_ratio,
+                        queue_idx);
     }
   }
 
@@ -106,6 +133,14 @@ public:
       size += BlockDeltaLossless<T, DeviceType>::EstimateMemoryFootprint(
           primary_count, config.block_delta_block_size);
     }
+    if (config.lossless == lossless_type::ZeroRLE_Rans) {
+      // RLE0 blob + rANS scratch (~2x the blob) dominate.
+      size += rle_rans_bound(primary_count) * 3;
+    }
+    if (config.lossless == lossless_type::SymbolRans) {
+      size += SymbolRans<Q, S, DeviceType>::EstimateMemoryFootprint(
+          primary_count, config.huff_dict_size, config.estimate_outlier_ratio);
+    }
     return size;
   }
 
@@ -126,6 +161,21 @@ public:
                                         (Byte *)original_data.data(), nbytes,
                                         queue_idx);
       lz4.Compress(compressed_data, queue_idx);
+      return;
+    }
+
+    if (config.lossless == lossless_type::ZeroRLE_Rans) {
+      // Zero-RLE the quantized stream into a (counts, symbols) byte blob, then
+      // entropy-code that blob with rANS. Self-contained: the rANS output is the
+      // final compressed stream (Serialize/Deserialize are no-ops here).
+      zerorle.Compress(original_data, rle_bytes, 0.0, queue_idx);
+      rans.Compress(rle_bytes, compressed_data, queue_idx);
+      return;
+    }
+
+    if (config.lossless == lossless_type::SymbolRans) {
+      // Outlier separation + symbol-alphabet rANS over the dict_size primary.
+      symbolrans.Compress(original_data, compressed_data, queue_idx);
       return;
     }
 
@@ -182,6 +232,21 @@ public:
       return;
     }
 
+    if (config.lossless == lossless_type::ZeroRLE_Rans) {
+      // Inverse of the RLE0 -> rANS path: rANS-decode back to the RLE0 blob,
+      // then expand it to the quantized stream.
+      rans.Deserialize(compressed_data, queue_idx);
+      rans.Decompress(compressed_data, rle_bytes, queue_idx);
+      zerorle.Deserialize(rle_bytes, queue_idx);
+      zerorle.Decompress(rle_bytes, decompressed_data, queue_idx);
+      return;
+    }
+
+    if (config.lossless == lossless_type::SymbolRans) {
+      symbolrans.Decompress(compressed_data, decompressed_data, queue_idx);
+      return;
+    }
+
     if (config.lossless == lossless_type::Huffman_LZ4) {
       lz4.Decompress(compressed_data, queue_idx);
       huffman.Deserialize(compressed_data, queue_idx);
@@ -202,6 +267,10 @@ public:
   LZ4<DeviceType> lz4;
   Zstd<DeviceType> zstd;
   BlockDeltaLossless<T, DeviceType> blockdelta;
+  parallel_rle::ZeroRunLengthEncoding<T, uint32_t, uint32_t, DeviceType> zerorle;
+  rans::Rans<Byte, DeviceType> rans;
+  Array<1, Byte, DeviceType> rle_bytes;
+  SymbolRans<Q, S, DeviceType> symbolrans;
 };
 
 } // namespace mgard_x

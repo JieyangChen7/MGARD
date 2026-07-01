@@ -5,9 +5,27 @@
  * Date: March 17, 2022
  */
 
+#include <cstdlib>
 #include <limits>
 
 #include "mgard-x/Config/Config.h"
+
+namespace {
+// CUDA 12 defaults to lazy module loading, which pulls each kernel's code from
+// the (large) fatbin on its first launch. For backends with many/large kernels
+// (e.g. the rANS lossless path) those scattered first-launch loads add hundreds
+// of ms per process. Eager loading front-loads the module once at context
+// creation, making launches instant (wall time unchanged or lower). The CUDA
+// runtime reads this env var while registering fatbins in static initializers,
+// so we must set it from an early-priority constructor (before those run) -- a
+// setenv in main() is too late. Only set when the user hasn't chosen, so it
+// stays overridable.
+__attribute__((constructor(101))) void mgard_x_set_cuda_module_loading() {
+  if (std::getenv("CUDA_MODULE_LOADING") == nullptr) {
+    setenv("CUDA_MODULE_LOADING", "EAGER", 0);
+  }
+}
+} // namespace
 
 namespace mgard_x {
 

@@ -446,6 +446,11 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
     } else if (ltype == mgard_x::lossless_type::BlockDelta) {
       encoding.set_compressor(mgard::pb::Encoding::X_BLOCK_DELTA);
       encoding.set_block_delta_block_size(block_delta_block_size);
+    } else if (ltype == mgard_x::lossless_type::SymbolRans) {
+      encoding.set_compressor(mgard::pb::Encoding::X_SYMBOL_RANS);
+      encoding.set_huffman_dictionary_size(huff_dict_size);
+    } else if (ltype == mgard_x::lossless_type::ZeroRLE_Rans) {
+      encoding.set_compressor(mgard::pb::Encoding::X_ZERORLE_RANS);
     }
   }
 
@@ -737,6 +742,11 @@ void MetadataBase::Deserialize(
     } else if (encoding.compressor() == mgard::pb::Encoding::X_BLOCK_DELTA) {
       ltype = mgard_x::lossless_type::BlockDelta;
       block_delta_block_size = encoding.block_delta_block_size();
+    } else if (encoding.compressor() == mgard::pb::Encoding::X_SYMBOL_RANS) {
+      ltype = mgard_x::lossless_type::SymbolRans;
+      huff_dict_size = encoding.huffman_dictionary_size();
+    } else if (encoding.compressor() == mgard::pb::Encoding::X_ZERORLE_RANS) {
+      ltype = mgard_x::lossless_type::ZeroRLE_Rans;
     } else {
       std::cout << log::log_err << "unknown lossless compressor type.\n";
       exit(-1);

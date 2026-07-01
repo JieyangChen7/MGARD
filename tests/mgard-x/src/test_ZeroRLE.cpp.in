@@ -1,0 +1,116 @@
+/*
+ * Copyright 2025, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Lossless/ParallelRLE/ZeroRunLengthEncoding.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+namespace {
+
+using T_symbol = uint32_t;
+using C_run = uint32_t;
+using C_global = uint32_t;
+
+// Compress with zero-RLE then decompress through a fresh object (mirroring how
+// the codec is used: metadata travels inside the serialized stream) and return
+// the reconstructed values for comparison against the input.
+std::vector<T_symbol> RoundTrip(const std::vector<T_symbol> &original) {
+  const SIZE n = static_cast<SIZE>(original.size());
+
+  Array<1, T_symbol, TestDevice> original_data({n});
+  original_data.load(original.data());
+
+  parallel_rle::ZeroRunLengthEncoding<T_symbol, C_run, C_global, TestDevice>
+      compressor;
+  compressor.Resize(n, 0);
+  Array<1, Byte, TestDevice> compressed_data;
+  // target_cr == 0 disables the compression-ratio early-out, so it always runs.
+  bool success = compressor.Compress(original_data, compressed_data, 0.0, 0);
+  REQUIRE(success == true);
+
+  parallel_rle::ZeroRunLengthEncoding<T_symbol, C_run, C_global, TestDevice>
+      decompressor;
+  decompressor.Resize(n, 0);
+  decompressor.Deserialize(compressed_data, 0);
+  Array<1, T_symbol, TestDevice> decompressed_data;
+  decompressor.Decompress(compressed_data, decompressed_data, 0);
+
+  REQUIRE(decompressed_data.shape(0) == n);
+  T_symbol *result = decompressed_data.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  return std::vector<T_symbol>(result, result + n);
+}
+
+void RequireRoundTrip(const std::vector<T_symbol> &original) {
+  std::vector<T_symbol> result = RoundTrip(original);
+  REQUIRE(result.size() == original.size());
+  for (SIZE k = 0; k < original.size(); k++) {
+    REQUIRE(result[k] == original[k]);
+  }
+}
+
+} // namespace
+
+// Zero-RLE (RLE0) round trip across the sparsity edge cases that distinguish it
+// from full RLE: leading/interior/trailing zero runs, all zeros, and no zeros.
+TEST_CASE("ZeroRLE", "[mgard-x][@DEVICE_TYPE@]") {
+  DeviceRuntime<TestDevice>::Initialize();
+
+  SECTION("sparse with leading and trailing zeros") {
+    // Long leading zero run, a few sparse nonzeros, long trailing zero run.
+    std::vector<T_symbol> original(50000, 0);
+    original[12345] = 7;
+    original[12346] = 9; // adjacent nonzeros (gap == 0)
+    original[20000] = 3;
+    original[33333] = 42;
+    // [33334, 49999] stay zero -> trailing zeros are implied, not stored.
+    RequireRoundTrip(original);
+  }
+
+  SECTION("first and last element nonzero") {
+    std::vector<T_symbol> original(1000, 0);
+    original[0] = 11;   // gap before first symbol == 0
+    original[999] = 22; // no trailing zeros
+    original[500] = 33;
+    RequireRoundTrip(original);
+  }
+
+  SECTION("all zeros") {
+    std::vector<T_symbol> original(4096, 0);
+    RequireRoundTrip(original);
+  }
+
+  SECTION("no zeros (dense)") {
+    std::vector<T_symbol> original(4096);
+    for (SIZE i = 0; i < original.size(); i++) {
+      original[i] = static_cast<T_symbol>(i % 255 + 1); // never zero
+    }
+    RequireRoundTrip(original);
+  }
+
+  SECTION("random sparse (~10% nonzero)") {
+    const SIZE n = 100000;
+    std::vector<T_symbol> original(n, 0);
+    std::srand(42);
+    for (SIZE i = 0; i < n; i++) {
+      if (std::rand() % 10 == 0) {
+        original[i] = static_cast<T_symbol>(std::rand() % 255 + 1);
+      }
+    }
+    RequireRoundTrip(original);
+  }
+}
+
+} // namespace mgard_x
