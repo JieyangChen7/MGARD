@@ -33,12 +33,19 @@ void Hierarchy<D, T, DeviceType>::coord_to_dist(SIZE dof, T *coord, T *dist) {
   for (int i = 0; i < dof - 1; i++) {
     h_dist[i] = h_coord[i + 1] - h_coord[i];
   }
-  // this is not necessary
-  // if (dof != 2 && dof % 2 == 0) {
-  //   T last_dist = h_dist[dof - 2];
-  //   h_dist[dof - 2] = last_dist / 2.0;
-  //   h_dist[dof - 1] = last_dist / 2.0;
-  // }
+  // For non-uniform grids we restore the original "split the last cell in half"
+  // handling when the number of nodes is even. This preserves the total volume
+  // and gives the multigrid coarsening a well-defined boundary cell. For uniform
+  // grids we intentionally skip the split so that every level's spacing stays
+  // uniform (all interpolation ratios == 0.5), which the UniformMultiDimension
+  // fast path relies on.
+  if (dstype == data_structure_type::Cartesian_Grid_Non_Uniform) {
+    if (dof != 2 && dof % 2 == 0) {
+      T last_dist = h_dist[dof - 2];
+      h_dist[dof - 2] = last_dist / 2.0;
+      h_dist[dof - 1] = last_dist / 2.0;
+    }
+  }
 
   // std::cout << "dist-dof: " << dof << " = ";
   // for (int i = 0; i < dof-1; i++) {
@@ -92,18 +99,31 @@ void Hierarchy<D, T, DeviceType>::reduce_dist(SIZE dof, T *dist, T *dist2) {
   // this->sync(0);
   MemoryManager<DeviceType>::Copy1D(h_dist, dist, dof, 0);
   DeviceRuntime<DeviceType>::SyncQueue(0);
-  T total_dist = 0;
-  for (int i = 0; i < dof - 1; i++) {
-    total_dist += h_dist[i];
+  if (dstype == data_structure_type::Cartesian_Grid_Non_Uniform) {
+    // Coarsen by merging each pair of fine cells so the coarse spacing follows
+    // the true (non-uniform) node geometry, then split the last cell in half for
+    // even-sized coarse grids (mirrors coord_to_dist). This is the original
+    // pre-uniform-adjustment behavior.
+    for (int i = 0; i < dof2 - 1; i++) {
+      h_dist2[i] = h_dist[i * 2] + h_dist[i * 2 + 1];
+    }
+    if (dof2 != 2 && dof2 % 2 == 0) {
+      T last_dist = h_dist2[dof2 - 2];
+      h_dist2[dof2 - 2] = last_dist / 2.0;
+      h_dist2[dof2 - 1] = last_dist / 2.0;
+    }
+  } else {
+    // Uniform grid: spread the total extent evenly so every coarse cell is
+    // identical (spacing doubles each level for 2^k+1, stays uniform otherwise).
+    // Uniform spacing => all interpolation ratios collapse to 0.5.
+    T total_dist = 0;
+    for (int i = 0; i < dof - 1; i++) {
+      total_dist += h_dist[i];
+    }
+    for (int i = 0; i < dof2 - 1; i++) {
+      h_dist2[i] = total_dist / (dof2 - 1);
+    }
   }
-  for (int i = 0; i < dof2 - 1; i++) {
-    h_dist2[i] = total_dist / (dof2 - 1);
-  }
-  // if (dof2 != 2 && dof2 % 2 == 0) {
-  //   T last_dist = h_dist2[dof2 - 2];
-  //   h_dist2[dof2 - 2] = last_dist / 2.0;
-  //   h_dist2[dof2 - 1] = last_dist / 2.0;
-  // }
   // cudaMemcpyAsyncHelper(*this, dist2, h_dist2, dof2 * sizeof(T), AUTO, 0);
   // this->sync(0);
   // std::cout << "dist-dof: " << dof2 << " = ";
