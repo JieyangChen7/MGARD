@@ -26,7 +26,7 @@ zstd_src_dir=${zstd_dir}/src
 zstd_build_dir=${zstd_dir}/build
 zstd_install_dir=${install_dir}
 if [ ! -d "${zstd_src_dir}" ]; then
-  git clone -b v1.5.0 https://github.com/facebook/zstd.git ${zstd_src_dir}
+  git clone -b v1.5.6 https://github.com/facebook/zstd.git ${zstd_src_dir}
 fi
 mkdir -p ${zstd_build_dir}
 cmake -S ${zstd_src_dir}/build/cmake -B ${zstd_build_dir}\
@@ -44,7 +44,7 @@ protobuf_src_dir=${protobuf_dir}/src
 protobuf_build_dir=${protobuf_dir}/build
 protobuf_install_dir=${install_dir}
 if [ ! -d "${protobuf_src_dir}" ]; then
-  git clone -b v3.19.4 --recurse-submodules https://github.com/protocolbuffers/protobuf.git ${protobuf_src_dir}
+  git clone -b v3.21.12 --recurse-submodules https://github.com/protocolbuffers/protobuf.git ${protobuf_src_dir}
 fi
 mkdir -p ${protobuf_build_dir}
 cmake -S ${protobuf_src_dir}/cmake -B ${protobuf_build_dir}\
