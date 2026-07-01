@@ -104,9 +104,7 @@ TEST_CASE("MeshLevel construction", "[mgard][MeshLevel]") {
       std::set<moab::EntityHandle> expected_nodes = {_nodes[4], _nodes[5]};
       REQUIRE(nodes == expected_nodes);
     }
-    {
-      REQUIRE_THROWS(mesh.connectivity(_nodes.back()));
-    }
+    { REQUIRE_THROWS(mesh.connectivity(_nodes.back())); }
   }
 }
 

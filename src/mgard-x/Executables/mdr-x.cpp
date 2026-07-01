@@ -381,7 +381,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   write_mdr(refactored_metadata, refactored_data, output_file);
 
   mgard_x::unpin_memory(original_data, config);
-  delete[] (T *)original_data;
+  delete[](T *) original_data;
 
   return 0;
 }

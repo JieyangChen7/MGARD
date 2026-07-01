@@ -158,9 +158,7 @@ inline void ErrorSyncCheck(cudaError_t code, std::string task,
 }
 
 #define gpuErrchk(ans)                                                         \
-  {                                                                            \
-    gpuAssert((ans), __FILE__, __LINE__);                                      \
-  }
+  { gpuAssert((ans), __FILE__, __LINE__); }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
@@ -856,7 +854,7 @@ public:
 template <> class MemoryManager<CUDA> {
 public:
   MGARDX_CONT
-  MemoryManager() {};
+  MemoryManager(){};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -2534,7 +2532,7 @@ struct SquareOp {
 template <> class DeviceCollective<CUDA> {
 public:
   MGARDX_CONT
-  DeviceCollective() {};
+  DeviceCollective(){};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, CUDA> v,

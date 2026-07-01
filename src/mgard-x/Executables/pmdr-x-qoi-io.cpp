@@ -16,9 +16,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "mgard-x/RuntimeX/Utilities/Log.h"
 #include "compress_x.hpp"
 #include "mdr_x.hpp"
+#include "mgard-x/RuntimeX/Utilities/Log.h"
 #include "mgard-x/Utilities/ErrorCalculator.h"
 
 #include "ArgumentParser.h"
@@ -786,7 +786,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   write_mdr(refactored_metadata, refactored_data, output_file);
 
   mgard_x::unpin_memory(original_data, config);
-  delete[] (T *)original_data;
+  delete[](T *) original_data;
 
   return 0;
 }

@@ -16,9 +16,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "mgard-x/RuntimeX/Utilities/Log.h"
 #include "compress_x.hpp"
 #include "mdr_x.hpp"
+#include "mgard-x/RuntimeX/Utilities/Log.h"
 #include "mgard-x/Utilities/ErrorCalculator.h"
 
 #include "ArgumentParser.h"
@@ -342,55 +342,64 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 }
 
 // void posterior_bp_request(mgard_x::MDR::RefactoredMetadata
-// &refactored_metadata, double tol, int rank){ 	if (tol == 1e-1) { 		switch (rank)
-// { 			case 0: 				refactored_metadata.metadata[0].requested_level_num_bitplanes =
-// {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// &refactored_metadata, double tol, int rank){ 	if (tol == 1e-1) {
+// switch (rank) { 			case 0:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28,
+// 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8}; 				break; 			case 1:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
+// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8}; 				break;
+// case 1:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28,
+// 24, 20, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8}; 				break; 			case 2:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {28, 28, 24, 20, 20, 16, 12, 12, 8, 8};
+// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8}; 				break;
+// case 2:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {28, 28, 24,
+// 20, 20, 16, 12, 12, 8, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {28, 28, 24, 20, 20, 16, 12, 12, 8, 8};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8}; 				break; 			case 3:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8}; 				break;
+// case 3:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28,
+// 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8}; 				break; 			case 4:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// = {32, 28, 28, 24, 20, 20, 16, 12, 12, 8}; 				break;
+// case 4:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28,
+// 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12}; 				break; 			case 5:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {28, 28, 24, 24, 20, 16, 12, 12, 8, 8};
+// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12}; 				break;
+// case 5:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {28, 28, 24,
+// 24, 20, 16, 12, 12, 8, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8}; 				break; 			case 6:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
+// = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8}; 				break;
+// case 6:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 28, 28,
+// 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 28, 28, 24, 24, 20, 16, 12, 12, 8};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12}; 				break; 			case 7:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12}; 				break;
+// case 7:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28,
+// 28, 24, 20, 16, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 12, 8, 8}; 				break; 			default: 				break;
+// = {32, 28, 28, 24, 24, 20, 16, 12, 8, 8}; 				break;
+// default: 				break;
 // 		}
 // 	}	else if (tol == 1e-2) {
 // 		switch (rank) {
@@ -400,49 +409,57 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 24, 20, 16, 12, 12}; 				break; 			case 1:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
+// = {32, 32, 32, 28, 24, 24, 20, 16, 12, 12}; 				break;
+// case 1:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12}; 				break; 			case 2:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12}; 				break;
+// case 2:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28,
+// 28, 24, 20, 16, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12}; 				break; 			case 3:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12}; 				break;
+// case 3:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28,
+// 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12}; 				break; 			case 4:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12}; 				break;
+// case 4:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28,
+// 28, 24, 20, 16, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12}; 				break; 			case 5:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12};
+// = {32, 32, 32, 28, 24, 20, 20, 16, 12, 12}; 				break;
+// case 5:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28,
+// 28, 24, 20, 16, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12}; 				break; 			case 6:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
+// = {32, 32, 28, 28, 24, 20, 16, 16, 12, 12}; 				break;
+// case 6:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 28,
+// 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12}; 				break; 			case 7:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
+// = {32, 32, 28, 28, 24, 20, 20, 16, 12, 12}; 				break;
+// case 7:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 28, 24, 20, 20, 16, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 28, 28, 24, 24, 20, 16, 16, 12, 8}; 				break; 			default: 				break;
+// = {32, 28, 28, 24, 24, 20, 16, 16, 12, 8}; 				break;
+// default: 				break;
 // 		}
 // 	}	else if (tol == 1e-3) {
 // 		switch (rank) {
@@ -452,49 +469,57 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12}; 				break; 			case 1:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12}; 				break;
+// case 1:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 24, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break; 			case 2:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 12, 12};
+// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break;
+// case 2:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 28, 24, 20, 16, 12, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12}; 				break; 			case 3:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12}; 				break;
+// case 3:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break; 			case 4:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
+// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break;
+// case 4:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 24, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12}; 				break; 			case 5:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// = {32, 32, 32, 28, 28, 24, 20, 20, 16, 12}; 				break;
+// case 5:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break; 			case 6:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
+// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break;
+// case 6:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break; 			case 7:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
+// = {32, 32, 32, 28, 28, 24, 20, 16, 16, 12}; 				break;
+// case 7:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 28, 24, 24, 20, 16, 16, 12};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
-// 				refactored_metadata.metadata[1].requested_level_num_bitplanes
-// = {32, 32, 32, 28, 24, 24, 20, 16, 16, 12};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12}; 				break; 			default: 				break;
+// = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12}; 				break;
+// default: 				break;
 // 		}
 // 	}	else if (tol == 1e-4) {
 // 		switch (rank) {
@@ -504,49 +529,57 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 1:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 1:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 28, 24, 24, 20, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 2:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 2:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 28, 24, 20, 20, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 3:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 3:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 4:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 4:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 5:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 5:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 6:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 6:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break; 			case 7:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
+// = {32, 32, 32, 32, 28, 28, 24, 20, 16, 16}; 				break;
+// case 7:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 28, 28, 24, 20, 20, 16};
+// 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 28, 28, 24, 20, 20, 16};
-// 				refactored_metadata.metadata[1].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 28, 24, 20, 20, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12}; 				break; 			default: 				break;
+// = {32, 32, 32, 32, 28, 24, 20, 20, 16, 12}; 				break;
+// default: 				break;
 // 		}
 // 	}	else if (tol == 1e-5) {
 // 		switch (rank) {
@@ -556,49 +589,57 @@ size_t read_mdr(mgard_x::MDR::RefactoredMetadata &refactored_metadata,
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 32, 28, 28, 20, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 32, 28, 24, 20, 20}; 				break; 			case 1:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 32, 28, 24, 20, 20}; 				break;
+// case 1:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 32, 32, 28, 24, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break; 			case 2:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 32, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break;
+// case 2:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 32, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 32, 28, 24, 20, 16};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break; 			case 3:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break;
+// case 3:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break; 			case 4:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break;
+// case 4:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break; 			case 5:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break;
+// case 5:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 32, 32, 28, 24, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break; 			case 6:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break;
+// case 6:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break; 			case 7:
-// 				refactored_metadata.metadata[0].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20}; 				break;
+// case 7:
+// refactored_metadata.metadata[0].requested_level_num_bitplanes = {32, 32, 32,
+// 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[1].requested_level_num_bitplanes
 // = {32, 32, 32, 32, 32, 28, 28, 24, 20, 20};
 // 				refactored_metadata.metadata[2].requested_level_num_bitplanes
-// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 16}; 				break; 			default: 				break;
+// = {32, 32, 32, 32, 32, 28, 28, 24, 20, 16}; 				break;
+// default: 				break;
 // 		}
 // 	}}
 
@@ -697,7 +738,7 @@ int launch_refactor(mgard_x::DIM D, enum mgard_x::data_type dtype,
   write_mdr(refactored_metadata, refactored_data, output_file);
 
   mgard_x::unpin_memory(original_data, config);
-  delete[] (T *)original_data;
+  delete[](T *) original_data;
 
   return 0;
 }

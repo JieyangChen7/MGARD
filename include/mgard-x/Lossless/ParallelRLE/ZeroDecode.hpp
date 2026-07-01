@@ -62,7 +62,8 @@ public:
 
   MGARDX_CONT Task<ZeroStrideFunctor<T_symbol, C_run, C_global, DeviceType>>
   GenTask(int queue_idx) {
-    using FunctorType = ZeroStrideFunctor<T_symbol, C_run, C_global, DeviceType>;
+    using FunctorType =
+        ZeroStrideFunctor<T_symbol, C_run, C_global, DeviceType>;
     FunctorType functor(counts, strides);
 
     SIZE tbx, tby, tbz, gridx, gridy, gridz;

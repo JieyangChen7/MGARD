@@ -18,8 +18,8 @@
   "compiling with NVCC."
 #endif
 
-#include "mgard/adaptive_roi.hpp"
 #include "compress_x.hpp"
+#include "mgard/adaptive_roi.hpp"
 
 //! Implementation of the MGARD compression and decompression algorithms.
 namespace mgard {

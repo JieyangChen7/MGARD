@@ -17,12 +17,12 @@ static bool debug_print_huffman = false;
 #include "Decode.hpp"
 #include "Deflate.hpp"
 #include "DictionaryShift.hpp"
-#include "ParallelDeflate.hpp"
 #include "EncodeFixedLen.hpp"
 #include "GetCodebook.hpp"
 #include "Histogram.hpp"
 #include "HuffmanWorkspace.hpp"
 #include "OutlierSeparator.hpp"
+#include "ParallelDeflate.hpp"
 
 #include <chrono>
 using namespace std::chrono;
@@ -170,8 +170,8 @@ public:
     primary_count = primary_subarray.shape(0);
 
     // Per-stage timing scaffolding (disabled; uncomment the block below and the
-    // mark() calls to profile each stage under log::TIME). Each mark() syncs the
-    // queue, prints the elapsed time of the stage just finished against the
+    // mark() calls to profile each stage under log::TIME). Each mark() syncs
+    // the queue, prints the elapsed time of the stage just finished against the
     // primary input size, and restarts the stage timer. Note: this serializes
     // the pipeline (one sync per stage).
     // Timer timer_stage;
@@ -229,9 +229,10 @@ public:
                     workspace.decodebook_subarray);
     }
     // Encoding is fused into the deflate kernels below: instead of first
-    // materializing huff[i] = codebook[data[i]] into a primary_count-sized array
-    // and reading it back twice, GroupBits and Pack look up codebook[data[i]] on
-    // the fly. This removes a full pass and the huff_array allocation.
+    // materializing huff[i] = codebook[data[i]] into a primary_count-sized
+    // array and reading it back twice, GroupBits and Pack look up
+    // codebook[data[i]] on the fly. This removes a full pass and the huff_array
+    // allocation.
 
     // Parallel deflate sizing. The actual bit-packing into the final buffer is
     // deferred to Serialize (once the output layout is known) so that each
@@ -280,7 +281,8 @@ public:
     // straight to it. Serialize then only fills in the surrounding metadata.
     // Each group writes MSB-first to its final intra-chunk offset; words fully
     // owned by a group use plain stores while the (<=2) words shared with
-    // neighbouring groups use atomicOr, so the destination must be zeroed first.
+    // neighbouring groups use atomicOr, so the destination must be zeroed
+    // first.
     SIZE packed_byte_offset;
     SIZE compressed_size = ComputeSerializedLayout(packed_byte_offset);
     compressed_data.resize({compressed_size}, queue_idx);
@@ -380,10 +382,9 @@ public:
                            byte_offset, queue_idx);
     // huffmeta second half: per-chunk word offsets (device). The extended scan
     // holds nchunk+1 entries; the first nchunk are the chunk start offsets.
-    SerializeArray<size_t>(
-        compressed_data_subarray,
-        workspace.deflate_chunk_word_offsets_subarray.data(), nchunk,
-        byte_offset, queue_idx);
+    SerializeArray<size_t>(compressed_data_subarray,
+                           workspace.deflate_chunk_word_offsets_subarray.data(),
+                           nchunk, byte_offset, queue_idx);
     SerializeArray<size_t>(compressed_data_subarray, &decodebook_size, 1,
                            byte_offset, queue_idx);
     SerializeArray<uint8_t>(compressed_data_subarray,
@@ -393,8 +394,9 @@ public:
     SerializeArray<size_t>(compressed_data_subarray, &ddata_size, 1,
                            byte_offset, queue_idx);
 
-    // The densely-packed Huffman stream is already in place (written directly by
-    // CompressPrimary); just advance past it. Must mirror ComputeSerializedLayout.
+    // The densely-packed Huffman stream is already in place (written directly
+    // by CompressPrimary); just advance past it. Must mirror
+    // ComputeSerializedLayout.
     advance_with_align<H>(byte_offset, ddata_size);
 
     // outlier

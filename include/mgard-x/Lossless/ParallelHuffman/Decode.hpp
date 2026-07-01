@@ -66,12 +66,13 @@ public:
     // keys[] always stays in global memory.
     auto first = reinterpret_cast<H *>(_s_singleton);
     auto entry = first + sizeof(H) * 8;
-    auto keys =
-        reinterpret_cast<Q *>(singleton((IDX)0) + sizeof(H) * (2 * sizeof(H) * 8));
+    auto keys = reinterpret_cast<Q *>(singleton((IDX)0) +
+                                      sizeof(H) * (2 * sizeof(H) * 8));
 
-    // Opt 2: hold the current densely word in a register and refetch from global
-    // memory only when the bit cursor crosses into the next word, instead of
-    // re-loading the same word once per bit (up to word_bw redundant loads).
+    // Opt 2: hold the current densely word in a register and refetch from
+    // global memory only when the bit cursor crosses into the next word,
+    // instead of re-loading the same word once per bit (up to word_bw redundant
+    // loads).
     size_t cached_word_idx = 0;
     H cached_word = *densely(densely_offset);
 
@@ -188,8 +189,8 @@ void Decode(SubArray<1, H, DeviceType> densely,
             SubArray<1, Q, DeviceType> bcode, SIZE len, int chunk_size,
             int n_chunk, SubArray<1, uint8_t, DeviceType> singleton,
             size_t singleton_size, int queue_idx) {
-  // Opt 3 caches only first[]/entry[] (~1KB) in shared memory, which always fits
-  // and never hurts occupancy, so the cached path is used unconditionally.
+  // Opt 3 caches only first[]/entry[] (~1KB) in shared memory, which always
+  // fits and never hurts occupancy, so the cached path is used unconditionally.
   if (DeviceRuntime<DeviceType>::PrintKernelConfig) {
     std::cout << log::log_info
               << "Decode: caching first[]/entry[] in shared memory\n";

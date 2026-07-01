@@ -72,8 +72,7 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "zero rle encode";
   MGARDX_CONT
-  ZeroEncodeKernel(C_global num_symbols,
-                   SubArray<1, T_symbol, DeviceType> data,
+  ZeroEncodeKernel(C_global num_symbols, SubArray<1, T_symbol, DeviceType> data,
                    SubArray<1, C_global, DeviceType> start_positions,
                    SubArray<1, C_run, DeviceType> counts,
                    SubArray<1, T_symbol, DeviceType> symbols)

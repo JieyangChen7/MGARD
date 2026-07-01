@@ -22,9 +22,11 @@
 // until it is actually compressed:
 //   1) LZ4ChunkCompress : compress chunk c into a worst-case-sized scratch slot
 //                         (scratch + c*max_chunk_out) and record comp_bytes[c].
-//   2) (host) exclusive scan comp_bytes -> byte_offset (final contiguous layout)
-//   3) LZ4Condense      : copy each chunk's comp_bytes[c] from its scratch slot
-//                         to packed[byte_offset[c]] (the gather/compaction pass).
+//   2) (host) exclusive scan comp_bytes -> byte_offset (final contiguous
+//   layout) 3) LZ4Condense      : copy each chunk's comp_bytes[c] from its
+//   scratch slot
+//                         to packed[byte_offset[c]] (the gather/compaction
+//                         pass).
 // Decompression is single-phase: rebuild byte_offset from the stored
 // comp_bytes, then one thread per chunk parses tokens and copies.
 //
@@ -40,19 +42,17 @@ namespace lz4 {
 
 // ---- format / tuning constants -------------------------------------------
 enum : int {
-  MIN_MATCH = 4,      // a back-reference must cover >= 4 bytes to pay off
-  LAST_LITERALS = 5,  // final 5 bytes of a chunk are always emitted literally
-  MFLIMIT = 12,       // last match must start >= 12 bytes before chunk end
+  MIN_MATCH = 4,        // a back-reference must cover >= 4 bytes to pay off
+  LAST_LITERALS = 5,    // final 5 bytes of a chunk are always emitted literally
+  MFLIMIT = 12,         // last match must start >= 12 bytes before chunk end
   MAX_DISTANCE = 65535, // 16-bit offset -> 64 KB window
-  HASH_LOG = 12,      // per-chunk hash table: 1<<HASH_LOG entries
+  HASH_LOG = 12,        // per-chunk hash table: 1<<HASH_LOG entries
 };
 static constexpr uint32_t HASH_SIZE = 1u << HASH_LOG;
 static constexpr uint32_t HASH_EMPTY = 0xFFFFFFFFu;
 
 // Worst-case compressed size of `s` input bytes (LZ4_compressBound).
-MGARDX_CONT_EXEC size_t compress_bound(size_t s) {
-  return s + s / 255 + 16;
-}
+MGARDX_CONT_EXEC size_t compress_bound(size_t s) { return s + s / 255 + 16; }
 
 MGARDX_EXEC uint32_t read4(const Byte *p) {
   return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
@@ -204,7 +204,8 @@ MGARDX_EXEC int compress_chunk(SG sg, const Byte *in, int len, Byte *out,
 // periodic seed out[op+k] = out[op-offset + (k mod offset)] (reads only the
 // already-decoded seed). Driven by output length. Size 1 = serial decoder.
 template <typename SG>
-MGARDX_EXEC void decompress_chunk(SG sg, const Byte *in, Byte *out, int outLen) {
+MGARDX_EXEC void decompress_chunk(SG sg, const Byte *in, Byte *out,
+                                  int outLen) {
   const int W = SG::size();
   const int lane = sg.lane();
   const int MM = lz4::MIN_MATCH;
@@ -273,11 +274,12 @@ template <typename DeviceType>
 class LZ4ChunkCompressFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT LZ4ChunkCompressFunctor() {}
-  MGARDX_CONT LZ4ChunkCompressFunctor(
-      SubArray<1, Byte, DeviceType> input, SIZE n, SIZE chunk_size,
-      SIZE nchunks, SIZE max_chunk_out, SubArray<1, uint16_t, DeviceType> htable,
-      SubArray<1, Byte, DeviceType> scratch,
-      SubArray<1, size_t, DeviceType> comp_bytes)
+  MGARDX_CONT
+  LZ4ChunkCompressFunctor(SubArray<1, Byte, DeviceType> input, SIZE n,
+                          SIZE chunk_size, SIZE nchunks, SIZE max_chunk_out,
+                          SubArray<1, uint16_t, DeviceType> htable,
+                          SubArray<1, Byte, DeviceType> scratch,
+                          SubArray<1, size_t, DeviceType> comp_bytes)
       : input(input), n(n), chunk_size(chunk_size), nchunks(nchunks),
         max_chunk_out(max_chunk_out), htable(htable), scratch(scratch),
         comp_bytes(comp_bytes) {
@@ -294,8 +296,8 @@ public:
     int len = (int)(chunk_size < (n - start) ? chunk_size : (n - start));
     Byte *out = scratch((size_t)c * max_chunk_out);
     uint16_t *ht = htable((size_t)c * lz4::HASH_SIZE);
-    int outlen = lz4_coop::compress_chunk(SubGroupScalar{}, input(start), len,
-                                          out, ht);
+    int outlen =
+        lz4_coop::compress_chunk(SubGroupScalar{}, input(start), len, out, ht);
     *comp_bytes(c) = (size_t)outlen;
   }
 
@@ -313,18 +315,18 @@ private:
   SubArray<1, size_t, DeviceType> comp_bytes;
 };
 
-template <typename DeviceType>
-class LZ4ChunkCompressKernel : public Kernel {
+template <typename DeviceType> class LZ4ChunkCompressKernel : public Kernel {
 public:
   constexpr static DIM NumDim = 1;
   constexpr static bool EnableAutoTuning() { return false; }
   using DataType = Byte;
   constexpr static std::string_view Name = "lz4_chunk_compress";
-  MGARDX_CONT LZ4ChunkCompressKernel(
-      SubArray<1, Byte, DeviceType> input, SIZE n, SIZE chunk_size,
-      SIZE nchunks, SIZE max_chunk_out, SubArray<1, uint16_t, DeviceType> htable,
-      SubArray<1, Byte, DeviceType> scratch,
-      SubArray<1, size_t, DeviceType> comp_bytes)
+  MGARDX_CONT LZ4ChunkCompressKernel(SubArray<1, Byte, DeviceType> input,
+                                     SIZE n, SIZE chunk_size, SIZE nchunks,
+                                     SIZE max_chunk_out,
+                                     SubArray<1, uint16_t, DeviceType> htable,
+                                     SubArray<1, Byte, DeviceType> scratch,
+                                     SubArray<1, size_t, DeviceType> comp_bytes)
       : input(input), n(n), chunk_size(chunk_size), nchunks(nchunks),
         max_chunk_out(max_chunk_out), htable(htable), scratch(scratch),
         comp_bytes(comp_bytes) {}
@@ -432,10 +434,11 @@ template <typename DeviceType>
 class LZ4ChunkDecompressFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT LZ4ChunkDecompressFunctor() {}
-  MGARDX_CONT LZ4ChunkDecompressFunctor(
-      SubArray<1, Byte, DeviceType> packed,
-      SubArray<1, size_t, DeviceType> byte_offset, SIZE n, SIZE chunk_size,
-      SIZE nchunks, SubArray<1, Byte, DeviceType> output)
+  MGARDX_CONT
+  LZ4ChunkDecompressFunctor(SubArray<1, Byte, DeviceType> packed,
+                            SubArray<1, size_t, DeviceType> byte_offset, SIZE n,
+                            SIZE chunk_size, SIZE nchunks,
+                            SubArray<1, Byte, DeviceType> output)
       : packed(packed), byte_offset(byte_offset), n(n), chunk_size(chunk_size),
         nchunks(nchunks), output(output) {
     Functor<DeviceType>();
@@ -466,17 +469,17 @@ private:
   SubArray<1, Byte, DeviceType> output;
 };
 
-template <typename DeviceType>
-class LZ4ChunkDecompressKernel : public Kernel {
+template <typename DeviceType> class LZ4ChunkDecompressKernel : public Kernel {
 public:
   constexpr static DIM NumDim = 1;
   constexpr static bool EnableAutoTuning() { return false; }
   using DataType = Byte;
   constexpr static std::string_view Name = "lz4_chunk_decompress";
-  MGARDX_CONT LZ4ChunkDecompressKernel(
-      SubArray<1, Byte, DeviceType> packed,
-      SubArray<1, size_t, DeviceType> byte_offset, SIZE n, SIZE chunk_size,
-      SIZE nchunks, SubArray<1, Byte, DeviceType> output)
+  MGARDX_CONT
+  LZ4ChunkDecompressKernel(SubArray<1, Byte, DeviceType> packed,
+                           SubArray<1, size_t, DeviceType> byte_offset, SIZE n,
+                           SIZE chunk_size, SIZE nchunks,
+                           SubArray<1, Byte, DeviceType> output)
       : packed(packed), byte_offset(byte_offset), n(n), chunk_size(chunk_size),
         nchunks(nchunks), output(output) {}
 

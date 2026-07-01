@@ -23,7 +23,8 @@ namespace mgard_x {
 //
 // Container layout written by Compress:
 //   signature(8) | uncompressed_total:size_t | chunk_size:size_t |
-//   nchunks:size_t | comp_bytes[nchunks]:size_t | packed_bytes:size_t | packed[]
+//   nchunks:size_t | comp_bytes[nchunks]:size_t | packed_bytes:size_t |
+//   packed[]
 // comp_bytes[] is the per-chunk compressed length; Decompress exclusive-scans
 // it to recover each chunk's offset into packed[] (same trick as BlockDelta).
 template <typename DeviceType> class LZ4 {
@@ -31,9 +32,9 @@ public:
   LZ4() : initialized(false) {}
 
   // The warp-per-chunk CUDA compress kernel (LZ4Fused) replaces the portable
-  // 1-thread-per-chunk functor when available; it keeps its hash table in shared
-  // memory, so the global htable_array is not needed on that path.
-  // True for the GPU backend (CUDA/HIP) that has the fused warp-per-chunk path
+  // 1-thread-per-chunk functor when available; it keeps its hash table in
+  // shared memory, so the global htable_array is not needed on that path. True
+  // for the GPU backend (CUDA/HIP) that has the fused warp-per-chunk path
   // compiled in this TU. SERIAL/OpenMP/other always use the portable functor.
   static constexpr bool fused_backend() {
     bool r = false;
@@ -50,7 +51,7 @@ public:
   }
 
   bool uses_fused() const {
-#if defined(MGARDX_COMPILE_CUDA) || defined(MGARDX_COMPILE_HIP) ||              \
+#if defined(MGARDX_COMPILE_CUDA) || defined(MGARDX_COMPILE_HIP) ||             \
     defined(MGARDX_COMPILE_SYCL)
     return fused_backend() && lz4_fused::fused_ok(chunk_size);
 #else
@@ -88,11 +89,11 @@ public:
   static size_t EstimateMemoryFootprint(SIZE n, SIZE chunk_size) {
     SIZE max_nchunks = (n - 1) / chunk_size + 1;
     size_t max_chunk_out = lz4::compress_bound(chunk_size);
-    size_t size = n;                                                  // input
-    size += (size_t)max_nchunks * lz4::HASH_SIZE * sizeof(uint16_t);  // htable
+    size_t size = n;                                                 // input
+    size += (size_t)max_nchunks * lz4::HASH_SIZE * sizeof(uint16_t); // htable
     size += (size_t)max_nchunks * max_chunk_out;                     // scratch
-    size += (size_t)max_nchunks * sizeof(size_t);                    // comp_bytes
-    size += (size_t)(max_nchunks + 1) * sizeof(size_t);              // offsets
+    size += (size_t)max_nchunks * sizeof(size_t);       // comp_bytes
+    size += (size_t)(max_nchunks + 1) * sizeof(size_t); // offsets
     return size;
   }
 
@@ -114,8 +115,8 @@ public:
     SubArray<1, Byte, DeviceType> input_subarray({(SIZE)n}, input_data.data());
     SubArray<1, Byte, DeviceType> scratch_subarray(
         {(SIZE)((size_t)nchunks * max_chunk_out)}, scratch_array.data());
-    SubArray<1, size_t, DeviceType> comp_bytes_subarray({(SIZE)nchunks},
-                                                        comp_bytes_array.data());
+    SubArray<1, size_t, DeviceType> comp_bytes_subarray(
+        {(SIZE)nchunks}, comp_bytes_array.data());
     SubArray<1, size_t, DeviceType> byte_offset_subarray(
         {(SIZE)nchunks + 1}, byte_offset_array.data());
 
@@ -123,7 +124,7 @@ public:
     //    CUDA: warp-per-chunk fused kernel (shared-memory hash, parallel match
     //    scan). Other backends / oversized chunks: portable 1-thread functor.
     bool did_fused = false;
-#if defined(MGARDX_COMPILE_CUDA) || defined(MGARDX_COMPILE_HIP) ||              \
+#if defined(MGARDX_COMPILE_CUDA) || defined(MGARDX_COMPILE_HIP) ||             \
     defined(MGARDX_COMPILE_SYCL)
     if constexpr (fused_backend()) {
       if (lz4_fused::fused_ok(chunk_size)) {
@@ -183,8 +184,8 @@ public:
     SerializeArray<size_t>(out_subarray, &packed_v, 1, byte_offset, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
-    log::info("LZ4 compress ratio: " + std::to_string(input_count) +
-              "/" + std::to_string(compressed_size) + " (" +
+    log::info("LZ4 compress ratio: " + std::to_string(input_count) + "/" +
+              std::to_string(compressed_size) + " (" +
               std::to_string((double)input_count / compressed_size) + ")");
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -212,8 +213,8 @@ public:
     Byte *sig = signature_verify;
     DeserializeArray<Byte>(in_subarray, sig, kSignatureLen, byte_offset, false,
                            queue_idx);
-    size_t *n_ptr = &n, *chunk_ptr = &chunk_size_runtime, *nchunks_ptr = &nchunks,
-           *packed_ptr_sz = &packed_bytes;
+    size_t *n_ptr = &n, *chunk_ptr = &chunk_size_runtime,
+           *nchunks_ptr = &nchunks, *packed_ptr_sz = &packed_bytes;
     DeserializeArray<size_t>(in_subarray, n_ptr, 1, byte_offset, false,
                              queue_idx);
     DeserializeArray<size_t>(in_subarray, chunk_ptr, 1, byte_offset, false,
@@ -252,7 +253,7 @@ public:
     // CUDA: warp-per-chunk fused decoder (cooperative literal/match copy).
     // Other backends / oversized chunks: portable 1-thread decode functor.
     bool did_fused = false;
-#if defined(MGARDX_COMPILE_CUDA) || defined(MGARDX_COMPILE_HIP) ||              \
+#if defined(MGARDX_COMPILE_CUDA) || defined(MGARDX_COMPILE_HIP) ||             \
     defined(MGARDX_COMPILE_SYCL)
     if constexpr (fused_backend()) {
       if (lz4_fused::fused_ok(chunk_size_runtime)) {
@@ -296,7 +297,7 @@ private:
     advance_with_align<size_t>(off, 1);           // packed_bytes
     align_byte_offset<Byte>(off);
     packed_byte_offset = off;
-    advance_with_align<Byte>(off, packed_bytes);  // packed[]
+    advance_with_align<Byte>(off, packed_bytes); // packed[]
     return off;
   }
 

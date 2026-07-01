@@ -25,7 +25,8 @@ static double f(const mgard::MeshLevel &mesh, const moab::EntityHandle node) {
           2 * std::cos(xyz[1] - 4 * xyz[2]));
 }
 
-TEST_CASE("SituatedCoefficientRange iteration", "[mgard][SituatedCoefficientRange]") {
+TEST_CASE("SituatedCoefficientRange iteration",
+          "[mgard][SituatedCoefficientRange]") {
   const std::string filename = GENERATE("pyramid.msh", "hexahedron.msh");
   moab::ErrorCode ecode;
   moab::Core mbcore;

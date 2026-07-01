@@ -120,13 +120,13 @@ MGARDX_CONT void FillAutoTunerTable(std::string kernel_name, int config) {
 template <typename DeviceType> class AutoTuningTable {
 public:
   MGARDX_CONT
-  AutoTuningTable() {};
+  AutoTuningTable(){};
 };
 
 template <typename DeviceType> class AutoTuner {
 public:
   MGARDX_CONT
-  AutoTuner() {};
+  AutoTuner(){};
 
   static AutoTuningTable<DeviceType> autoTuningTable;
   static bool ProfileKenrles;

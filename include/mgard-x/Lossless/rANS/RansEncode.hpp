@@ -22,12 +22,11 @@ template <typename Q, typename DeviceType>
 class EncodeFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT EncodeFunctor() {}
-  MGARDX_CONT EncodeFunctor(SubArray<1, Q, DeviceType> input, SIZE n,
-                            SIZE segment_size, SIZE num_segments,
-                            SubArray<1, RansEncPacked, DeviceType> esym,
-                            IDX seg_capacity,
-                            SubArray<1, Byte, DeviceType> scratch,
-                            SubArray<1, uint32_t, DeviceType> seg_len)
+  MGARDX_CONT
+  EncodeFunctor(SubArray<1, Q, DeviceType> input, SIZE n, SIZE segment_size,
+                SIZE num_segments, SubArray<1, RansEncPacked, DeviceType> esym,
+                IDX seg_capacity, SubArray<1, Byte, DeviceType> scratch,
+                SubArray<1, uint32_t, DeviceType> seg_len)
       : input(input), n(n), segment_size(segment_size),
         num_segments(num_segments), esym(esym), seg_capacity(seg_capacity),
         scratch(scratch), seg_len(seg_len) {

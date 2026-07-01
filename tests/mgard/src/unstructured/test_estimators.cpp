@@ -25,7 +25,8 @@
 
 static const double inf = std::numeric_limits<double>::infinity();
 
-TEST_CASE("comparison with Python implementation: estimators", "[mgard][estimators]") {
+TEST_CASE("comparison with Python implementation: estimators",
+          "[mgard][estimators]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("slope.msh").c_str());

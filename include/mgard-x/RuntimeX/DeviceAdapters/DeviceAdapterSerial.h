@@ -831,7 +831,7 @@ public:
 template <> class MemoryManager<SERIAL> {
 public:
   MGARDX_CONT
-  MemoryManager() {};
+  MemoryManager(){};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -1109,7 +1109,7 @@ struct BlockErrorCollect<T, T_fp, T_sfp, T_error, nblockx, nblocky, nblockz,
 template <typename TaskType> class DeviceAdapter<TaskType, SERIAL> {
 public:
   MGARDX_CONT
-  DeviceAdapter() {};
+  DeviceAdapter(){};
 
   MGARDX_CONT
   int IsResourceEnough(TaskType &task) {
@@ -1340,7 +1340,7 @@ public:
 template <> class DeviceCollective<SERIAL> {
 public:
   MGARDX_CONT
-  DeviceCollective() {};
+  DeviceCollective(){};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, SERIAL> v,
@@ -1457,8 +1457,9 @@ public:
 
     if (workspace_allocated) {
       // Serial extended scan: result has n+1 entries with result[0] = 0 and
-      // result[i+1] = sum(v[0..i]) (exclusive prefix plus the grand total in the
-      // last slot). Hand-rolled in place of std::inclusive_scan into result+1.
+      // result[i+1] = sum(v[0..i]) (exclusive prefix plus the grand total in
+      // the last slot). Hand-rolled in place of std::inclusive_scan into
+      // result+1.
       T acc = (T)0;
       *result((IDX)0) = (T)0;
       for (SIZE i = 0; i < n; i++) {

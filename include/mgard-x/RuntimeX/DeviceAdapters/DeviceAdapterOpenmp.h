@@ -152,9 +152,7 @@ public:
 #pragma omp parallel
     {
 #pragma omp single
-      {
-        NumSMs[dev_id] = omp_get_num_threads();
-      }
+      { NumSMs[dev_id] = omp_get_num_threads(); }
     }
     return NumSMs[dev_id];
   }
@@ -345,7 +343,7 @@ public:
 template <> class MemoryManager<OPENMP> {
 public:
   MGARDX_CONT
-  MemoryManager() {};
+  MemoryManager(){};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -1419,7 +1417,7 @@ public:
 template <> class DeviceCollective<OPENMP> {
 public:
   MGARDX_CONT
-  DeviceCollective() {};
+  DeviceCollective(){};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, OPENMP> v,

@@ -31,19 +31,18 @@ template <typename H> MGARDX_EXEC uint8_t deflate_bitwidth(H word) {
 }
 
 // Phase 1 (sizing): each thread sums the bitwidths of the symbols in one group.
-// The fixed-length codeword for symbol s is codebook[s], so we look it up on the
-// fly instead of reading a materialized per-symbol array (encode is fused here).
-// Groups never cross chunk boundaries, so a later per-chunk reduction over the
-// scanned group sums yields per-chunk bit lengths.
+// The fixed-length codeword for symbol s is codebook[s], so we look it up on
+// the fly instead of reading a materialized per-symbol array (encode is fused
+// here). Groups never cross chunk boundaries, so a later per-chunk reduction
+// over the scanned group sums yields per-chunk bit lengths.
 template <typename Q, typename H, typename DeviceType>
 class DeflateGroupBitsFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT DeflateGroupBitsFunctor() {}
-  MGARDX_CONT DeflateGroupBitsFunctor(SubArray<1, Q, DeviceType> data,
-                                      SubArray<1, H, DeviceType> codebook,
-                                      SubArray<1, size_t, DeviceType> group_bits,
-                                      size_t primary_count, SIZE chunk_size,
-                                      SIZE groups_per_chunk, SIZE ngroups)
+  MGARDX_CONT DeflateGroupBitsFunctor(
+      SubArray<1, Q, DeviceType> data, SubArray<1, H, DeviceType> codebook,
+      SubArray<1, size_t, DeviceType> group_bits, size_t primary_count,
+      SIZE chunk_size, SIZE groups_per_chunk, SIZE ngroups)
       : data(data), codebook(codebook), group_bits(group_bits),
         primary_count(primary_count), chunk_size(chunk_size),
         groups_per_chunk(groups_per_chunk), ngroups(ngroups) {
@@ -58,7 +57,8 @@ public:
       return;
     SIZE chunk_id = gid / groups_per_chunk;
     SIZE local = gid % groups_per_chunk;
-    size_t sym_base = (size_t)chunk_id * chunk_size + (size_t)local * DEFLATE_GROUP_SIZE;
+    size_t sym_base =
+        (size_t)chunk_id * chunk_size + (size_t)local * DEFLATE_GROUP_SIZE;
     size_t chunk_end = (size_t)(chunk_id + 1) * chunk_size;
     if (chunk_end > primary_count)
       chunk_end = primary_count;
@@ -327,7 +327,8 @@ public:
         primary_count(primary_count), chunk_size(chunk_size),
         groups_per_chunk(groups_per_chunk), ngroups(ngroups) {}
 
-  MGARDX_CONT Task<DeflatePackFunctor<Q, H, DeviceType>> GenTask(int queue_idx) {
+  MGARDX_CONT Task<DeflatePackFunctor<Q, H, DeviceType>>
+  GenTask(int queue_idx) {
     using FunctorType = DeflatePackFunctor<Q, H, DeviceType>;
     FunctorType functor(data, codebook, group_offsets, chunk_word_offsets,
                         condensed, primary_count, chunk_size, groups_per_chunk,

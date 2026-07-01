@@ -13,11 +13,11 @@
 #include "testing_random.hpp"
 #include "testing_utilities.hpp"
 
+#include "compress.hpp"
 #include "mgard/TensorMeshHierarchy.hpp"
 #include "mgard/TensorMeshHierarchyIteration.hpp"
 #include "mgard/TensorNorms.hpp"
 #include "mgard/blas.hpp"
-#include "compress.hpp"
 #include "mgard/shuffle.hpp"
 
 namespace {
@@ -72,8 +72,8 @@ void test_compression_decompression(
 
 } // namespace
 
-TEMPLATE_TEST_CASE("compression followed by decompression", "[mgard][compress]", float,
-                   double) {
+TEMPLATE_TEST_CASE("compression followed by decompression", "[mgard][compress]",
+                   float, double) {
   std::default_random_engine gen(343873);
   const std::vector<TestType> smoothness_parameters = {
       -1.5, -0.5, 0.0, 0.5, 1.5, std::numeric_limits<TestType>::infinity()};
@@ -396,8 +396,8 @@ void test_self_describing_decompression(
 
 } // namespace
 
-TEMPLATE_TEST_CASE("decompressing self-describing buffer", "[mgard][compress]", float,
-                   double) {
+TEMPLATE_TEST_CASE("decompressing self-describing buffer", "[mgard][compress]",
+                   float, double) {
   std::default_random_engine gen(32094);
   const std::vector<TestType> smoothness_parameters = {
       -1.5, -0.5, 0.0, 0.5, 1.5, std::numeric_limits<TestType>::infinity()};

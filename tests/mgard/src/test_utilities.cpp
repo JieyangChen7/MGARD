@@ -111,7 +111,8 @@ TEST_CASE("CartesianProduct iterator", "[mgard][utilities]") {
   }
 }
 
-TEST_CASE("CartesianProduct predecessors and successors", "[mgard][utilities]") {
+TEST_CASE("CartesianProduct predecessors and successors",
+          "[mgard][utilities]") {
   const std::vector<char> a = {'a', 'b', 'c'};
   const std::vector<char> b = {'d', 'e'};
   const mgard::CartesianProduct<std::vector<char>, 2> product({a, b});

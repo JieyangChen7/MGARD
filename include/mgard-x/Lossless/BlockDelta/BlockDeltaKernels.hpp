@@ -21,7 +21,8 @@
 // Each block is padded to a whole byte and owns a disjoint byte range of the
 // output (no atomics; trivially parallel). For Fixed/Delta a block's byte range
 // is just its packed bitstream. For Outlier it is laid out as:
-//   [outlier_count : 2B][main FLE : ceil(bw*len/8)B][records : oc * (2B pos + sizeof(T)B value)]
+//   [outlier_count : 2B][main FLE : ceil(bw*len/8)B][records : oc * (2B pos +
+//   sizeof(T)B value)]
 // where outlier slots in the main stream store 0 and the full zigzag value
 // lives in the record. Records are written in increasing position order so
 // decode can patch them with an O(len+oc) single scan.
@@ -119,7 +120,8 @@ MGARDX_CONT_EXEC void size_block(const T *data, SIZE start, SIZE len, Byte mode,
 } // namespace block_delta
 
 // ---------------------------------------------------------------------------
-// Kernel 1: per-block bit-width + byte-count (+ outlier count) -- encode sizing.
+// Kernel 1: per-block bit-width + byte-count (+ outlier count) -- encode
+// sizing.
 // ---------------------------------------------------------------------------
 template <typename T, typename DeviceType>
 class BlockBitwidthFunctor : public Functor<DeviceType> {
@@ -167,7 +169,8 @@ private:
   SubArray<1, uint16_t, DeviceType> oc;
 };
 
-template <typename T, typename DeviceType> class BlockBitwidthKernel : public Kernel {
+template <typename T, typename DeviceType>
+class BlockBitwidthKernel : public Kernel {
 public:
   constexpr static DIM NumDim = 1;
   constexpr static bool EnableAutoTuning() { return false; }
@@ -241,7 +244,8 @@ public:
       T x = *data(start + i);
       UT z = block_delta::zigzag<T>(use_delta ? (T)(x - prev) : x);
       prev = x;
-      UT sv = (outlier && bw < (int)(sizeof(T) * 8) && z >= ((UT)1 << bw)) ? 0 : z;
+      UT sv =
+          (outlier && bw < (int)(sizeof(T) * 8) && z >= ((UT)1 << bw)) ? 0 : z;
       for (int k = 0; k < bw; k++) {
         buf |= (UT)((sv >> k) & 1) << cnt;
         if (++cnt == 8) {
@@ -293,7 +297,8 @@ private:
   SubArray<1, Byte, DeviceType> packed;
 };
 
-template <typename T, typename DeviceType> class BlockPackKernel : public Kernel {
+template <typename T, typename DeviceType>
+class BlockPackKernel : public Kernel {
 public:
   constexpr static DIM NumDim = 1;
   constexpr static bool EnableAutoTuning() { return false; }
@@ -374,7 +379,8 @@ private:
   SubArray<1, size_t, DeviceType> bytecount;
 };
 
-template <typename T, typename DeviceType> class BlockBytecountKernel : public Kernel {
+template <typename T, typename DeviceType>
+class BlockBytecountKernel : public Kernel {
 public:
   constexpr static DIM NumDim = 1;
   constexpr static bool EnableAutoTuning() { return false; }
@@ -388,7 +394,8 @@ public:
       : n(n), block_size(block_size), nblocks(nblocks), mode(mode),
         bitwidth(bitwidth), oc(oc), bytecount(bytecount) {}
 
-  MGARDX_CONT Task<BlockBytecountFunctor<T, DeviceType>> GenTask(int queue_idx) {
+  MGARDX_CONT Task<BlockBytecountFunctor<T, DeviceType>>
+  GenTask(int queue_idx) {
     using FunctorType = BlockBytecountFunctor<T, DeviceType>;
     FunctorType functor(n, block_size, nblocks, mode, bitwidth, oc, bytecount);
     SIZE tbx = 256, tby = 1, tbz = 1;
@@ -471,10 +478,11 @@ public:
           v |= (UT)in[ro + k] << (8 * k);
         z = v;
         cursor++;
-        next_pos = (cursor < oc)
-                       ? ((long)in[rec_start + (size_t)cursor * RECSZ] |
-                          ((long)in[rec_start + (size_t)cursor * RECSZ + 1] << 8))
-                       : -1;
+        next_pos =
+            (cursor < oc)
+                ? ((long)in[rec_start + (size_t)cursor * RECSZ] |
+                   ((long)in[rec_start + (size_t)cursor * RECSZ + 1] << 8))
+                : -1;
       }
       T d = block_delta::unzigzag<T>(z);
       prev = use_delta ? (T)(prev + d) : d;
@@ -497,7 +505,8 @@ private:
   SubArray<1, T, DeviceType> data;
 };
 
-template <typename T, typename DeviceType> class BlockUnpackKernel : public Kernel {
+template <typename T, typename DeviceType>
+class BlockUnpackKernel : public Kernel {
 public:
   constexpr static DIM NumDim = 1;
   constexpr static bool EnableAutoTuning() { return false; }

@@ -63,10 +63,11 @@ struct RansEncSymbol {
   uint32_t rcp_shift;
 };
 
-// Packed 16-byte encode-table entry so the hot encode loop fetches all per-symbol
-// constants in a single (uint4) load instead of 5 separate array reads. The
-// encode loop is compute/latency-bound, so cutting table loads 5x->1x is the
-// main encode speedup. Internal to encode only (not part of the bitstream).
+// Packed 16-byte encode-table entry so the hot encode loop fetches all
+// per-symbol constants in a single (uint4) load instead of 5 separate array
+// reads. The encode loop is compute/latency-bound, so cutting table loads
+// 5x->1x is the main encode speedup. Internal to encode only (not part of the
+// bitstream).
 struct alignas(16) RansEncPacked {
   uint32_t x_max;
   uint32_t rcp_freq;
@@ -140,7 +141,7 @@ MGARDX_EXEC uint32_t RansEncPut(uint32_t x, uint32_t x_max, uint32_t rcp_freq,
 // (back-to-front) segment buffer.
 template <typename DeviceType>
 MGARDX_EXEC void RansEncFlush(uint32_t x, SubArray<1, Byte, DeviceType> &out,
-                             IDX &ptr) {
+                              IDX &ptr) {
   ptr -= 4;
   *out(ptr + 0) = (Byte)(x >> 0);
   *out(ptr + 1) = (Byte)(x >> 8);

@@ -22,16 +22,16 @@ class DecodeFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT DecodeFunctor() {}
   MGARDX_CONT DecodeFunctor(SubArray<1, Byte, DeviceType> stream,
-                            SubArray<1, uint32_t, DeviceType> seg_offset, SIZE n,
-                            SIZE segment_size, SIZE num_segments,
+                            SubArray<1, uint32_t, DeviceType> seg_offset,
+                            SIZE n, SIZE segment_size, SIZE num_segments,
                             SubArray<1, uint32_t, DeviceType> freq,
                             SubArray<1, uint32_t, DeviceType> cum,
                             SubArray<1, uint16_t, DeviceType> slot2sym,
                             uint32_t scale_bits,
                             SubArray<1, Q, DeviceType> output)
-      : stream(stream), seg_offset(seg_offset), n(n), segment_size(segment_size),
-        num_segments(num_segments), freq(freq), cum(cum), slot2sym(slot2sym),
-        scale_bits(scale_bits), output(output) {
+      : stream(stream), seg_offset(seg_offset), n(n),
+        segment_size(segment_size), num_segments(num_segments), freq(freq),
+        cum(cum), slot2sym(slot2sym), scale_bits(scale_bits), output(output) {
     Functor<DeviceType>();
   }
 
@@ -91,9 +91,9 @@ public:
                SubArray<1, uint32_t, DeviceType> cum,
                SubArray<1, uint16_t, DeviceType> slot2sym, uint32_t scale_bits,
                SubArray<1, Q, DeviceType> output)
-      : stream(stream), seg_offset(seg_offset), n(n), segment_size(segment_size),
-        num_segments(num_segments), freq(freq), cum(cum), slot2sym(slot2sym),
-        scale_bits(scale_bits), output(output) {}
+      : stream(stream), seg_offset(seg_offset), n(n),
+        segment_size(segment_size), num_segments(num_segments), freq(freq),
+        cum(cum), slot2sym(slot2sym), scale_bits(scale_bits), output(output) {}
 
   MGARDX_CONT Task<DecodeFunctor<Q, DeviceType>> GenTask(int queue_idx) {
     using FunctorType = DecodeFunctor<Q, DeviceType>;

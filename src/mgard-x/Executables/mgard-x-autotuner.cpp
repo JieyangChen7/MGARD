@@ -63,7 +63,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   mgard_x::decompress(compressed_data, compressed_size, decompressed_data,
                       config, false);
 
-  delete[] (T *)original_data;
+  delete[](T *) original_data;
   free(compressed_data);
   free(decompressed_data);
   return 0;

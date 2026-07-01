@@ -132,9 +132,10 @@ void MetadataBase::InitializeConfig(Config &config) {
   config.lossless = ltype;
   // Only overwrite a backend's parameters when the metadata actually carries
   // them (non-zero). A file compressed with a non-Huffman backend leaves the
-  // Huffman fields at 0; copying those zeros would make HuffmanWorkspace::resize
-  // divide by a zero block size. Leaving config defaults intact avoids that
-  // (the unused backend's workspace is harmlessly sized with defaults).
+  // Huffman fields at 0; copying those zeros would make
+  // HuffmanWorkspace::resize divide by a zero block size. Leaving config
+  // defaults intact avoids that (the unused backend's workspace is harmlessly
+  // sized with defaults).
   if (huff_dict_size != 0) {
     config.huff_dict_size = huff_dict_size;
   }

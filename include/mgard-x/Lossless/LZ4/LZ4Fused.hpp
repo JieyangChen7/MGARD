@@ -9,12 +9,12 @@
 
 #include "LZ4Kernels.hpp" // lz4_coop:: cooperative codec (SubGroup<> lives in the DeviceAdapters)
 
-// GPU launch wrappers for the portable LZ4 backend: one sub-group (warp on CUDA,
-// wavefront on HIP) per chunk, running the SAME lz4_coop::compress_chunk /
-// decompress_chunk used by every backend -- here with the GPU sub-group, so the
-// hash table lives in shared memory and the match scan / byte copies run across
-// lanes. The portable functor path (LZ4Kernels) runs the identical codec with a
-// size-1 SubGroupScalar. Both __global__ kernels are templated so their
+// GPU launch wrappers for the portable LZ4 backend: one sub-group (warp on
+// CUDA, wavefront on HIP) per chunk, running the SAME lz4_coop::compress_chunk
+// / decompress_chunk used by every backend -- here with the GPU sub-group, so
+// the hash table lives in shared memory and the match scan / byte copies run
+// across lanes. The portable functor path (LZ4Kernels) runs the identical codec
+// with a size-1 SubGroupScalar. Both __global__ kernels are templated so their
 // definitions have weak linkage and don't clash across GPU TUs (a non-template
 // __global__ in a header -> nvlink "merge_elf failed"). chunk_size must be
 // <= 65535 (uint16 hash slot). The HIP path is UNTESTED (no AMD hardware here).
@@ -37,10 +37,10 @@ static constexpr int WARPS_PER_BLOCK = 4;
 static constexpr int SG = FusedSubGroup::size();
 
 template <int WPB>
-__global__ void
-compress_kernel(const Byte *__restrict__ input, SIZE n, int chunk_size,
-                SIZE nchunks, SIZE max_chunk_out, Byte *__restrict__ scratch,
-                size_t *__restrict__ comp_bytes) {
+__global__ void compress_kernel(const Byte *__restrict__ input, SIZE n,
+                                int chunk_size, SIZE nchunks,
+                                SIZE max_chunk_out, Byte *__restrict__ scratch,
+                                size_t *__restrict__ comp_bytes) {
   constexpr int HS = 1 << lz4::HASH_LOG;
   __shared__ uint16_t s_ht[WPB][HS];
   const int warp = threadIdx.x / FusedSubGroup::size();
@@ -51,18 +51,17 @@ compress_kernel(const Byte *__restrict__ input, SIZE n, int chunk_size,
   const int len =
       (int)((SIZE)chunk_size < (n - start) ? (SIZE)chunk_size : (n - start));
   FusedSubGroup sg;
-  int cb = lz4_coop::compress_chunk(sg, input + start, len,
-                                    scratch + (size_t)c * max_chunk_out,
-                                    s_ht[warp]);
+  int cb = lz4_coop::compress_chunk(
+      sg, input + start, len, scratch + (size_t)c * max_chunk_out, s_ht[warp]);
   if (sg.lane() == 0)
     comp_bytes[c] = (size_t)cb;
 }
 
 template <int WPB>
-__global__ void
-decompress_kernel(const Byte *__restrict__ packed,
-                  const size_t *__restrict__ byte_offset, SIZE n, int chunk_size,
-                  SIZE nchunks, Byte *__restrict__ output) {
+__global__ void decompress_kernel(const Byte *__restrict__ packed,
+                                  const size_t *__restrict__ byte_offset,
+                                  SIZE n, int chunk_size, SIZE nchunks,
+                                  Byte *__restrict__ output) {
   const int warp = threadIdx.x / FusedSubGroup::size();
   const SIZE c = (SIZE)blockIdx.x * WPB + warp;
   if (c >= nchunks)
@@ -163,7 +162,7 @@ inline void launch_decompress(const Byte *packed, const size_t *byte_offset,
             return;
           SIZE start = c * (SIZE)chunk_size;
           int outLen = (int)((SIZE)chunk_size < (n - start) ? (SIZE)chunk_size
-                                                           : (n - start));
+                                                            : (n - start));
           SubGroup<SYCL> sg(nsg);
           lz4_coop::decompress_chunk(sg, packed + byte_offset[c],
                                      output + start, outLen);

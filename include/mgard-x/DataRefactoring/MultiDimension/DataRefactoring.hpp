@@ -312,7 +312,7 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
     if (multidim_refactoring_debug_print) { // debug
       PrintSubarray4D(format("final output"), v);
     } // deb
-  } // D > 3
+  }   // D > 3
   // DeviceRuntime<DeviceType>::SyncDevice();
 }
 

@@ -7,11 +7,11 @@
 #ifndef MGARD_X_BLOCK_DELTA_HPP
 #define MGARD_X_BLOCK_DELTA_HPP
 
-#include "BlockDeltaKernels.hpp" // pulls in RuntimeX (types + macros) first
-#include "BlockDeltaFused.hpp"   // CUDA/HIP single-kernel decoupled look-back
 #include "../../RuntimeX/Utilities/Serializer.hpp"
 #include "../../Utilities/Types.h" // block_delta_mode_type
 #include "../LosslessCompressorInterface.hpp"
+#include "BlockDeltaFused.hpp"   // CUDA/HIP single-kernel decoupled look-back
+#include "BlockDeltaKernels.hpp" // pulls in RuntimeX (types + macros) first
 
 namespace mgard_x {
 
@@ -33,8 +33,9 @@ template <typename T, typename DeviceType> class BlockDeltaLossless {
 public:
   BlockDeltaLossless() : initialized(false) {}
 
-  BlockDeltaLossless(SIZE max_size, int block_size,
-                     block_delta_mode_type mode = block_delta_mode_type::Delta) {
+  BlockDeltaLossless(
+      SIZE max_size, int block_size,
+      block_delta_mode_type mode = block_delta_mode_type::Delta) {
     Resize(max_size, block_size, mode, 0);
     DeviceRuntime<DeviceType>::SyncQueue(0);
   }
@@ -68,10 +69,10 @@ public:
 
   static size_t EstimateMemoryFootprint(SIZE primary_count, int block_size) {
     SIZE max_nblocks = (primary_count - 1) / block_size + 1;
-    size_t size = max_nblocks * sizeof(Byte);        // bitwidth
-    size += max_nblocks * sizeof(size_t);            // bytecount
-    size += (max_nblocks + 1) * sizeof(size_t);      // byte_offset
-    size += max_nblocks * sizeof(uint16_t);          // outlier counts
+    size_t size = max_nblocks * sizeof(Byte);   // bitwidth
+    size += max_nblocks * sizeof(size_t);       // bytecount
+    size += (max_nblocks + 1) * sizeof(size_t); // byte_offset
+    size += max_nblocks * sizeof(uint16_t);     // outlier counts
     return size;
   }
 
@@ -108,7 +109,8 @@ public:
     }
     SubArray<1, Byte, DeviceType> cd(compressed_data);
     size_t n_v = n, nblocks_v = nblocks, bitwidth_bytes_v = nblocks,
-           oc_bytes_v = nblocks * sizeof(uint16_t), packed_bytes_v = packed_bytes;
+           oc_bytes_v = nblocks * sizeof(uint16_t),
+           packed_bytes_v = packed_bytes;
     int block_size_v = block_size;
     Byte mode_v = (Byte)mode;
     SIZE byte_offset = 0;
@@ -158,15 +160,15 @@ private:
     advance_with_align<size_t>(off, 1);           // bitwidth_bytes
     align_byte_offset<Byte>(off);
     bitwidth_byte_offset = off;
-    advance_with_align<Byte>(off, nblocks);       // bitwidth[]
+    advance_with_align<Byte>(off, nblocks); // bitwidth[]
     oc_byte_offset = 0;
     if (mode_v == (Byte)block_delta_mode_type::Outlier) {
-      advance_with_align<size_t>(off, 1);         // oc_bytes
+      advance_with_align<size_t>(off, 1); // oc_bytes
       align_byte_offset<uint16_t>(off);
       oc_byte_offset = off;
       advance_with_align<uint16_t>(off, nblocks); // oc[]
     }
-    advance_with_align<size_t>(off, 1);           // packed_bytes
+    advance_with_align<size_t>(off, 1); // packed_bytes
     align_byte_offset<Byte>(off);
     packed_byte_offset = off;
     advance_with_align<Byte>(off, packed_bytes);
@@ -185,10 +187,10 @@ private:
     n = original_data.shape(0);
     nblocks = (SIZE)((n - 1) / block_size + 1);
     SubArray<1, T, DeviceType> data_subarray(original_data);
-    SubArray<1, Byte, DeviceType> bitwidth_subarray(
-        {(SIZE)nblocks}, bitwidth_array.data());
-    SubArray<1, size_t, DeviceType> bytecount_subarray(
-        {(SIZE)nblocks}, bytecount_array.data());
+    SubArray<1, Byte, DeviceType> bitwidth_subarray({(SIZE)nblocks},
+                                                    bitwidth_array.data());
+    SubArray<1, size_t, DeviceType> bytecount_subarray({(SIZE)nblocks},
+                                                       bytecount_array.data());
     SubArray<1, size_t, DeviceType> byte_offset_subarray(
         {(SIZE)nblocks + 1}, byte_offset_array.data());
     SubArray<1, uint16_t, DeviceType> oc_subarray({(SIZE)nblocks},
@@ -197,19 +199,17 @@ private:
 
     // 1) per-block bit-width + byte-count (+ outlier count)
     DeviceLauncher<DeviceType>::Execute(
-        BlockBitwidthKernel<T, DeviceType>(data_subarray, (SIZE)n,
-                                           (SIZE)block_size, (SIZE)nblocks,
-                                           mode_v, bitwidth_subarray,
-                                           bytecount_subarray, oc_subarray),
+        BlockBitwidthKernel<T, DeviceType>(
+            data_subarray, (SIZE)n, (SIZE)block_size, (SIZE)nblocks, mode_v,
+            bitwidth_subarray, bytecount_subarray, oc_subarray),
         queue_idx);
 
     // 2) exclusive scan of byte-counts -> per-block byte offsets (+ total)
     DeviceCollective<DeviceType>::ScanSumExtended(
         (SIZE)nblocks, bytecount_subarray, byte_offset_subarray, scan_workspace,
         true, queue_idx);
-    MemoryManager<DeviceType>::Copy1D(&packed_bytes,
-                                      byte_offset_subarray.data() + nblocks, 1,
-                                      queue_idx);
+    MemoryManager<DeviceType>::Copy1D(
+        &packed_bytes, byte_offset_subarray.data() + nblocks, 1, queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
     // 3) size the output buffer. Computation only: the metadata (signature,
@@ -226,8 +226,7 @@ private:
     // 4) pack into the packed region (a kernel writing to its final location,
     // mirroring how Huffman's deflate writes its bitstream in place).
     SubArray<1, Byte, DeviceType> packed_subarray(
-        {(SIZE)packed_bytes},
-        (Byte *)compressed_subarray(packed_byte_offset));
+        {(SIZE)packed_bytes}, (Byte *)compressed_subarray(packed_byte_offset));
     DeviceLauncher<DeviceType>::Execute(
         BlockPackKernel<T, DeviceType>(data_subarray, (SIZE)n, (SIZE)block_size,
                                        (SIZE)nblocks, mode_v, bitwidth_subarray,
@@ -235,9 +234,8 @@ private:
         queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
-    log::info("BlockDelta compress ratio: " +
-              std::to_string(n * sizeof(T)) + "/" +
-              std::to_string(compressed_size) + " (" +
+    log::info("BlockDelta compress ratio: " + std::to_string(n * sizeof(T)) +
+              "/" + std::to_string(compressed_size) + " (" +
               std::to_string((double)n * sizeof(T) / compressed_size) + ")");
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
@@ -255,8 +253,8 @@ private:
     DeserializeArray<Byte>(compressed_subarray, sig, kSignatureLen, byte_offset,
                            false, queue_idx);
     size_t *n_ptr = &n, *nblocks_ptr = &nblocks,
-           *bitwidth_bytes_ptr = &bitwidth_bytes, *packed_bytes_ptr =
-                                                      &packed_bytes;
+           *bitwidth_bytes_ptr = &bitwidth_bytes,
+           *packed_bytes_ptr = &packed_bytes;
     int *block_size_ptr = &block_size;
     Byte mode_v = 0, *mode_ptr = &mode_v;
     DeserializeArray<size_t>(compressed_subarray, n_ptr, 1, byte_offset, false,
@@ -281,12 +279,12 @@ private:
                            byte_offset, true, queue_idx);
     if (this->mode == block_delta_mode_type::Outlier) {
       size_t oc_bytes = 0, *oc_bytes_ptr = &oc_bytes;
-      DeserializeArray<size_t>(compressed_subarray, oc_bytes_ptr, 1, byte_offset,
-                               false, queue_idx);
+      DeserializeArray<size_t>(compressed_subarray, oc_bytes_ptr, 1,
+                               byte_offset, false, queue_idx);
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      DeserializeArray<uint16_t>(compressed_subarray, oc_ptr, oc_bytes /
-                                                                 sizeof(uint16_t),
-                                 byte_offset, true, queue_idx);
+      DeserializeArray<uint16_t>(compressed_subarray, oc_ptr,
+                                 oc_bytes / sizeof(uint16_t), byte_offset, true,
+                                 queue_idx);
     }
     DeserializeArray<size_t>(compressed_subarray, packed_bytes_ptr, 1,
                              byte_offset, false, queue_idx);
@@ -310,8 +308,8 @@ private:
                                                     bitwidth_ptr);
     SubArray<1, Byte, DeviceType> packed_subarray({(SIZE)packed_bytes},
                                                   packed_ptr);
-    SubArray<1, size_t, DeviceType> bytecount_subarray(
-        {(SIZE)nblocks}, bytecount_array.data());
+    SubArray<1, size_t, DeviceType> bytecount_subarray({(SIZE)nblocks},
+                                                       bytecount_array.data());
     SubArray<1, size_t, DeviceType> byte_offset_subarray(
         {(SIZE)nblocks + 1}, byte_offset_array.data());
     // Outlier mode reads its per-block counts from the (zero-copy) stream
@@ -323,20 +321,18 @@ private:
 
     // Rebuild per-block byte offsets from the stored bit-widths (+ counts).
     DeviceLauncher<DeviceType>::Execute(
-        BlockBytecountKernel<T, DeviceType>((SIZE)n, (SIZE)block_size,
-                                            (SIZE)nblocks, mode_v,
-                                            bitwidth_subarray, oc_subarray,
-                                            bytecount_subarray),
+        BlockBytecountKernel<T, DeviceType>(
+            (SIZE)n, (SIZE)block_size, (SIZE)nblocks, mode_v, bitwidth_subarray,
+            oc_subarray, bytecount_subarray),
         queue_idx);
     DeviceCollective<DeviceType>::ScanSumExtended(
         (SIZE)nblocks, bytecount_subarray, byte_offset_subarray, scan_workspace,
         true, queue_idx);
 
     DeviceLauncher<DeviceType>::Execute(
-        BlockUnpackKernel<T, DeviceType>(packed_subarray, (SIZE)n,
-                                         (SIZE)block_size, (SIZE)nblocks, mode_v,
-                                         bitwidth_subarray, byte_offset_subarray,
-                                         data_subarray),
+        BlockUnpackKernel<T, DeviceType>(
+            packed_subarray, (SIZE)n, (SIZE)block_size, (SIZE)nblocks, mode_v,
+            bitwidth_subarray, byte_offset_subarray, data_subarray),
         queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
 
@@ -408,10 +404,10 @@ private:
     SIZE compressed_size = packed_off + (SIZE)packed_bytes;
     compressed_data.resize({compressed_size}, queue_idx);
 
-    log::info("BlockDelta(fused) compress ratio: " +
-              std::to_string(n * sizeof(T)) + "/" +
-              std::to_string(compressed_size) + " (" +
-              std::to_string((double)n * sizeof(T) / compressed_size) + ")");
+    log::info(
+        "BlockDelta(fused) compress ratio: " + std::to_string(n * sizeof(T)) +
+        "/" + std::to_string(compressed_size) + " (" +
+        std::to_string((double)n * sizeof(T) / compressed_size) + ")");
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
       timer.end();

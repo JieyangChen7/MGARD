@@ -37,8 +37,8 @@ enum : unsigned long long {
   ST_AGGREGATE = 1ULL,
   ST_PREFIX = 2ULL
 };
-__device__ __forceinline__ unsigned long long make_status(unsigned long long state,
-                                                          unsigned long long val) {
+__device__ __forceinline__ unsigned long long
+make_status(unsigned long long state, unsigned long long val) {
   return (state << 62) | (val & ((1ULL << 62) - 1));
 }
 __device__ __forceinline__ unsigned long long st_state(unsigned long long s) {

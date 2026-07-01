@@ -57,8 +57,8 @@ public:
     this->alphabet = alphabet;
     this->scale_bits = ScaleBitsFor(alphabet);
     this->interleaved = interleaved_mode;
-    this->segment_size =
-        segment_size_override > 0 ? segment_size_override : DEFAULT_SEGMENT_SIZE;
+    this->segment_size = segment_size_override > 0 ? segment_size_override
+                                                   : DEFAULT_SEGMENT_SIZE;
 
     // Two layouts share the same scratch/compact/offset machinery:
     //  - non-interleaved: one stream per lane (num_segments = blocks*NLANES),
@@ -208,10 +208,10 @@ public:
     }
 
     if (n > 0) {
-      MemoryManager<DeviceType>::Memset1D(freq32.data(), alphabet, 0, queue_idx);
-      Histogram<Q, uint32_t, DeviceType>(SubArray(input_data),
-                                         SubArray(freq32), n, alphabet,
-                                         queue_idx);
+      MemoryManager<DeviceType>::Memset1D(freq32.data(), alphabet, 0,
+                                          queue_idx);
+      Histogram<Q, uint32_t, DeviceType>(SubArray(input_data), SubArray(freq32),
+                                         n, alphabet, queue_idx);
       BuildTables(n, queue_idx);
     }
 
@@ -241,10 +241,10 @@ public:
         }
       } else {
         DeviceLauncher<DeviceType>::Execute(
-            EncodeKernel<Q, DeviceType>(
-                SubArray(input_data), n, segment_size, num_segments,
-                SubArray(esym_d), seg_capacity, SubArray(scratch),
-                SubArray(seg_len_d)),
+            EncodeKernel<Q, DeviceType>(SubArray(input_data), n, segment_size,
+                                        num_segments, SubArray(esym_d),
+                                        seg_capacity, SubArray(scratch),
+                                        SubArray(seg_len_d)),
             queue_idx);
       }
 
@@ -260,24 +260,25 @@ public:
     }
 
     SIZE byte_offset = 0;
-    advance_with_align<Byte>(byte_offset, 7);                  // signature
-    advance_with_align<SIZE>(byte_offset, 1);                  // scale_bits
-    advance_with_align<SIZE>(byte_offset, 1);                  // alphabet
-    advance_with_align<SIZE>(byte_offset, 1);                  // original_length
-    advance_with_align<SIZE>(byte_offset, 1);                  // segment_size
-    advance_with_align<SIZE>(byte_offset, 1);                  // interleaved
-    advance_with_align<SIZE>(byte_offset, 1);                  // num_segments
-    advance_with_align<SIZE>(byte_offset, 1);                  // stream_bytes
-    advance_with_align<uint16_t>(byte_offset, alphabet);       // norm freq
-    advance_with_align<uint32_t>(byte_offset, num_segments);   // seg offsets
+    advance_with_align<Byte>(byte_offset, 7);                // signature
+    advance_with_align<SIZE>(byte_offset, 1);                // scale_bits
+    advance_with_align<SIZE>(byte_offset, 1);                // alphabet
+    advance_with_align<SIZE>(byte_offset, 1);                // original_length
+    advance_with_align<SIZE>(byte_offset, 1);                // segment_size
+    advance_with_align<SIZE>(byte_offset, 1);                // interleaved
+    advance_with_align<SIZE>(byte_offset, 1);                // num_segments
+    advance_with_align<SIZE>(byte_offset, 1);                // stream_bytes
+    advance_with_align<uint16_t>(byte_offset, alphabet);     // norm freq
+    advance_with_align<uint32_t>(byte_offset, num_segments); // seg offsets
     advance_with_align<Byte>(byte_offset, (SIZE)stream_bytes); // stream
 
     compressed_data.resize({byte_offset}, queue_idx);
     SubArray<1, Byte, DeviceType> compressed_subarray(compressed_data);
 
-    SIZE scale_bits_s = scale_bits, alphabet_s = alphabet, original_length_s = n,
-         segment_size_s = segment_size, num_segments_s = num_segments,
-         stream_bytes_s = stream_bytes, interleaved_s = interleaved ? 1 : 0;
+    SIZE scale_bits_s = scale_bits, alphabet_s = alphabet,
+         original_length_s = n, segment_size_s = segment_size,
+         num_segments_s = num_segments, stream_bytes_s = stream_bytes,
+         interleaved_s = interleaved ? 1 : 0;
 
     byte_offset = 0;
     SerializeArray<Byte>(compressed_subarray, signature, 7, byte_offset,
@@ -286,8 +287,8 @@ public:
                          queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &alphabet_s, 1, byte_offset,
                          queue_idx);
-    SerializeArray<SIZE>(compressed_subarray, &original_length_s, 1, byte_offset,
-                         queue_idx);
+    SerializeArray<SIZE>(compressed_subarray, &original_length_s, 1,
+                         byte_offset, queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &segment_size_s, 1, byte_offset,
                          queue_idx);
     SerializeArray<SIZE>(compressed_subarray, &interleaved_s, 1, byte_offset,
@@ -320,11 +321,11 @@ public:
 
     if (log::level & log::TIME) {
       DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
-      log::info("rANS compression ratio: " +
-                std::to_string(n * sizeof(Q)) + "/" +
-                std::to_string(compressed_data.shape(0)) + " (" +
-                std::to_string((double)n * sizeof(Q) / compressed_data.shape(0)) +
-                ")");
+      log::info(
+          "rANS compression ratio: " + std::to_string(n * sizeof(Q)) + "/" +
+          std::to_string(compressed_data.shape(0)) + " (" +
+          std::to_string((double)n * sizeof(Q) / compressed_data.shape(0)) +
+          ")");
       timer.end();
       timer.print("rANS compress", n * sizeof(Q));
       timer.clear();
@@ -438,7 +439,8 @@ public:
 
       SubArray<1, uint32_t, DeviceType> seg_offset_sub({(SIZE)num_segments},
                                                        seg_offset_ptr);
-      SubArray<1, Byte, DeviceType> stream_sub({(SIZE)stream_bytes}, stream_ptr);
+      SubArray<1, Byte, DeviceType> stream_sub({(SIZE)stream_bytes},
+                                               stream_ptr);
 
       if (interleaved) {
         // num_segments == num_blocks here.

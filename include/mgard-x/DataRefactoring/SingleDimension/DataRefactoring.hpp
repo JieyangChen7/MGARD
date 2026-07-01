@@ -102,7 +102,7 @@ void decompose(Hierarchy<D, T, DeviceType> &hierarchy,
       }
 
     } // loop dimensions
-  } // loop levels
+  }   // loop levels
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -187,7 +187,7 @@ void recompose(Hierarchy<D, T, DeviceType> &hierarchy,
       }
 
     } // loop dimensions
-  } // loop levels
+  }   // loop levels
 }
 
 } // namespace single_dimension

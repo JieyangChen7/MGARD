@@ -66,9 +66,8 @@ public:
   MGARDX_EXEC void Operation2() {
     if constexpr (OP == MGARDX_SEPARATE_OUTLIER) {
       if (is_outlier) {
-        local_offset =
-            Atomic<ATOMIC_IDX, AtomicSharedMemory, AtomicDeviceScope,
-                   DeviceType>::Add(&sm[0], (ATOMIC_IDX)1);
+        local_offset = Atomic<ATOMIC_IDX, AtomicSharedMemory, AtomicDeviceScope,
+                              DeviceType>::Add(&sm[0], (ATOMIC_IDX)1);
       }
     }
   }

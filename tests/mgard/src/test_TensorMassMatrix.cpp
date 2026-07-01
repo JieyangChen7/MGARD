@@ -451,7 +451,8 @@ TEST_CASE("tensor product mass matrix inverses", "[mgard][TensorMassMatrix]") {
   }
 }
 
-TEST_CASE("mass matrices and inverses on 'flat' meshes", "[mgard][TensorMassMatrix]") {
+TEST_CASE("mass matrices and inverses on 'flat' meshes",
+          "[mgard][TensorMassMatrix]") {
   const std::size_t ndof = 36;
   const std::size_t l = 2;
   std::vector<float> u_(ndof);

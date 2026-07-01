@@ -72,7 +72,8 @@ public:
       throw std::runtime_error("SymbolRans: not enough outlier workspace.");
     }
 
-    // The in-range primary stream (outliers now zero) reinterpreted as unsigned.
+    // The in-range primary stream (outliers now zero) reinterpreted as
+    // unsigned.
     Array<1, Q, DeviceType> primary({n}, (Q *)original_data.data());
     rans.Compress(primary, rans_stream, queue_idx);
     SIZE rans_bytes = rans_stream.shape(0);
@@ -105,12 +106,14 @@ public:
                       queue_idx);
     align_byte_offset<Byte>(byte_offset);
     MemoryManager<DeviceType>::Copy1D(compressed_data.data() + byte_offset,
-                                      rans_stream.data(), rans_bytes, queue_idx);
+                                      rans_stream.data(), rans_bytes,
+                                      queue_idx);
     DeviceRuntime<DeviceType>::SyncQueue(queue_idx);
   }
 
   void Serialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {}
-  void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {}
+  void Deserialize(Array<1, Byte, DeviceType> &compressed_data, int queue_idx) {
+  }
 
   void Decompress(Array<1, Byte, DeviceType> &compressed_data,
                   Array<1, S, DeviceType> &decompressed_data, int queue_idx) {
@@ -138,8 +141,8 @@ public:
     DeserializeArray<S>(cs, oval_ptr, outlier_count, byte_offset, true,
                         queue_idx);
     align_byte_offset<Byte>(byte_offset);
-    Array<1, Byte, DeviceType> rans_alias(
-        {rans_bytes}, compressed_data.data() + byte_offset);
+    Array<1, Byte, DeviceType> rans_alias({rans_bytes},
+                                          compressed_data.data() + byte_offset);
 
     decompressed_data.resize({n}, queue_idx);
     Array<1, Q, DeviceType> primary({n}, (Q *)decompressed_data.data());

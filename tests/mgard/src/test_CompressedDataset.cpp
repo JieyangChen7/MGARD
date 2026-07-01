@@ -4,8 +4,8 @@
 #include <random>
 #include <sstream>
 
-#include "mgard/CompressedDataset.hpp"
 #include "compress.hpp"
+#include "mgard/CompressedDataset.hpp"
 
 #include "testing_random.hpp"
 
@@ -76,7 +76,8 @@ void test_serialization(const mgard::TensorMeshHierarchy<N, Real> &hierarchy,
 
 } // namespace
 
-TEST_CASE("compressed dataset (de)serialization", "[mgard][CompressedDataset]") {
+TEST_CASE("compressed dataset (de)serialization",
+          "[mgard][CompressedDataset]") {
   std::default_random_engine gen(534393);
   {
     const mgard::TensorMeshHierarchy<1, float> hierarchy({381});

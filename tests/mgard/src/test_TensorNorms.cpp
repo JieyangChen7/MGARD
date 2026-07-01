@@ -114,7 +114,8 @@ float f(const std::array<float, 3> xyz) {
 
 } // namespace
 
-TEST_CASE("comparison with Python implementation: tensor norms", "[mgard][norms]") {
+TEST_CASE("comparison with Python implementation: tensor norms",
+          "[mgard][norms]") {
   const mgard::TensorMeshHierarchy<3, float> hierarchy({9, 9, 9});
   const std::size_t ndof = hierarchy.ndof();
   std::vector<float> u_(ndof);

@@ -94,9 +94,7 @@ inline void ErrorSyncCheck(hipError_t code, std::string task,
 }
 
 #define gpuErrchk(ans)                                                         \
-  {                                                                            \
-    gpuAssert((ans), __FILE__, __LINE__);                                      \
-  }
+  { gpuAssert((ans), __FILE__, __LINE__); }
 
 inline void gpuAssert(hipError_t code, const char *file, int line,
                       bool abort = true) {
@@ -150,12 +148,12 @@ struct Atomic<T, MemoryType, Scope, HIP> {
     // H = uint32/64 (atomicOr is only defined for 32-/64-bit unsigned ints).
     if constexpr (sizeof(T) == 8) {
       using U = unsigned long long int;
-      return static_cast<T>(atomicOr(reinterpret_cast<U *>(result),
-                                     static_cast<U>(value)));
+      return static_cast<T>(
+          atomicOr(reinterpret_cast<U *>(result), static_cast<U>(value)));
     } else {
       using U = unsigned int;
-      return static_cast<T>(atomicOr(reinterpret_cast<U *>(result),
-                                     static_cast<U>(value)));
+      return static_cast<T>(
+          atomicOr(reinterpret_cast<U *>(result), static_cast<U>(value)));
     }
   }
 };
@@ -587,8 +585,8 @@ public:
 extern int hip_dev_id;
 #pragma omp threadprivate(hip_dev_id)
 
-// AMD wavefront sub-group (HIP). UNTESTED -- no AMD hardware available here. See
-// the verification notes at the original definition: width via
+// AMD wavefront sub-group (HIP). UNTESTED -- no AMD hardware available here.
+// See the verification notes at the original definition: width via
 // __AMDGCN_WAVEFRONT_SIZE__ (64 CDNA / 32 RDNA), 64-bit ballot mask,
 // __ballot/__shfl/__ffsll/__syncwarp. If the project's "64 triggers a bug" note
 // bites, force size()=32 and launch half-wavefront blocks.
@@ -759,7 +757,7 @@ public:
 template <> class MemoryManager<HIP> {
 public:
   MGARDX_CONT
-  MemoryManager() {};
+  MemoryManager(){};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -2355,7 +2353,7 @@ struct SquareOp {
 template <> class DeviceCollective<HIP> {
 public:
   MGARDX_CONT
-  DeviceCollective() {};
+  DeviceCollective(){};
 
   template <typename T>
   MGARDX_CONT static void

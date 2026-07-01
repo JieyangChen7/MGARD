@@ -159,8 +159,8 @@ public:
     if (num_symbols > 0) {
       DeviceLauncher<DeviceType>::Execute(
           ZeroEncodeKernel<T_symbol, C_run, C_global, DeviceType>(
-              num_symbols, SubArray(original_data),
-              SubArray(start_positions), counts, symbols),
+              num_symbols, SubArray(original_data), SubArray(start_positions),
+              counts, symbols),
           queue_idx);
     }
 
@@ -253,8 +253,7 @@ public:
 
       DeviceLauncher<DeviceType>::Execute(
           ZeroScatterKernel<T_symbol, C_run, C_global, DeviceType>(
-              symbols, SubArray(start_positions),
-              SubArray(decompressed_data)),
+              symbols, SubArray(start_positions), SubArray(decompressed_data)),
           queue_idx);
     }
 

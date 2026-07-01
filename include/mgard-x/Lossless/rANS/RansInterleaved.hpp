@@ -15,9 +15,9 @@ namespace rans {
 
 // Shared-stream interleaved rANS: a "block" of RANS_NLANES independent rANS
 // states shares ONE byte stream, with the states' renorm bytes intermixed in
-// LIFO emission order (standard interleaved rANS, generalized to NLANES states).
-// This is the layout required to coalesce the encode byte writes (the CUDA
-// warp-cooperative kernels below process one block per warp and write the
+// LIFO emission order (standard interleaved rANS, generalized to NLANES
+// states). This is the layout required to coalesce the encode byte writes (the
+// CUDA warp-cooperative kernels below process one block per warp and write the
 // per-step bytes coalesced). The SEQUENTIAL reference functors here (one thread
 // per block) define the canonical byte order and are the correctness oracle /
 // portable fallback; they produce a bitstream identical to the warp kernels.
@@ -25,7 +25,8 @@ namespace rans {
 // Block b, lane L owns symbol positions  b*NLANES*S + L + j*NLANES,  j < count,
 // where S = symbols-per-lane (segment_size). Encode order: j high->low, then
 // L = 0..NLANES-1; states flushed L = 0..NLANES-1 at the end (lowest address).
-// Decode mirrors: init states L = NLANES-1..0, then j low->high, L = NLANES-1..0.
+// Decode mirrors: init states L = NLANES-1..0, then j low->high, L =
+// NLANES-1..0.
 
 template <typename DeviceType>
 MGARDX_EXEC IDX RansBlockLaneBase(IDX b, IDX L, IDX S) {
@@ -162,9 +163,9 @@ public:
       SubArray<1, uint32_t, DeviceType> cum,
       SubArray<1, uint16_t, DeviceType> slot2sym, uint32_t scale_bits,
       SubArray<1, Q, DeviceType> output)
-      : stream(stream), seg_offset(seg_offset), n(n), segment_size(segment_size),
-        num_blocks(num_blocks), freq(freq), cum(cum), slot2sym(slot2sym),
-        scale_bits(scale_bits), output(output) {
+      : stream(stream), seg_offset(seg_offset), n(n),
+        segment_size(segment_size), num_blocks(num_blocks), freq(freq),
+        cum(cum), slot2sym(slot2sym), scale_bits(scale_bits), output(output) {
     Functor<DeviceType>();
   }
 
@@ -230,9 +231,9 @@ public:
       SubArray<1, uint32_t, DeviceType> cum,
       SubArray<1, uint16_t, DeviceType> slot2sym, uint32_t scale_bits,
       SubArray<1, Q, DeviceType> output)
-      : stream(stream), seg_offset(seg_offset), n(n), segment_size(segment_size),
-        num_blocks(num_blocks), freq(freq), cum(cum), slot2sym(slot2sym),
-        scale_bits(scale_bits), output(output) {}
+      : stream(stream), seg_offset(seg_offset), n(n),
+        segment_size(segment_size), num_blocks(num_blocks), freq(freq),
+        cum(cum), slot2sym(slot2sym), scale_bits(scale_bits), output(output) {}
 
   MGARDX_CONT Task<InterleavedDecodeFunctor<Q, DeviceType>>
   GenTask(int queue_idx) {
@@ -262,10 +263,11 @@ private:
 // ---------------------------------------------------------------------------
 // Warp-cooperative encode: one SubGroup (= RANS_NLANES lanes) per block, lane L
 // owns rANS state L. Written against the portable SubGroup abstraction, so the
-// per-step renorm bytes of all lanes are gathered with a subgroup prefix-sum and
-// written COALESCED, in the exact byte order of the sequential reference above
-// (lane 0 at the high end of each step's range). Used only where the subgroup
-// size equals RANS_NLANES (CUDA warp); other backends use the sequential kernel.
+// per-step renorm bytes of all lanes are gathered with a subgroup prefix-sum
+// and written COALESCED, in the exact byte order of the sequential reference
+// above (lane 0 at the high end of each step's range). Used only where the
+// subgroup size equals RANS_NLANES (CUDA warp); other backends use the
+// sequential kernel.
 template <typename Q, typename DeviceType>
 class InterleavedEncodeWarpFunctor : public Functor<DeviceType> {
 public:
@@ -282,10 +284,10 @@ public:
   }
 
   // Exclusive prefix sum of v across ONE RANS_NLANES-lane segment of the
-  // subgroup (lanes [seg_base, seg_base+RANS_NLANES)); returns the segment total
-  // via the reference parameter. logical_lane is the 0..RANS_NLANES-1 position
-  // within the segment. A wavefront wider than RANS_NLANES holds several
-  // independent segments, each scanning only its own lanes.
+  // subgroup (lanes [seg_base, seg_base+RANS_NLANES)); returns the segment
+  // total via the reference parameter. logical_lane is the 0..RANS_NLANES-1
+  // position within the segment. A wavefront wider than RANS_NLANES holds
+  // several independent segments, each scanning only its own lanes.
   MGARDX_EXEC int SubgroupExclScan(SubGroup<DeviceType> &sg, int logical_lane,
                                    int seg_base, int v, int &total) {
     int incl = v;
@@ -303,10 +305,12 @@ public:
 
   MGARDX_EXEC void Operation1() {
     SubGroup<DeviceType> sg;
-    constexpr int W = SubGroup<DeviceType>::size(); // 32 (warp) or 64 (wavefront)
-    constexpr int SUBBLOCKS = W / (int)RANS_NLANES; // logical blocks per subgroup
-    int lane_in_sg = sg.lane();                     // 0..W-1
-    int seg = lane_in_sg / (int)RANS_NLANES;        // which logical block
+    constexpr int W =
+        SubGroup<DeviceType>::size(); // 32 (warp) or 64 (wavefront)
+    constexpr int SUBBLOCKS =
+        W / (int)RANS_NLANES;                // logical blocks per subgroup
+    int lane_in_sg = sg.lane();              // 0..W-1
+    int seg = lane_in_sg / (int)RANS_NLANES; // which logical block
     int logical_lane = lane_in_sg % (int)RANS_NLANES;
     int seg_base = seg * (int)RANS_NLANES;
 
@@ -314,14 +318,13 @@ public:
                    FunctorBase<DeviceType>::GetBlockDimX() +
                FunctorBase<DeviceType>::GetThreadIdX();
     IDX subgroup_idx = gtid / (IDX)W;
-    IDX num_subgroups =
-        (FunctorBase<DeviceType>::GetGridDimX() *
-         FunctorBase<DeviceType>::GetBlockDimX()) /
-        (IDX)W;
+    IDX num_subgroups = (FunctorBase<DeviceType>::GetGridDimX() *
+                         FunctorBase<DeviceType>::GetBlockDimX()) /
+                        (IDX)W;
 
-    // The loop bound is uniform across the whole subgroup so every lane iterates
-    // together (required for the subgroup shuffles), even when the wavefront's
-    // several blocks have different lengths.
+    // The loop bound is uniform across the whole subgroup so every lane
+    // iterates together (required for the subgroup shuffles), even when the
+    // wavefront's several blocks have different lengths.
     for (IDX sgi = subgroup_idx; sgi * (IDX)SUBBLOCKS < num_blocks;
          sgi += num_subgroups) {
       IDX b = sgi * (IDX)SUBBLOCKS + (IDX)seg;

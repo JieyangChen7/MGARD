@@ -38,7 +38,8 @@ unscaled_indicator(const mgard::MultilevelCoefficients<double> u_mc,
   return std::sqrt(unscaled_square_indicator);
 }
 
-TEST_CASE("comparison with Python implementation: indicators", "[mgard][indicators]") {
+TEST_CASE("comparison with Python implementation: indicators",
+          "[mgard][indicators]") {
   moab::ErrorCode ecode;
   moab::Core mbcore;
   ecode = mbcore.load_file(mesh_path("seated.msh").c_str());

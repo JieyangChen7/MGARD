@@ -409,9 +409,10 @@ extern int sycl_dev_id;
 
 // Intel sub-group (oneAPI/DPC++). UNTESTED -- no Intel GPU / SYCL toolchain
 // here. Holds the native sycl::sub_group (constructed from nd_item in the
-// kernel); width pinned to 32 by [[sycl::reqd_sub_group_size(32)]] at the launch
-// site so the ballot mask fits a uint32. See verification notes at the original
-// definition (group_ballot/extract_bits, select_from_group, group_barrier).
+// kernel); width pinned to 32 by [[sycl::reqd_sub_group_size(32)]] at the
+// launch site so the ballot mask fits a uint32. See verification notes at the
+// original definition (group_ballot/extract_bits, select_from_group,
+// group_barrier).
 template <> struct SubGroup<SYCL> {
   sycl::sub_group sg_;
   using mask_t = uint32_t;
@@ -526,7 +527,7 @@ public:
 template <> class MemoryManager<SYCL> {
 public:
   MGARDX_CONT
-  MemoryManager() {};
+  MemoryManager(){};
 
   template <typename T>
   MGARDX_CONT static void Malloc1D(T *&ptr, SIZE n,
@@ -1846,7 +1847,7 @@ template <typename T> struct SquareOp {
 template <> class DeviceCollective<SYCL> {
 public:
   MGARDX_CONT
-  DeviceCollective() {};
+  DeviceCollective(){};
 
   template <typename T>
   MGARDX_CONT static void Sum(SIZE n, SubArray<1, T, SYCL> v,

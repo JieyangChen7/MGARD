@@ -166,8 +166,8 @@ public:
 
     if (config.lossless == lossless_type::ZeroRLE_Rans) {
       // Zero-RLE the quantized stream into a (counts, symbols) byte blob, then
-      // entropy-code that blob with rANS. Self-contained: the rANS output is the
-      // final compressed stream (Serialize/Deserialize are no-ops here).
+      // entropy-code that blob with rANS. Self-contained: the rANS output is
+      // the final compressed stream (Serialize/Deserialize are no-ops here).
       zerorle.Compress(original_data, rle_bytes, 0.0, queue_idx);
       rans.Compress(rle_bytes, compressed_data, queue_idx);
       return;
@@ -267,7 +267,8 @@ public:
   LZ4<DeviceType> lz4;
   Zstd<DeviceType> zstd;
   BlockDeltaLossless<T, DeviceType> blockdelta;
-  parallel_rle::ZeroRunLengthEncoding<T, uint32_t, uint32_t, DeviceType> zerorle;
+  parallel_rle::ZeroRunLengthEncoding<T, uint32_t, uint32_t, DeviceType>
+      zerorle;
   rans::Rans<Byte, DeviceType> rans;
   Array<1, Byte, DeviceType> rle_bytes;
   SymbolRans<Q, S, DeviceType> symbolrans;

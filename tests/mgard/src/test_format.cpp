@@ -237,9 +237,7 @@ TEST_CASE("reading topology and geometry", "[mgard][format]") {
   REQUIRE(cgt.dimension == dimension);
   REQUIRE(cgt.shape == shape);
 
-  {
-    domain.set_geometry(mgard::pb::Domain::UNIT_CUBE);
-  }
+  { domain.set_geometry(mgard::pb::Domain::UNIT_CUBE); }
   {
     const mgard::CartesianGridGeometry cgg = read_geometry(domain, cgt);
     REQUIRE(cgg.uniform);
@@ -409,9 +407,7 @@ void test_serialization_deserialization(const mgard::pb::Header &header) {
 TEST_CASE("metadata (de)serialization", "[mgard][format]") {
   mgard::pb::Header header;
   mgard::populate_defaults(header);
-  {
-    test_serialization_deserialization(header);
-  }
+  { test_serialization_deserialization(header); }
   {
     header.mutable_quantization()->set_type(mgard::pb::Quantization::INT8_T);
     test_serialization_deserialization(header);
