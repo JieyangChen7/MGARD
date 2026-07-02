@@ -1,6 +1,7 @@
 #ifndef _MDR_NEGABINARY_BP_ENCODER_HPP
 #define _MDR_NEGABINARY_BP_ENCODER_HPP
 
+#include "../../RuntimeX/Utilities/Exceptions.h"
 #include "BitplaneEncoderInterface.hpp"
 
 namespace MDR {
@@ -248,8 +249,7 @@ private:
     } else if (std::is_same<T, uint8_t>::value) {
       block_size = 8;
     } else {
-      std::cerr << "Integer type not supported." << std::endl;
-      exit(0);
+      throw mgard_x::ProcessingException("Integer type not supported.");
     }
     return block_size;
   }

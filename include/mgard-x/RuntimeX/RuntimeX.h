@@ -55,6 +55,7 @@
 #endif
 
 #include "Utilities/CheckShape.hpp"
+#include "Utilities/Exceptions.h"
 #include "Utilities/OffsetCalculators.hpp"
 
 #include "DataStructures/Array.hpp"

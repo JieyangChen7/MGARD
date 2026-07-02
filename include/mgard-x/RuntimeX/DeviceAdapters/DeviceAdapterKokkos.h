@@ -8,6 +8,7 @@
 #ifndef MGARD_X_DEVICE_ADAPTER_KOKKOS_H
 #define MGARD_X_DEVICE_ADAPTER_KOKKOS_H
 
+#include "../Utilities/Exceptions.h"
 #include "DeviceAdapter.h"
 #include "Kokkos_Core.hpp"
 
@@ -20,10 +21,13 @@ namespace mgard_x {
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
   if (code != cudaSuccess) {
-    fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
-            line);
     if (abort)
-      exit(code);
+      throw ProcessingException(std::string("GPUassert: ") +
+                                cudaGetErrorString(code) + " " + file + " " +
+                                std::to_string(line));
+    else
+      fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+              line);
   }
 }
 #endif
@@ -36,11 +40,15 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
 inline void gpuAssert(hipError_t code, const char *file, int line,
                       bool abort = true) {
   if (code != hipSuccess) {
-    fprintf(stderr, "GPUassert: %s %s %d\n", hipGetErrorString(code), file,
-            line);
     if (abort)
-      exit(code);
+      throw ProcessingException(std::string("GPUassert: ") +
+                                hipGetErrorString(code) + " " + file + " " +
+                                std::to_string(line));
+    else
+      fprintf(stderr, "GPUassert: %s %s %d\n", hipGetErrorString(code), file,
+              line);
   }
+}
 
 #endif
 

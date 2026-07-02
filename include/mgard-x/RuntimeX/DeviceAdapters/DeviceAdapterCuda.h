@@ -5,6 +5,7 @@
  * Date: March 17, 2022
  */
 
+#include "../Utilities/Exceptions.h"
 #include "DeviceAdapter.h"
 #include <cooperative_groups.h>
 #include <cub/cub.cuh>
@@ -115,11 +116,13 @@ template <typename TaskType>
 inline void ErrorAsyncCheckTask(cudaError_t code, TaskType &task,
                                 bool abort = true) {
   if (code != cudaSuccess) {
-    throw std::runtime_error(
-        std::string(cudaGetErrorString(code)) + " while executing " +
-        task.GetFunctorName().c_str() + " with CUDA (Async-check)");
+    std::string msg = std::string(cudaGetErrorString(code)) +
+                      " while executing " + task.GetFunctorName().c_str() +
+                      " with CUDA (Async-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
@@ -127,33 +130,39 @@ template <typename TaskType>
 inline void ErrorSyncCheckTask(cudaError_t code, TaskType &task,
                                bool abort = true) {
   if (code != cudaSuccess) {
-    throw std::runtime_error(
-        std::string(cudaGetErrorString(code)) + " while executing " +
-        task.GetFunctorName().c_str() + " with CUDA (Sync-check)");
+    std::string msg = std::string(cudaGetErrorString(code)) +
+                      " while executing " + task.GetFunctorName().c_str() +
+                      " with CUDA (Sync-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
 inline void ErrorAsyncCheck(cudaError_t code, std::string task,
                             bool abort = true) {
   if (code != cudaSuccess) {
-    throw std::runtime_error(std::string(cudaGetErrorString(code)) +
-                             " while executing " + task.c_str() +
-                             " with CUDA (Async-check)");
+    std::string msg = std::string(cudaGetErrorString(code)) +
+                      " while executing " + task.c_str() +
+                      " with CUDA (Async-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
 inline void ErrorSyncCheck(cudaError_t code, std::string task,
                            bool abort = true) {
   if (code != cudaSuccess) {
-    throw std::runtime_error(std::string(cudaGetErrorString(code)) +
-                             " while executing " + task.c_str() +
-                             " with CUDA (Sync-check)");
+    std::string msg = std::string(cudaGetErrorString(code)) +
+                      " while executing " + task.c_str() +
+                      " with CUDA (Sync-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
@@ -163,10 +172,13 @@ inline void ErrorSyncCheck(cudaError_t code, std::string task,
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
   if (code != cudaSuccess) {
-    fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
-            line);
     if (abort)
-      exit(code);
+      throw ProcessingException(std::string("GPUassert: ") +
+                                cudaGetErrorString(code) + " " + file + " " +
+                                std::to_string(line));
+    else
+      fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+              line);
   }
 }
 

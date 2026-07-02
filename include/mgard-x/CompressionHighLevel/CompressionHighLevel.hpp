@@ -45,12 +45,11 @@
 namespace mgard_x {
 
 template <DIM D, typename T, typename DeviceType, typename CompressorType>
-enum compress_status_type
-general_compress(std::vector<SIZE> shape, T tol, T s,
-                 enum error_bound_type ebtype, const void *original_data,
-                 void *&compressed_data, size_t &compressed_size, Config config,
-                 bool uniform, std::vector<T *> coords,
-                 bool output_pre_allocated) {
+enum compress_status_type general_compress_pipeline(
+    std::vector<SIZE> shape, T tol, T s, enum error_bound_type ebtype,
+    const void *original_data, void *&compressed_data, size_t &compressed_size,
+    Config config, bool uniform, std::vector<T *> coords,
+    bool output_pre_allocated) {
 
   DeviceRuntime<DeviceType>::Initialize();
   size_t total_num_elem = 1;
@@ -286,6 +285,29 @@ general_compress(std::vector<SIZE> shape, T tol, T s,
   return compress_status;
 }
 
+// Wraps the compression pipeline and translates any exception thrown by the
+// internal (de)compression steps into a compress_status_type failure code, so
+// that the library never terminates the calling application via exit().
+template <DIM D, typename T, typename DeviceType, typename CompressorType>
+enum compress_status_type
+general_compress(std::vector<SIZE> shape, T tol, T s,
+                 enum error_bound_type ebtype, const void *original_data,
+                 void *&compressed_data, size_t &compressed_size, Config config,
+                 bool uniform, std::vector<T *> coords,
+                 bool output_pre_allocated) {
+  try {
+    return general_compress_pipeline<D, T, DeviceType, CompressorType>(
+        shape, tol, s, ebtype, original_data, compressed_data, compressed_size,
+        config, uniform, coords, output_pre_allocated);
+  } catch (const Exception &e) {
+    log::err(std::string("compression failed: ") + e.what());
+    return e.status();
+  } catch (const std::exception &e) {
+    log::err(std::string("compression failed: ") + e.what());
+    return compress_status_type::Failure;
+  }
+}
+
 template <DIM D, typename T, typename DeviceType>
 enum compress_status_type
 compress(std::vector<SIZE> shape, T tol, T s, enum error_bound_type ebtype,
@@ -348,10 +370,10 @@ compress(std::vector<SIZE> shape, T tol, T s, enum error_bound_type ebtype,
 }
 
 template <DIM D, typename T, typename DeviceType, typename CompressorType>
-enum compress_status_type
-general_decompress(std::vector<SIZE> shape, const void *compressed_data,
-                   size_t compressed_size, void *&decompressed_data,
-                   Config config, bool output_pre_allocated) {
+enum compress_status_type general_decompress_pipeline(
+    std::vector<SIZE> shape, const void *compressed_data,
+    size_t compressed_size, void *&decompressed_data, Config config,
+    bool output_pre_allocated) {
   DeviceRuntime<DeviceType>::Initialize();
   size_t total_num_elem = 1;
   for (int i = 0; i < D; i++)
@@ -533,6 +555,27 @@ general_decompress(std::vector<SIZE> shape, const void *compressed_data,
   }
 
   return decompress_status;
+}
+
+// Wraps the decompression pipeline and translates any exception thrown by the
+// internal steps (e.g. malformed metadata, lossless backend errors) into a
+// compress_status_type failure code instead of terminating via exit().
+template <DIM D, typename T, typename DeviceType, typename CompressorType>
+enum compress_status_type
+general_decompress(std::vector<SIZE> shape, const void *compressed_data,
+                   size_t compressed_size, void *&decompressed_data,
+                   Config config, bool output_pre_allocated) {
+  try {
+    return general_decompress_pipeline<D, T, DeviceType, CompressorType>(
+        shape, compressed_data, compressed_size, decompressed_data, config,
+        output_pre_allocated);
+  } catch (const Exception &e) {
+    log::err(std::string("decompression failed: ") + e.what());
+    return e.status();
+  } catch (const std::exception &e) {
+    log::err(std::string("decompression failed: ") + e.what());
+    return compress_status_type::Failure;
+  }
 }
 
 template <DIM D, typename T, typename DeviceType>

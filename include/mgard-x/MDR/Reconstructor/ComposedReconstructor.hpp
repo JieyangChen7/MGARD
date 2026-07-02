@@ -9,6 +9,7 @@
 #include "../LosslessCompressor/LevelCompressor.hpp"
 #include "../RefactorUtils.hpp"
 #include "../Retriever/Retriever.hpp"
+#include "../../RuntimeX/Utilities/Exceptions.h"
 #include "../SizeInterpreter/SizeInterpreter.hpp"
 #include "ReconstructorInterface.hpp"
 
@@ -97,11 +98,11 @@ public:
         data[i] += cur_data[i];
       }
     } else if (cur_data.size()) {
-      std::cerr << "Reconstruct size changes, not supported yet." << std::endl;
-      std::cerr << "Sizes before reconstruction: " << cur_data.size()
-                << std::endl;
-      std::cerr << "Sizes after reconstruction: " << data.size() << std::endl;
-      exit(0);
+      throw mgard_x::ProcessingException(
+          "Reconstruct size changes, not supported yet. Sizes before "
+          "reconstruction: " +
+          std::to_string(cur_data.size()) +
+          "; sizes after reconstruction: " + std::to_string(data.size()));
     }
     return data.data();
   }

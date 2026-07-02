@@ -5,6 +5,7 @@
  * Date: March 17, 2022
  */
 
+#include "../Utilities/Exceptions.h"
 #include "DeviceAdapter.h"
 
 #define HIP_ENABLE_WARP_SYNC_BUILTINS
@@ -51,11 +52,13 @@ template <typename TaskType>
 inline void ErrorAsyncCheckTask(hipError_t code, TaskType &task,
                                 bool abort = true) {
   if (code != hipSuccess) {
-    throw std::runtime_error(
-        std::string(hipGetErrorString(code)) + " while executing " +
-        task.GetFunctorName().c_str() + " with HIP (Async-check)");
+    std::string msg = std::string(hipGetErrorString(code)) +
+                      " while executing " + task.GetFunctorName().c_str() +
+                      " with HIP (Async-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
@@ -63,33 +66,39 @@ template <typename TaskType>
 inline void ErrorSyncCheckTask(hipError_t code, TaskType &task,
                                bool abort = true) {
   if (code != hipSuccess) {
-    throw std::runtime_error(
-        std::string(hipGetErrorString(code)) + " while executing " +
-        task.GetFunctorName().c_str() + " with HIP (Sync-check)");
+    std::string msg = std::string(hipGetErrorString(code)) +
+                      " while executing " + task.GetFunctorName().c_str() +
+                      " with HIP (Sync-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
 inline void ErrorAsyncCheck(hipError_t code, std::string task,
                             bool abort = true) {
   if (code != hipSuccess) {
-    throw std::runtime_error(std::string(hipGetErrorString(code)) +
-                             " while executing " + task.c_str() +
-                             " with HIP (Async-check)");
+    std::string msg = std::string(hipGetErrorString(code)) +
+                      " while executing " + task.c_str() +
+                      " with HIP (Async-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
 inline void ErrorSyncCheck(hipError_t code, std::string task,
                            bool abort = true) {
   if (code != hipSuccess) {
-    throw std::runtime_error(std::string(hipGetErrorString(code)) +
-                             " while executing " + task.c_str() +
-                             " with HIP (Sync-check)");
+    std::string msg = std::string(hipGetErrorString(code)) +
+                      " while executing " + task.c_str() +
+                      " with HIP (Sync-check)";
     if (abort)
-      exit(code);
+      throw ProcessingException(msg);
+    else
+      std::cerr << msg << std::endl;
   }
 }
 
@@ -99,10 +108,13 @@ inline void ErrorSyncCheck(hipError_t code, std::string task,
 inline void gpuAssert(hipError_t code, const char *file, int line,
                       bool abort = true) {
   if (code != hipSuccess) {
-    fprintf(stderr, "GPUassert: %s %s %d\n", hipGetErrorString(code), file,
-            line);
     if (abort)
-      exit(code);
+      throw ProcessingException(std::string("GPUassert: ") +
+                                hipGetErrorString(code) + " " + file + " " +
+                                std::to_string(line));
+    else
+      fprintf(stderr, "GPUassert: %s %s %d\n", hipGetErrorString(code), file,
+              line);
   }
 }
 

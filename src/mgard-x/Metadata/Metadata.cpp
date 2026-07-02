@@ -7,6 +7,7 @@
 
 #include "mgard-x/Metadata/Metadata.hpp"
 #include "MGARDConfig.hpp"
+#include "mgard-x/RuntimeX/Utilities/Exceptions.h"
 #include "proto/mgard.pb.h"
 
 #include <google/protobuf/io/coded_stream.h>
@@ -111,8 +112,7 @@ void DeserializeSignature(SerializedIter &iter) {
     char c_;
     Deserialize(c_, iter);
     if (c_ != c) {
-      std::cout << mgard_x::log::log_err << "signature mismatch.\n";
-      exit(-1);
+      throw mgard_x::InvalidDataException("signature mismatch.");
     }
   }
 }
@@ -514,8 +514,7 @@ void MetadataBase::Deserialize(
   uint64_t offset = std::distance(serialized_data.begin(), iter);
 
   if (header_crc32 != ComputeCRC32(serialized_data, offset)) {
-    std::cout << log::log_err << "header CRC32 mismatch.\n";
-    exit(-1);
+    throw InvalidDataException("header CRC32 mismatch.");
   }
 
   mgard::pb::Header header = DeserializeProtoBuf(serialized_data, offset);
@@ -527,8 +526,7 @@ void MetadataBase::Deserialize(
     software_version[1] = mgard_version_number.minor_();
     software_version[2] = mgard_version_number.patch_();
     if (software_version[0] > MGARD_VERSION_MAJOR) {
-      std::cout << log::log_err << "MGARD version mismatch.\n";
-      exit(-1);
+      throw InvalidDataException("MGARD version mismatch.");
     }
 
     const mgard::pb::VersionNumber format_version_number =
@@ -537,8 +535,7 @@ void MetadataBase::Deserialize(
     file_version[1] = format_version_number.minor_();
     file_version[2] = format_version_number.patch_();
     if (file_version[0] > MGARD_FILE_VERSION_MAJOR) {
-      std::cout << log::log_err << "MGARD file format version mismatch.\n";
-      exit(-1);
+      throw InvalidDataException("MGARD file format version mismatch.");
     }
   }
 
@@ -550,9 +547,7 @@ void MetadataBase::Deserialize(
     const google::protobuf::RepeatedField<google::protobuf::uint64> shape_ =
         cartesian_grid_topology.shape();
     if (total_dims != shape_.size()) {
-      std::cout << log::log_err
-                << "grid shape does not match given dimension.\n";
-      exit(-1);
+      throw InvalidDataException("grid shape does not match given dimension.");
     }
     shape = std::vector<uint64_t>(total_dims);
     std::copy(shape_.begin(), shape_.end(), shape.begin());
@@ -570,10 +565,8 @@ void MetadataBase::Deserialize(
       for (DIM d = 0; d < total_dims; d++)
         totel_len += shape[d];
       if (totel_len != coordinates.size()) {
-        std::cout << log::log_err
-                  << "mismatch between number of node coordinates and grid "
-                     "shape.\n";
-        exit(-1);
+        throw InvalidDataException(
+            "mismatch between number of node coordinates and grid shape.");
       }
       using It = google::protobuf::RepeatedField<double>::const_iterator;
       It p = coordinates.begin();
@@ -657,10 +650,9 @@ void MetadataBase::Deserialize(
                mgard::pb::FunctionDecomposition::HYBRID_HIERARCHY) {
       decomposition = decomposition_type::Hybrid;
     } else {
-      std::cout << log::log_err
-                << "this decomposition hierarchy mismatch the hierarchy used "
-                   "in MGARD-X.\n";
-      exit(-1);
+      throw InvalidDataException(
+          "this decomposition hierarchy mismatch the hierarchy used "
+          "in MGARD-X.");
     }
     l_target = function_decomposition.l_target();
   }
@@ -700,10 +692,8 @@ void MetadataBase::Deserialize(
         quantization.method() == mgard::pb::Quantization::NOOP_QUANTIZATION &&
             bitplane_encoding.method() ==
                 mgard::pb::BitplaneEncoding::NOOP_BITPLANE_ENCODING) {
-      std::cout << log::log_err
-                << "cannot determine whether this is compressed or "
-                   "refactored data.\n";
-      exit(-1);
+      throw InvalidDataException("cannot determine whether this is compressed "
+                                 "or refactored data.");
     }
   }
 
@@ -749,8 +739,7 @@ void MetadataBase::Deserialize(
     } else if (encoding.compressor() == mgard::pb::Encoding::X_ZERORLE_RANS) {
       ltype = mgard_x::lossless_type::ZeroRLE_Rans;
     } else {
-      std::cout << log::log_err << "unknown lossless compressor type.\n";
-      exit(-1);
+      throw InvalidDataException("unknown lossless compressor type.");
     }
   }
 
@@ -767,9 +756,7 @@ void MetadataBase::Deserialize(
     } else if (device.backend() == mgard::pb::Device::X_SYCL) {
       ptype = processor_type::X_SYCL;
     } else if (device.backend() == mgard::pb::Device::CPU) {
-      std::cout << log::log_err
-                << "this data was not compressed with MGARD-X.\n";
-      exit(-1);
+      throw InvalidDataException("this data was not compressed with MGARD-X.");
     }
   }
 }

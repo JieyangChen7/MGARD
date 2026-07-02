@@ -1,18 +1,26 @@
 #ifndef MGARD_X_CPU_LOSSLESS_TEMPLATE_HPP
 #define MGARD_X_CPU_LOSSLESS_TEMPLATE_HPP
 
+#include <cstdio>
+#include <string>
 #include <zstd.h>
 
+#include "../RuntimeX/Utilities/Exceptions.h"
+
 /*! CHECK
- * Check that the condition holds. If it doesn't print a message and die.
+ * Check that the condition holds. If it doesn't, throw an exception so the
+ * calling application can handle the failure instead of the whole process
+ * being terminated.
  */
 #define CHECK(cond, ...)                                                       \
   do {                                                                         \
     if (!(cond)) {                                                             \
-      fprintf(stderr, "%s:%d CHECK(%s) failed: ", __FILE__, __LINE__, #cond);  \
-      fprintf(stderr, "" __VA_ARGS__);                                         \
-      fprintf(stderr, "\n");                                                   \
-      exit(1);                                                                 \
+      char mgard_x_check_msg[256];                                            \
+      std::snprintf(mgard_x_check_msg, sizeof(mgard_x_check_msg),              \
+                    "CHECK(" #cond ") failed: " __VA_ARGS__);                  \
+      throw mgard_x::ProcessingException(                                      \
+          std::string(__FILE__) + ":" + std::to_string(__LINE__) + " " +      \
+          mgard_x_check_msg);                                                  \
     }                                                                          \
   } while (0)
 
