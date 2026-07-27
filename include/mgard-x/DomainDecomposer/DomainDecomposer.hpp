@@ -858,6 +858,6 @@ class DomainDecomposer {
   std::vector<T *> coords;
 };
 
-}  // namespace mgard_x
+} // namespace mgard_x
 
 #endif

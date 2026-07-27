@@ -5,16 +5,16 @@
  * Date: March 17, 2022
  */
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <fstream>
+#include <functional>
+#include <iomanip>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <algorithm>
-#include <functional>
-#include <iomanip>
 
 #include "compress_x.hpp"
 #include "mgard-x/Utilities/ErrorCalculator.h"
@@ -29,8 +29,7 @@ void print_usage_message(std::string error) {
   if (error.compare("") != 0) {
     std::cout << mgard_x::log::log_err << error << std::endl;
   }
-  printf(
-      "Options\n\
+  printf("Options\n\
 \t -z / --compress: compress mode\n\
 \t\t -i / --input <path to original data>\n\
 \t\t -o / --output <path to compressed data>\n\
@@ -62,8 +61,7 @@ void print_usage_message(std::string error) {
   exit(0);
 }
 
-template <typename T>
-void min_max(size_t n, T *in_buff) {
+template <typename T> void min_max(size_t n, T *in_buff) {
   T min = std::numeric_limits<T>::infinity();
   T max = 0;
   for (size_t i = 0; i < n; i++) {
@@ -77,8 +75,7 @@ void min_max(size_t n, T *in_buff) {
   printf("Min: %f, Max: %f\n", min, max);
 }
 
-template <typename T>
-size_t readfile(const char *input_file, T *&in_buff) {
+template <typename T> size_t readfile(const char *input_file, T *&in_buff) {
   std::cout << mgard_x::log::log_info << "Loading file: " << input_file << "\n";
 
   FILE *pFile;
@@ -105,11 +102,12 @@ void writefile(const char *output_file, size_t num_bytes, T *out_buff) {
 }
 
 // ============================
-// ROI Block-wise Verification 
+// ROI Block-wise Verification
 // ============================
 
-std::vector<mgard_x::SIZE> LinearToCoord(mgard_x::SIZE linear_idx, 
-                                          const std::vector<mgard_x::SIZE>& dims) {
+std::vector<mgard_x::SIZE>
+LinearToCoord(mgard_x::SIZE linear_idx,
+              const std::vector<mgard_x::SIZE> &dims) {
   std::vector<mgard_x::SIZE> coord(dims.size());
   for (int d = dims.size() - 1; d >= 0; --d) {
     coord[d] = linear_idx % dims[d];
@@ -118,8 +116,8 @@ std::vector<mgard_x::SIZE> LinearToCoord(mgard_x::SIZE linear_idx,
   return coord;
 }
 
-mgard_x::SIZE CoordToLinear(const std::vector<mgard_x::SIZE>& coord, 
-                             const std::vector<mgard_x::SIZE>& dims) {
+mgard_x::SIZE CoordToLinear(const std::vector<mgard_x::SIZE> &coord,
+                            const std::vector<mgard_x::SIZE> &dims) {
   mgard_x::SIZE linear = 0;
   mgard_x::SIZE stride = 1;
   for (int d = dims.size() - 1; d >= 0; --d) {
@@ -130,25 +128,22 @@ mgard_x::SIZE CoordToLinear(const std::vector<mgard_x::SIZE>& coord,
 }
 
 struct BlockViolation {
-  std::vector<mgard_x::SIZE> block_coord;  // Block coordinate
-  double tolerance;                         // Expected tolerance
-  double actual_error;                      // Actual L_inf error in this block
-  double violation_ratio;                   // actual_error / tolerance
+  std::vector<mgard_x::SIZE> block_coord; // Block coordinate
+  double tolerance;                       // Expected tolerance
+  double actual_error;                    // Actual L_inf error in this block
+  double violation_ratio;                 // actual_error / tolerance
 };
 
 // Block-wise ROI verification
 template <typename T>
-std::vector<BlockViolation> verify_roi_blocks(
-    const std::vector<mgard_x::SIZE>& shape,
-    T* original_data,
-    T* decompressed_data,
-    const std::vector<double>& tol_map,
-    enum mgard_x::error_bound_type mode,
-    T global_norm) {
-  
+std::vector<BlockViolation>
+verify_roi_blocks(const std::vector<mgard_x::SIZE> &shape, T *original_data,
+                  T *decompressed_data, const std::vector<double> &tol_map,
+                  enum mgard_x::error_bound_type mode, T global_norm) {
+
   const mgard_x::SIZE BLOCK_SIZE = 8;
   size_t D = shape.size();
-  
+
   // Compute number of blocks in each dimension
   std::vector<mgard_x::SIZE> num_blocks(D);
   mgard_x::SIZE total_blocks = 1;
@@ -156,51 +151,53 @@ std::vector<BlockViolation> verify_roi_blocks(
     num_blocks[d] = (shape[d] + BLOCK_SIZE - 1) / BLOCK_SIZE;
     total_blocks *= num_blocks[d];
   }
-  
+
   std::vector<BlockViolation> violations;
-  
+
   // Iterate over all blocks
   for (mgard_x::SIZE block_idx = 0; block_idx < total_blocks; block_idx++) {
     // Get block coordinate
-    std::vector<mgard_x::SIZE> block_coord = LinearToCoord(block_idx, num_blocks);
-    
+    std::vector<mgard_x::SIZE> block_coord =
+        LinearToCoord(block_idx, num_blocks);
+
     // Get tolerance for this block
     double block_tol = tol_map[block_idx];
-    
+
     // Compute block boundaries in data space
     std::vector<mgard_x::SIZE> block_start(D), block_end(D);
     for (size_t d = 0; d < D; d++) {
       block_start[d] = block_coord[d] * BLOCK_SIZE;
       block_end[d] = std::min(block_start[d] + BLOCK_SIZE, shape[d]);
     }
-    
+
     // Compute L_inf error within this block
     T block_max_error = 0;
-    
+
     // Iterate over all elements in this block using nested approach
     std::vector<mgard_x::SIZE> elem_coord(D);
     std::function<void(size_t)> iterate_block = [&](size_t dim) {
       if (dim == D) {
         // Compute linear index in data
         mgard_x::SIZE data_idx = CoordToLinear(elem_coord, shape);
-        
+
         // Compute error for this element
-        T error = std::abs(original_data[data_idx] - decompressed_data[data_idx]);
+        T error =
+            std::abs(original_data[data_idx] - decompressed_data[data_idx]);
         if (mode == mgard_x::error_bound_type::REL) {
           error = error / global_norm;
         }
         block_max_error = std::max(block_max_error, error);
         return;
       }
-      
+
       for (mgard_x::SIZE i = block_start[dim]; i < block_end[dim]; i++) {
         elem_coord[dim] = i;
         iterate_block(dim + 1);
       }
     };
-    
+
     iterate_block(0);
-    
+
     // Check if this block violates its tolerance
     if (block_max_error > block_tol) {
       BlockViolation v;
@@ -211,7 +208,7 @@ std::vector<BlockViolation> verify_roi_blocks(
       violations.push_back(v);
     }
   }
-  
+
   return violations;
 }
 
@@ -219,11 +216,12 @@ std::vector<BlockViolation> verify_roi_blocks(
 template <typename T>
 void print_statistics_roi(double s, enum mgard_x::error_bound_type mode,
                           std::vector<mgard_x::SIZE> shape, T *original_data,
-                          T *decompressed_data, const std::vector<double>& tol_map,
+                          T *decompressed_data,
+                          const std::vector<double> &tol_map,
                           bool normalize_coordinates) {
   const mgard_x::SIZE BLOCK_SIZE = 8;
   size_t D = shape.size();
-  
+
   // Compute number of blocks
   std::vector<mgard_x::SIZE> num_blocks(D);
   mgard_x::SIZE total_blocks = 1;
@@ -231,131 +229,139 @@ void print_statistics_roi(double s, enum mgard_x::error_bound_type mode,
     num_blocks[d] = (shape[d] + BLOCK_SIZE - 1) / BLOCK_SIZE;
     total_blocks *= num_blocks[d];
   }
-  
+
   // Verify tol_map size
   if (tol_map.size() != static_cast<size_t>(total_blocks)) {
-    std::cout << mgard_x::log::log_err << "ROI tolerance map size mismatch: expected "
-              << total_blocks << ", got " << tol_map.size() << "\n";
+    std::cout << mgard_x::log::log_err
+              << "ROI tolerance map size mismatch: expected " << total_blocks
+              << ", got " << tol_map.size() << "\n";
     return;
   }
-  
-  std::cout << mgard_x::log::log_info << "=== ROI Block-wise Verification ===\n";
+
+  std::cout << mgard_x::log::log_info
+            << "=== ROI Block-wise Verification ===\n";
   std::cout << mgard_x::log::log_info << "Block size: " << BLOCK_SIZE;
-  for (size_t d = 1; d < D; d++) std::cout << "x" << BLOCK_SIZE;
+  for (size_t d = 1; d < D; d++)
+    std::cout << "x" << BLOCK_SIZE;
   std::cout << "\n";
-  
+
   std::cout << mgard_x::log::log_info << "Number of blocks: ";
   for (size_t d = 0; d < D; d++) {
     std::cout << num_blocks[d];
-    if (d < D - 1) std::cout << " x ";
+    if (d < D - 1)
+      std::cout << " x ";
   }
   std::cout << " = " << total_blocks << " total\n";
-  
+
   // Compute global norm for relative error mode
   T global_norm = 1;
   if (mode == mgard_x::error_bound_type::REL) {
     mgard_x::SIZE n = 1;
-    for (size_t d = 0; d < D; d++) n *= shape[d];
+    for (size_t d = 0; d < D; d++)
+      n *= shape[d];
     global_norm = 0;
     for (mgard_x::SIZE i = 0; i < n; i++) {
       global_norm = std::max(global_norm, std::abs(original_data[i]));
     }
-    std::cout << mgard_x::log::log_info << "Global L_inf norm: " << std::scientific 
-              << global_norm << std::defaultfloat << "\n";
+    std::cout << mgard_x::log::log_info
+              << "Global L_inf norm: " << std::scientific << global_norm
+              << std::defaultfloat << "\n";
   }
-  
+
   // Perform block-wise verification
   std::vector<BlockViolation> violations = verify_roi_blocks(
       shape, original_data, decompressed_data, tol_map, mode, global_norm);
-  
+
   mgard_x::SIZE num_violations = violations.size();
   mgard_x::SIZE num_satisfied = total_blocks - num_violations;
   double satisfaction_rate = 100.0 * num_satisfied / total_blocks;
-  
-  std::cout << mgard_x::log::log_info << "Blocks satisfied: " << num_satisfied 
-            << "/" << total_blocks << " (" << std::fixed << std::setprecision(2) 
+
+  std::cout << mgard_x::log::log_info << "Blocks satisfied: " << num_satisfied
+            << "/" << total_blocks << " (" << std::fixed << std::setprecision(2)
             << satisfaction_rate << "%)\n";
-  std::cout << mgard_x::log::log_info << "Blocks violated: " << num_violations 
-            << "/" << total_blocks << " (" << std::fixed << std::setprecision(2) 
+  std::cout << mgard_x::log::log_info << "Blocks violated: " << num_violations
+            << "/" << total_blocks << " (" << std::fixed << std::setprecision(2)
             << (100.0 - satisfaction_rate) << "%)\n";
   std::cout << std::defaultfloat;
-  
+
   if (num_violations == 0) {
-    std::cout << mgard_x::log::log_info << "\e[32mAll blocks satisfied their tolerances!\e[0m\n";
+    std::cout << mgard_x::log::log_info
+              << "\e[32mAll blocks satisfied their tolerances!\e[0m\n";
   } else {
     std::cout << mgard_x::log::log_info << "\e[31mViolated blocks:\e[0m\n";
-    
+
     // Sort violations by violation ratio (worst first)
     std::sort(violations.begin(), violations.end(),
-              [](const BlockViolation& a, const BlockViolation& b) {
+              [](const BlockViolation &a, const BlockViolation &b) {
                 return a.violation_ratio > b.violation_ratio;
               });
-    
+
     // Print header
-    std::cout << mgard_x::log::log_info 
-              << std::setw(20) << "Block Coord" 
-              << std::setw(15) << "Tolerance" 
-              << std::setw(15) << "Actual Error"
-              << std::setw(10) << "Ratio" << "\n";
+    std::cout << mgard_x::log::log_info << std::setw(20) << "Block Coord"
+              << std::setw(15) << "Tolerance" << std::setw(15) << "Actual Error"
+              << std::setw(10) << "Ratio"
+              << "\n";
     std::cout << mgard_x::log::log_info << std::string(60, '-') << "\n";
-    
+
     // Print all violations
     std::cout << std::scientific << std::setprecision(4);
-    for (const auto& v : violations) {
+    for (const auto &v : violations) {
       // Format block coordinate
       std::ostringstream coord_str;
       coord_str << "(";
       for (size_t d = 0; d < v.block_coord.size(); d++) {
         coord_str << v.block_coord[d];
-        if (d < v.block_coord.size() - 1) coord_str << ",";
+        if (d < v.block_coord.size() - 1)
+          coord_str << ",";
       }
       coord_str << ")";
-      
-      std::cout << mgard_x::log::log_info 
-                << std::setw(20) << coord_str.str()
-                << std::setw(15) << v.tolerance
-                << std::setw(15) << v.actual_error
-                << std::setw(10) << std::fixed << std::setprecision(2) 
-                << v.violation_ratio << "x\n";
+
+      std::cout << mgard_x::log::log_info << std::setw(20) << coord_str.str()
+                << std::setw(15) << v.tolerance << std::setw(15)
+                << v.actual_error << std::setw(10) << std::fixed
+                << std::setprecision(2) << v.violation_ratio << "x\n";
       std::cout << std::scientific << std::setprecision(4);
     }
     std::cout << std::defaultfloat;
-    
+
     // Print worst violation summary
-    const auto& worst = violations[0];
+    const auto &worst = violations[0];
     std::ostringstream worst_coord;
     worst_coord << "(";
     for (size_t d = 0; d < worst.block_coord.size(); d++) {
       worst_coord << worst.block_coord[d];
-      if (d < worst.block_coord.size() - 1) worst_coord << ",";
+      if (d < worst.block_coord.size() - 1)
+        worst_coord << ",";
     }
     worst_coord << ")";
-    std::cout << mgard_x::log::log_info << "Worst violation: block " << worst_coord.str()
-              << " with " << std::scientific << worst.actual_error 
-              << " > " << worst.tolerance << " (" << std::fixed 
-              << std::setprecision(2) << worst.violation_ratio << "x)\n";
+    std::cout << mgard_x::log::log_info << "Worst violation: block "
+              << worst_coord.str() << " with " << std::scientific
+              << worst.actual_error << " > " << worst.tolerance << " ("
+              << std::fixed << std::setprecision(2) << worst.violation_ratio
+              << "x)\n";
     std::cout << std::defaultfloat;
   }
-  
+
   // Also print global statistics
   std::cout << mgard_x::log::log_info << "=== Global Statistics ===\n";
   mgard_x::SIZE n = 1;
-  for (size_t d = 0; d < shape.size(); d++) n *= shape[d];
-  
+  for (size_t d = 0; d < shape.size(); d++)
+    n *= shape[d];
+
   std::cout << mgard_x::log::log_info
-            << "MSE: " << mgard_x::MSE(n, original_data, decompressed_data) << "\n";
+            << "MSE: " << mgard_x::MSE(n, original_data, decompressed_data)
+            << "\n";
   std::cout << mgard_x::log::log_info
-            << "PSNR: " << mgard_x::PSNR(n, original_data, decompressed_data) << "\n";
+            << "PSNR: " << mgard_x::PSNR(n, original_data, decompressed_data)
+            << "\n";
 }
 
 // ROI vs background error breakdown for standalone decompression
 template <typename T>
-void print_decompress_roi_statistics(
-    std::vector<mgard_x::SIZE> shape,
-    T* original_data,
-    T* decompressed_data,
-    const std::vector<double>& tol_map,
-    enum mgard_x::error_bound_type mode) {
+void print_decompress_roi_statistics(std::vector<mgard_x::SIZE> shape,
+                                     T *original_data, T *decompressed_data,
+                                     const std::vector<double> &tol_map,
+                                     enum mgard_x::error_bound_type mode) {
 
   const mgard_x::SIZE BLOCK_SIZE = 8;
   size_t D = shape.size();
@@ -371,11 +377,13 @@ void print_decompress_roi_statistics(
   T global_norm = 1;
   if (mode == mgard_x::error_bound_type::REL) {
     mgard_x::SIZE n = 1;
-    for (size_t d = 0; d < D; d++) n *= shape[d];
+    for (size_t d = 0; d < D; d++)
+      n *= shape[d];
     for (mgard_x::SIZE i = 0; i < n; i++)
       global_norm = std::max(global_norm, std::abs(original_data[i]));
-    std::cout << mgard_x::log::log_info << "Global L_inf norm: "
-              << std::scientific << global_norm << std::defaultfloat << "\n";
+    std::cout << mgard_x::log::log_info
+              << "Global L_inf norm: " << std::scientific << global_norm
+              << std::defaultfloat << "\n";
   }
 
   // Identify ROI tolerance (minimum) vs background (maximum)
@@ -390,7 +398,8 @@ void print_decompress_roi_statistics(
   GroupStats roi_stats, bg_stats;
 
   for (mgard_x::SIZE block_idx = 0; block_idx < total_blocks; block_idx++) {
-    std::vector<mgard_x::SIZE> block_coord = LinearToCoord(block_idx, num_blocks);
+    std::vector<mgard_x::SIZE> block_coord =
+        LinearToCoord(block_idx, num_blocks);
     double block_tol = tol_map[block_idx];
     bool is_roi = (block_tol <= split);
 
@@ -406,7 +415,8 @@ void print_decompress_roi_statistics(
       if (dim == D) {
         mgard_x::SIZE idx = CoordToLinear(elem_coord, shape);
         T err = std::abs(original_data[idx] - decompressed_data[idx]);
-        if (mode == mgard_x::error_bound_type::REL) err /= global_norm;
+        if (mode == mgard_x::error_bound_type::REL)
+          err /= global_norm;
         block_max_error = std::max(block_max_error, err);
         return;
       }
@@ -417,7 +427,7 @@ void print_decompress_roi_statistics(
     };
     iterate(0);
 
-    GroupStats& g = is_roi ? roi_stats : bg_stats;
+    GroupStats &g = is_roi ? roi_stats : bg_stats;
     g.total++;
     g.sum_error += block_max_error;
     g.max_error = std::max(g.max_error, (double)block_max_error);
@@ -428,33 +438,38 @@ void print_decompress_roi_statistics(
     }
   }
 
-  auto print_group = [&](const char* label, const GroupStats& g, double tol) {
-    if (g.total == 0) return;
+  auto print_group = [&](const char *label, const GroupStats &g, double tol) {
+    if (g.total == 0)
+      return;
     double avg_err = g.sum_error / g.total;
     double sat_pct = 100.0 * g.satisfied / g.total;
     std::cout << mgard_x::log::log_info << "--- " << label
               << " (tolerance=" << std::scientific << tol
-              << ", blocks=" << g.total << ") ---\n" << std::defaultfloat;
-    std::cout << mgard_x::log::log_info << "  Satisfied: " << g.satisfied
-              << "/" << g.total << " (" << std::fixed << std::setprecision(2)
+              << ", blocks=" << g.total << ") ---\n"
+              << std::defaultfloat;
+    std::cout << mgard_x::log::log_info << "  Satisfied: " << g.satisfied << "/"
+              << g.total << " (" << std::fixed << std::setprecision(2)
               << sat_pct << "%)\n";
-    std::cout << mgard_x::log::log_info << "  Avg block L_inf error: "
-              << std::scientific << avg_err << "\n";
-    std::cout << mgard_x::log::log_info << "  Max block L_inf error: "
-              << std::scientific << g.max_error << "\n";
+    std::cout << mgard_x::log::log_info
+              << "  Avg block L_inf error: " << std::scientific << avg_err
+              << "\n";
+    std::cout << mgard_x::log::log_info
+              << "  Max block L_inf error: " << std::scientific << g.max_error
+              << "\n";
     if (g.satisfied < g.total)
-      std::cout << mgard_x::log::log_info << "  Worst violation ratio: "
-                << std::fixed << std::setprecision(2) << g.max_ratio << "x\n";
+      std::cout << mgard_x::log::log_info
+                << "  Worst violation ratio: " << std::fixed
+                << std::setprecision(2) << g.max_ratio << "x\n";
     std::cout << std::defaultfloat;
   };
 
   std::cout << mgard_x::log::log_info
             << "=== Decompression ROI Error Verification ===\n";
-  print_group("ROI blocks",        roi_stats, min_tol);
-  print_group("Background blocks", bg_stats,  max_tol);
+  print_group("ROI blocks", roi_stats, min_tol);
+  print_group("Background blocks", bg_stats, max_tol);
   std::cout << mgard_x::log::log_info << "Total blocks: " << total_blocks
-            << " (ROI=" << roi_stats.total
-            << ", BG=" << bg_stats.total << ")\n";
+            << " (ROI=" << roi_stats.total << ", BG=" << bg_stats.total
+            << ")\n";
 }
 
 template <typename T>
@@ -462,7 +477,8 @@ void print_statistics(double s, enum mgard_x::error_bound_type mode,
                       std::vector<mgard_x::SIZE> shape, T *original_data,
                       T *decompressed_data, T tol, bool normalize_coordinates) {
   mgard_x::SIZE n = 1;
-  for (mgard_x::DIM d = 0; d < shape.size(); d++) n *= shape[d];
+  for (mgard_x::DIM d = 0; d < shape.size(); d++)
+    n *= shape[d];
   T actual_error = 0.0;
   std::cout << std::scientific;
   if (s == std::numeric_limits<T>::infinity()) {
@@ -535,9 +551,8 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
                     enum mgard_x::error_bound_type mode, std::string lossless,
                     std::string domain_decomposition, mgard_x::SIZE block_size,
                     enum mgard_x::device_type dev_type, int verbose,
-                    mgard_x::SIZE max_memory_footprint,
-                    int num_local_levels, int num_global_levels,
-                    bool use_hybrid, bool warm_up) {
+                    mgard_x::SIZE max_memory_footprint, int num_local_levels,
+                    int num_global_levels, bool use_hybrid, bool warm_up) {
   mgard_x::Config config;
   config.log_level = verbose_to_log_level(verbose);
   // Hybrid (block-local + global) hierarchy decomposition is opt-in via
@@ -635,7 +650,8 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   }
 
   size_t original_size = 1;
-  for (mgard_x::DIM i = 0; i < D; i++) original_size *= shape[i];
+  for (mgard_x::DIM i = 0; i < D; i++)
+    original_size *= shape[i];
   T *original_data = (T *)malloc(original_size * sizeof(T));
   size_t in_size = 0;
   if (std::string(input_file).compare("random") == 0) {
@@ -678,9 +694,11 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
       warmup_shape[i] = std::min(shape[i], (mgard_x::SIZE)33);
     }
     size_t warmup_size = 1;
-    for (mgard_x::DIM i = 0; i < D; i++) warmup_size *= warmup_shape[i];
+    for (mgard_x::DIM i = 0; i < D; i++)
+      warmup_size *= warmup_shape[i];
     T *warmup_data = (T *)malloc(warmup_size * sizeof(T));
-    for (size_t i = 0; i < warmup_size; i++) warmup_data[i] = (T)(i % 10 + 1);
+    for (size_t i = 0; i < warmup_size; i++)
+      warmup_data[i] = (T)(i % 10 + 1);
     size_t warmup_compressed_size = warmup_size * sizeof(T) * 2;
     void *warmup_compressed_data = (void *)malloc(warmup_compressed_size);
     void *warmup_decompressed_data = malloc(warmup_size * sizeof(T));
@@ -717,14 +735,13 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   mgard_x::decompress(compressed_data, compressed_size, decompressed_data,
                       config, true);
 
-  
-
   if (config.enable_roi) {
-    print_statistics_roi<T>(s, mode, shape, original_data, (T *)decompressed_data,
-                            tol_map, config.normalize_coordinates);
-  }else{
+    print_statistics_roi<T>(s, mode, shape, original_data,
+                            (T *)decompressed_data, tol_map,
+                            config.normalize_coordinates);
+  } else {
     print_statistics<T>(s, mode, shape, original_data, (T *)decompressed_data,
-                      tol, config.normalize_coordinates);
+                        tol, config.normalize_coordinates);
   }
 
   mgard_x::unpin_memory(decompressed_data, config);
@@ -737,12 +754,12 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   return 0;
 }
 
-int launch_decompress(const char *input_file, const char *output_file,
-                      enum mgard_x::device_type dev_type, int verbose,
-                      bool enable_roi, std::vector<double> tol_map,
-                      int num_local_levels, int num_global_levels,
-                      const char *original_file = nullptr,
-                      enum mgard_x::error_bound_type ebtype = mgard_x::error_bound_type::ABS) {
+int launch_decompress(
+    const char *input_file, const char *output_file,
+    enum mgard_x::device_type dev_type, int verbose, bool enable_roi,
+    std::vector<double> tol_map, int num_local_levels, int num_global_levels,
+    const char *original_file = nullptr,
+    enum mgard_x::error_bound_type ebtype = mgard_x::error_bound_type::ABS) {
   mgard_x::Config config;
   config.log_level = verbose_to_log_level(verbose);
   config.dev_type = dev_type;
@@ -784,13 +801,13 @@ int launch_decompress(const char *input_file, const char *output_file,
     size_t orig_bytes = readfile(original_file, orig_raw);
     if (orig_bytes == original_size * elem_size) {
       if (dtype == mgard_x::data_type::Float) {
-        print_decompress_roi_statistics<float>(
-            shape, (float *)orig_raw, (float *)decompressed_data,
-            tol_map, ebtype);
+        print_decompress_roi_statistics<float>(shape, (float *)orig_raw,
+                                               (float *)decompressed_data,
+                                               tol_map, ebtype);
       } else if (dtype == mgard_x::data_type::Double) {
-        print_decompress_roi_statistics<double>(
-            shape, (double *)orig_raw, (double *)decompressed_data,
-            tol_map, ebtype);
+        print_decompress_roi_statistics<double>(shape, (double *)orig_raw,
+                                                (double *)decompressed_data,
+                                                tol_map, ebtype);
       }
       free(orig_raw);
     } else {
@@ -804,7 +821,8 @@ int launch_decompress(const char *input_file, const char *output_file,
 }
 
 bool try_compression(int argc, char *argv[]) {
-  if (!has_arg(argc, argv, "-z", "--compress")) return false;
+  if (!has_arg(argc, argv, "-z", "--compress"))
+    return false;
   mgard_x::log::info("mode: compress", true);
   std::string input_file =
       get_arg<std::string>(argc, argv, "Original data", "-i", "--input");
@@ -814,19 +832,18 @@ bool try_compression(int argc, char *argv[]) {
   std::vector<mgard_x::SIZE> shape =
       get_args<mgard_x::SIZE>(argc, argv, "Dimensions", "-dim", "--dimension");
   enum mgard_x::error_bound_type mode =
-      get_error_bound_mode(argc, argv);  // REL or ABS
+      get_error_bound_mode(argc, argv); // REL or ABS
   double tol = -1.0;
-  if(has_arg(argc, argv, "-e", "--error-bound")){
-    tol =
-      get_arg<double>(argc, argv, "Error bound", "-e", "--error-bound");
+  if (has_arg(argc, argv, "-e", "--error-bound")) {
+    tol = get_arg<double>(argc, argv, "Error bound", "-e", "--error-bound");
   }
   bool enable_roi = has_arg(argc, argv, "-roi", "--enable-roi");
   std::vector<double> tol_map;
   if (has_arg(argc, argv, "-r", "--roi-tolerance-map")) {
-    std::string roi_file =
-        get_arg<std::string>(argc, argv, "ROI tolerance map", "-r", "--roi-tolerance-map");
-    
-    double* roi_map_buffer;
+    std::string roi_file = get_arg<std::string>(argc, argv, "ROI tolerance map",
+                                                "-r", "--roi-tolerance-map");
+
+    double *roi_map_buffer;
     size_t roi_map_bytes = readfile(roi_file.c_str(), roi_map_buffer);
     size_t roi_map_size = roi_map_bytes / sizeof(double);
     tol_map.resize(roi_map_size);
@@ -834,24 +851,24 @@ bool try_compression(int argc, char *argv[]) {
       tol_map[i] = static_cast<double>(roi_map_buffer[i]);
     }
     free(roi_map_buffer);
-    
+
     size_t expected_roi_map_size = 1;
     for (mgard_x::DIM i = 0; i < shape.size(); i++) {
-      expected_roi_map_size *= (shape[i] + 8 - 1) / 8; 
+      expected_roi_map_size *= (shape[i] + 8 - 1) / 8;
     }
     if (tol_map.size() != expected_roi_map_size) {
       std::cout << mgard_x::log::log_warn << "ROI map size mismatch: expected "
                 << expected_roi_map_size << ", got " << tol_map.size() << "\n";
     }
   }
-  
+
   if (enable_roi && tol_map.empty()) {
-    std::cout << mgard_x::log::log_err 
+    std::cout << mgard_x::log::log_err
               << "--enable-roi requires -r/--roi-tolerance-map\n";
     exit(-1);
   }
   if (!enable_roi && tol <= 0) {
-    std::cout << mgard_x::log::log_err 
+    std::cout << mgard_x::log::log_err
               << "-e/--tolerance is required when not using ROI mode\n";
     exit(-1);
   }
@@ -871,16 +888,18 @@ bool try_compression(int argc, char *argv[]) {
         argc, argv, "Max memory", "-m", "--max-memory");
   }
 
-  int num_local_levels = 1;  // default value
+  int num_local_levels = 1; // default value
   if (has_arg(argc, argv, "-ll", "--local-levels")) {
-    num_local_levels = get_arg<int>(argc, argv, "Local levels", "-ll", "--local-levels");
+    num_local_levels =
+        get_arg<int>(argc, argv, "Local levels", "-ll", "--local-levels");
   }
 
   bool use_hybrid = has_arg(argc, argv, "-hh", "--hybrid");
-  
-  int num_global_levels = 0;  // default value
+
+  int num_global_levels = 0; // default value
   if (has_arg(argc, argv, "-gl", "--global-levels")) {
-    num_global_levels = get_arg<int>(argc, argv, "Global levels", "-gl", "--global-levels");
+    num_global_levels =
+        get_arg<int>(argc, argv, "Global levels", "-gl", "--global-levels");
   }
 
   std::string domain_decomposition = "max-dim";
@@ -895,24 +914,25 @@ bool try_compression(int argc, char *argv[]) {
   }
 
   if (dtype == mgard_x::data_type::Double) {
-    launch_compress<double>(shape.size(), dtype, input_file.c_str(),
-                            output_file.c_str(), shape, tol, tol_map, enable_roi, s, mode, lossless,
-                            domain_decomposition, block_size, dev_type, verbose,
-                            max_memory_footprint, num_local_levels,
-                            num_global_levels, use_hybrid, warm_up);
+    launch_compress<double>(
+        shape.size(), dtype, input_file.c_str(), output_file.c_str(), shape,
+        tol, tol_map, enable_roi, s, mode, lossless, domain_decomposition,
+        block_size, dev_type, verbose, max_memory_footprint, num_local_levels,
+        num_global_levels, use_hybrid, warm_up);
   } else if (dtype == mgard_x::data_type::Float) {
-    launch_compress<float>(shape.size(), dtype, input_file.c_str(),
-                           output_file.c_str(), shape, tol, tol_map, enable_roi, s, mode, lossless,
-                           domain_decomposition, block_size, dev_type, verbose,
-                           max_memory_footprint, num_local_levels,
-                           num_global_levels, use_hybrid, warm_up);
+    launch_compress<float>(
+        shape.size(), dtype, input_file.c_str(), output_file.c_str(), shape,
+        tol, tol_map, enable_roi, s, mode, lossless, domain_decomposition,
+        block_size, dev_type, verbose, max_memory_footprint, num_local_levels,
+        num_global_levels, use_hybrid, warm_up);
   }
   mgard_x::release_cache(mgard_x::Config());
   return true;
 }
 
 bool try_decompression(int argc, char *argv[]) {
-  if (!has_arg(argc, argv, "-x", "--decompress")) return false;
+  if (!has_arg(argc, argv, "-x", "--decompress"))
+    return false;
   mgard_x::log::info("mode: decompress", true);
   std::string input_file =
       get_arg<std::string>(argc, argv, "Compressed data", "-i", "--input");
@@ -926,8 +946,8 @@ bool try_decompression(int argc, char *argv[]) {
   bool enable_roi = has_arg(argc, argv, "-roi", "--enable-roi");
   std::vector<double> tol_map;
   if (has_arg(argc, argv, "-r", "--roi-tolerance-map")) {
-    std::string roi_file =
-        get_arg<std::string>(argc, argv, "ROI tolerance map", "-r", "--roi-tolerance-map");
+    std::string roi_file = get_arg<std::string>(argc, argv, "ROI tolerance map",
+                                                "-r", "--roi-tolerance-map");
     double *roi_map_buffer;
     size_t roi_map_bytes = readfile(roi_file.c_str(), roi_map_buffer);
     size_t roi_map_size = roi_map_bytes / sizeof(double);
@@ -939,17 +959,19 @@ bool try_decompression(int argc, char *argv[]) {
   }
   int num_local_levels = 1;
   if (has_arg(argc, argv, "-ll", "--local-levels")) {
-    num_local_levels = get_arg<int>(argc, argv, "Local levels", "-ll", "--local-levels");
+    num_local_levels =
+        get_arg<int>(argc, argv, "Local levels", "-ll", "--local-levels");
   }
   int num_global_levels = 0;
   if (has_arg(argc, argv, "-gl", "--global-levels")) {
-    num_global_levels = get_arg<int>(argc, argv, "Global levels", "-gl", "--global-levels");
+    num_global_levels =
+        get_arg<int>(argc, argv, "Global levels", "-gl", "--global-levels");
   }
   // Optional: original data file for error verification
   std::string original_file;
   if (has_arg(argc, argv, "-orig", "--original-data")) {
-    original_file = get_arg<std::string>(argc, argv, "Original data",
-                                         "-orig", "--original-data");
+    original_file = get_arg<std::string>(argc, argv, "Original data", "-orig",
+                                         "--original-data");
   }
   enum mgard_x::error_bound_type ebtype = mgard_x::error_bound_type::REL;
   if (has_arg(argc, argv, "-em", "--error-bound-mode")) {
