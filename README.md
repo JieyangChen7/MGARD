@@ -26,10 +26,10 @@ MGARD framework consists of the following modules. Please see the detailed instr
 
 ## ***MGARD-X***: Accelerated and portable compression
 *MGARD-X* is designed for portable compression on NVIDIA GPUs, AMD GPUs, and CPUs. See the detailed user guide [here][mgard_x instructions].
-In addition, *MGARD-X* can be configured to preserve region-of-interest ([RoI user guide][mgard-roi2]) and linear quantity-of-interest ([QoI user guide][mgard-qoi]) during data compression.
+In addition, *MGARD-X* can be configured to preserve region-of-interest ([ROI user guide][mgard-x-roi]) and linear quantity-of-interest ([QoI user guide][mgard-qoi]) during data compression.
 
 [mgard_x instructions]: doc/MGARD-X.md
-[mgard-roi2]: doc/MGARD-RoI2.md
+[mgard-x-roi]: doc/MGARD-RoI2.md
 [mgard-qoi]: doc/MGARD-QoI.md
 
 ## ***MGARD***$\text{-}\lambda$: Preserving Non-Linear Quantity-of-Interest
@@ -102,7 +102,6 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 [rapids]: https://dl.acm.org/doi/10.1145/3588195.3592983
 [progressive-dnn]: https://ieeexplore.ieee.org/document/10184595/
 [qoi2]: https://ieeexplore.ieee.org/document/10106324
-
 
 
 

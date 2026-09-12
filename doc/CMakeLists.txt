@@ -3,6 +3,7 @@ set(
 	MGARD_DOC_PAGES
 	"README.md"
 	"doc/MGARD-X.md"
+	"doc/MGARD-RoI2.md"
 	"doc/MDR-X.md"
 	"examples/README.md"
 	"examples/linking/README.md"

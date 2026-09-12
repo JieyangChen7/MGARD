@@ -42,7 +42,7 @@ void print_usage_message(std::string error) {
 \t\t -em / --error-bound-mode <abs|rel>: error bound mode (abs: abolute; rel: relative)\n\
 \t\t -e / --error-bound <float>: error bound\n\
 \t\t -r / --roi-tolerance-map <path>: path to ROI tolerance map file\n\
-\t\t -roi / -enable-roi enable ROI mode (use per-block tolerances from -r)\n\
+\t\t -roi / --enable-roi: enable ROI mode (use per-block tolerances from -r)\n\
 \t\t -s / --smoothness <float>: smoothness parameter\n\
 \t\t -l / --lossless <huffman|huffman-lz4|lz4|huffman-zstd|blockdelta[-fixed|-delta|-outlier]|zerorle-rans|symbol-rans>: lossless compression\n\
 \t\t -d / --device <auto|serial|cuda|hip>: device type\n\
