@@ -59,24 +59,26 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 * Ben Whitney. [Multilevel Techniques for Compression and Reduction of Scientific Data.][thesis] PhD thesis, Brown University, 2018.
 
 ### Preserving Quantities of Interest (QoIs)
-* Xuan Wu et al. [Error-controlled Progressive Retrieval of Scientific Data under Derivable Quantities of Interest.][qoi] **the International Conference for High Performance Computing, Networking, Storage and Analysis 2024*, Nov, 2024* 
+* Xuan Wu et al. [Error-controlled Progressive Retrieval of Scientific Data under Derivable Quantities of Interest.][qoi] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2024*, Nov. 2024 
 * Tania Banerjee et al. [Scalable Hybrid Learning Techniques for Scientific Data Compression.][pp3], *Arxiv*, 2022
 * Qian Gong et al. [Region-adaptive, Error-controlled Scientific Data Compression using Multilevel Decomposition.][roi2] *the 34th International Conference on Scientific and Statistical Database Management*, Jul. 2022
-* Tania Benerjee et al. An algorithmic and software pipeline for very large-scale scientific data compression with error guarantees. *International Conference on High Performance Computing, Data, and Analytics*, 2022
+* Tania Benerjee et al. [An algorithmic and software pipeline for very large-scale scientific data compression with error guarantees.][qoi2] *International Conference on High Performance Computing, Data, and Analytics*, 2022
 * Jaemoon Lee et al. [Error-bounded learned scientific data compression with preservation of derived quantities.][pp] *Applied Sciences*, 2022
 * Qian Gong et al. [Maintaining trust in reduction: Preserving the accuracy of quantities of interest for lossy compression.][roi] *21st Smoky Mountains Computational Sciences and Engineering Conference*, Oct. 2021
 
 ### Progressive Retrieval
-* Jinzheng Wang et al. Improving Progressive Retrieval for HPC Scientific Data using Deep Neural Network. *IEEE International Conference on Data Engineering (ICDE)*, 2023 
-* Xin Liang et al. [Error-controlled, progressive, and adaptable retrieval of scientific data with multilevel decomposition.][mdr] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2021*, Nov, 2021
+* Yanliang Li et al. [HP-MDR: High-performance and Portable Data Refactoring and Progressive Retrieval with Advanced GPUs.][hp-mdr] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2025*, Nov 2025
+* Jinzheng Wang et al. [Improving Progressive Retrieval for HPC Scientific Data using Deep Neural Network.][progressive-dnn] *IEEE International Conference on Data Engineering (ICDE)*, 2023 
+* Xin Liang et al. [Error-controlled, progressive, and adaptable retrieval of scientific data with multilevel decomposition.][mdr] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2021*, Nov. 2021
 
 ### Parallelization and GPU Acceleration
-* Jieyang Chen et al. [HPDR: High-Performance Portable Scientific Data Reduction Framework.][gpu3] 39th IEEE International Parallel and Distributed Processing Symposium, June, 2025
+* Yanliang Li et al. [BlockMGARD: Accelerating Adaptive Scientific Data Reduction with Region-of-Interest Error Control on GPUs.][gpu4] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2026*, Nov. 2026
+* Jieyang Chen et al. [HPDR: High-Performance Portable Scientific Data Reduction Framework.][gpu3] *39th IEEE International Parallel and Distributed Processing Symposium*, June. 2025
 * Jieyang Chen et al. [Scalable Multigrid-based Hierarchical Scientific Data Refactoring on GPUs.][gpu2] *Arxiv*
-* Jieyang Chen et al. [Accelerating Multigrid-based Hierarchical Scientific Data Refactoring on GPUs.][gpu] *35th IEEE International Parallel & Distributed Processing Symposium*, May, 2021.
+* Jieyang Chen et al. [Accelerating Multigrid-based Hierarchical Scientific Data Refactoring on GPUs.][gpu] *35th IEEE International Parallel & Distributed Processing Symposium*, May. 2021.
 
 ### System Optimizations
-* Lipeng Wan et al. RAPIDS: Reconciling Availability, Accuracy, and Performance in Managing Geo-Distributed Scientific Data. * The International ACM Symposium on High-Performance Parallel and Distributed Computing*, Jun. 2023
+* Lipeng Wan et al. [RAPIDS: Reconciling Availability, Accuracy, and Performance in Managing Geo-Distributed Scientific Data.][rapids] *The International ACM Symposium on High-Performance Parallel and Distributed Computing*, Jun. 2023
 * Xinying Wang et al. [Unbalanced Parallel I/O: An Often-Neglected Side Effect of Lossy Scientific Data Compression.][unbalanced-io] *7th International Workshop on Data Analysis and Reduction for Big Scientific Data*, Nov. 2021
 
 [thesis]: https://doi.org/10.26300/ya1v-hn97
@@ -87,14 +89,19 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 [gpu]: https://ieeexplore.ieee.org/abstract/document/9460526/
 [gpu2]: https://arxiv.org/abs/2105.12764
 [gpu3]: https://ieeexplore.ieee.org/document/11078565
+[gpu4]: https://arxiv.org/abs/2609.00205
 [mgard+]: https://ieeexplore.ieee.org/abstract/document/9479913/
 [unbalanced-io]: https://ieeexplore.ieee.org/abstract/document/9652573/
 [mdr]: https://dl.acm.org/doi/abs/10.1145/3458817.3476179
+[hp-mdr]: https://dl.acm.org/doi/10.1145/3712285.3759845
 [roi]: https://link.springer.com/chapter/10.1007/978-3-030-96498-6_2
 [roi2]: https://dl.acm.org/doi/abs/10.1145/3538712.3538717
 [pp]: https://www.mdpi.com/1709018 
 [pp3]: https://arxiv.org/abs/2212.10733
 [qoi]: https://ieeexplore.ieee.org/abstract/document/10793162
+[rapids]: https://dl.acm.org/doi/10.1145/3588195.3592983
+[progressive-dnn]: https://ieeexplore.ieee.org/document/10184595/
+[qoi2]: https://ieeexplore.ieee.org/document/10106324
 
 
 
