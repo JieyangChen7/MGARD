@@ -36,12 +36,10 @@ inline hybrid_projection_mode_type resolve_hybrid_projection_mode(
     }
     return mode;
   }
-  if (mode == hybrid_projection_mode_type::Auto) {
-    return s == std::numeric_limits<T>::infinity()
-               ? hybrid_projection_mode_type::Hierarchical
-               : hybrid_projection_mode_type::Orthogonal;
+  if (mode == hybrid_projection_mode_type::Orthogonal) {
+    return mode;
   }
-  return mode;
+  throw ProcessingException("unknown hybrid projection mode");
 }
 
 template <typename T>

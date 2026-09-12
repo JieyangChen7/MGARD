@@ -49,8 +49,8 @@ void print_usage_message(std::string error) {
 \t\t (optional) -hh / --hybrid: use hybrid (block-local + global) hierarchy\n\
 \t\t (optional) -ll / --local-levels <int>: number of local refactoring levels (default: 1)\n\
 \t\t (optional) -gl / --global-levels <int>: number of global refactoring levels (default: 0)\n\
-\t\t (optional) -hp / --hybrid-projection <auto|orthogonal|hierarchical>:\n\
-\t\t\t hybrid hierarchy projection mode (default: auto; hierarchical is L-inf only)\n\
+\t\t (optional) -hp / --hybrid-projection <orthogonal|hierarchical>:\n\
+\t\t\t hybrid hierarchy projection mode (default: orthogonal; hierarchical is L-inf only)\n\
 \t\t (optional) -nkf / --no-kernel-fusion: run the hybrid local stage as\n\
 \t\t\t separate decompose and quantize passes instead of fused kernels\n\
 \t\t\t (same reconstruction either way, but slower -- use it to time the\n\
@@ -940,7 +940,7 @@ bool try_compression(int argc, char *argv[]) {
   bool use_hybrid = has_arg(argc, argv, "-hh", "--hybrid");
 
   mgard_x::hybrid_projection_mode_type projection_mode =
-      mgard_x::hybrid_projection_mode_type::Auto;
+      mgard_x::hybrid_projection_mode_type::Orthogonal;
   if (has_arg(argc, argv, "-hp", "--hybrid-projection")) {
     std::string value = get_arg<std::string>(
         argc, argv, "Hybrid projection", "-hp", "--hybrid-projection");
@@ -948,10 +948,9 @@ bool try_compression(int argc, char *argv[]) {
       projection_mode = mgard_x::hybrid_projection_mode_type::Orthogonal;
     } else if (value == "hierarchical") {
       projection_mode = mgard_x::hybrid_projection_mode_type::Hierarchical;
-    } else if (value != "auto") {
+    } else {
       std::cout << mgard_x::log::log_err
-                << "--hybrid-projection must be auto, orthogonal, or "
-                   "hierarchical\n";
+                << "--hybrid-projection must be orthogonal or hierarchical\n";
       exit(-1);
     }
   }

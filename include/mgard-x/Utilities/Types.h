@@ -43,12 +43,11 @@ constexpr uint64_t hybrid_local_coeff_per_block(uint64_t num_dims) {
 
 enum class decomposition_basis_type : uint8_t { Orthoganal, Hierarchical };
 
-// Basis selection for the hybrid (BlockMGARD) hierarchy. Auto uses the
-// hierarchical basis for L-infinity error control and the orthogonal basis for
-// finite-s norms. Unlike kernel fusion this changes the coefficient stream, so
-// the resolved choice is recorded in the compressed-file metadata.
+// Basis selection for the hybrid (BlockMGARD) hierarchy. Orthogonal is the
+// default and retains the original L2 projection. Unlike kernel fusion this
+// changes the coefficient stream, so the choice is recorded in the
+// compressed-file metadata.
 enum class hybrid_projection_mode_type : uint8_t {
-  Auto,
   Orthogonal,
   Hierarchical
 };

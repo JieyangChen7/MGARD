@@ -79,13 +79,14 @@ TEST_CASE("hybrid level counts survive a metadata round trip",
   REQUIRE(config.enable_roi == false);
 }
 
-TEST_CASE("an unresolved hybrid projection mode is not serialized",
+TEST_CASE("an invalid hybrid projection mode is not serialized",
           "[HybridMetadata]") {
   Metadata<TestDevice> out = base_metadata({64, 64, 64});
   out.hybrid_num_local_levels = 1;
   out.hybrid_num_global_levels = 0;
   out.hybrid_local_block_size = MGARDX_HYBRID_LOCAL_BLOCK_SIZE;
-  out.hybrid_projection_mode = hybrid_projection_mode_type::Auto;
+  out.hybrid_projection_mode =
+      static_cast<hybrid_projection_mode_type>(255);
 
   REQUIRE_THROWS_AS(out.MetadataBase::Serialize(), InvalidDataException);
 }

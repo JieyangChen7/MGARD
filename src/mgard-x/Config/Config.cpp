@@ -60,7 +60,7 @@ Config::Config() {
   num_local_refactoring_level = 1;
   num_global_refactoring_level = 0;
   enable_roi = false;
-  hybrid_projection_mode = hybrid_projection_mode_type::Auto;
+  hybrid_projection_mode = hybrid_projection_mode_type::Orthogonal;
   auto_cache_release = false;
   cpu_mode = cpu_parallelization_mode::INTER_BLOCK;
   mdr_qoi_mode = false;

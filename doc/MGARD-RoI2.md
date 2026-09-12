@@ -81,7 +81,7 @@ config.roi_tolerance_map = tolerance_map; // std::vector<double>
 config.num_local_refactoring_level = 1;
 config.num_global_refactoring_level = 2;
 config.hybrid_projection_mode =
-    mgard_x::hybrid_projection_mode_type::Auto;
+    mgard_x::hybrid_projection_mode_type::Orthogonal;
 ```
 
 The vector length and ordering must follow the binary map format described above. Pass this ```Config``` to the regular high-level ```mgard_x::compress``` API. The regular high-level ```mgard_x::decompress``` API restores the ROI configuration from metadata.

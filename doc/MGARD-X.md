@@ -127,9 +127,8 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
     + ```-hh / --hybrid``` use the hybrid hierarchy (1D-3D only)
     + ```-ll / --local-levels <int>``` number of block-local refactoring levels (default: 1)
     + ```-gl / --global-levels <int>``` number of global refactoring levels (default: 0)
-    + ```-hp / --hybrid-projection <auto|orthogonal|hierarchical>``` select the projection mode used by the hybrid hierarchy (default: auto)
-        + ```auto```: use the hierarchical basis for L<sup>&infin;</sup> and the orthogonal basis for finite-```s``` norms
-        + ```orthogonal```: retain the L<sup>2</sup> projection
+    + ```-hp / --hybrid-projection <orthogonal|hierarchical>``` select the projection mode used by the hybrid hierarchy (default: orthogonal)
+        + ```orthogonal```: retain the L<sup>2</sup> projection (default)
         + ```hierarchical```: remove the L<sup>2</sup> projection (L<sup>&infin;</sup> only)
     + ```-nkf / --no-kernel-fusion``` disable fused local decomposition and quantization kernels for the hybrid hierarchy
 + ```-x```: enable decompression mode
@@ -178,8 +177,7 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
     + ```num_local_refactoring_level```: controls the number of block-local refactoring levels in the hybrid hierarchy (***Default: 1***)
     + ```num_global_refactoring_level```: controls the number of global refactoring levels in the hybrid hierarchy (***Default: 0***)
     + ```hybrid_projection_mode```: controls the projection mode used by the hybrid hierarchy:
-        + ```mgard_x::hybrid_projection_mode_type::Auto```: use the hierarchical basis for L<sup>&infin;</sup> and the orthogonal basis for finite-```s``` norms (***Default***)
-        + ```mgard_x::hybrid_projection_mode_type::Orthogonal```: retain the L<sup>2</sup> projection
+        + ```mgard_x::hybrid_projection_mode_type::Orthogonal```: retain the L<sup>2</sup> projection (***Default***)
         + ```mgard_x::hybrid_projection_mode_type::Hierarchical```: remove the L<sup>2</sup> projection (L<sup>&infin;</sup> only)
     + ```fuse_decompose_quantize```: controls fused local decomposition and quantization for the hybrid hierarchy (***Default: true***)
     + ```fuse_dequantize_recompose```: controls fused local dequantization and recomposition for the hybrid hierarchy (***Default: true***)

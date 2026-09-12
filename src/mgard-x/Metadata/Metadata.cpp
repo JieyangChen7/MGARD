@@ -550,7 +550,7 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
         hybrid.set_projection(mgard::pb::HybridHierarchy::ORTHOGONAL);
       } else {
         throw InvalidDataException(
-            "cannot serialize an unresolved hybrid projection mode.");
+            "cannot serialize an invalid hybrid projection mode.");
       }
       if (hybrid_enable_roi) {
         mgard::pb::RegionOfInterest &roi = *hybrid.mutable_region_of_interest();

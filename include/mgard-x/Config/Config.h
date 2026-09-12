@@ -43,8 +43,8 @@ struct Config {
   int mdr_qoi_num_variables;
   std::vector<double> roi_tolerance_map;
   bool enable_roi;
-  // BlockMGARD basis policy. Auto selects the hierarchical basis for L-inf
-  // error control and preserves the orthogonal basis for finite-s norms.
+  // BlockMGARD basis policy. Orthogonal retains the original L2 projection;
+  // Hierarchical explicitly removes it for L-inf error control.
   enum hybrid_projection_mode_type hybrid_projection_mode;
   // The hybrid (BlockMGARD) local stage fuses its decompose/recompose kernels
   // with quantization/dequantization so coefficients never round-trip through

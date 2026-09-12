@@ -148,7 +148,7 @@ void run_hybrid_compressor_test(std::vector<SIZE> shape, int num_local_levels,
                                 bool fused = true,
                                 T s = std::numeric_limits<T>::infinity(),
                                 hybrid_projection_mode_type projection_mode =
-                                    hybrid_projection_mode_type::Auto) {
+                                    hybrid_projection_mode_type::Orthogonal) {
   SIZE n = 1;
   for (auto sz : shape)
     n *= sz;
@@ -205,20 +205,20 @@ void run_hybrid_compressor_test(std::vector<SIZE> shape, int num_local_levels,
   REQUIRE(actual_error < static_cast<double>(tol));
 }
 
-TEST_CASE("hybrid projection mode follows the norm", "[mgard-x][hybrid]") {
+TEST_CASE("hybrid projection defaults to the orthogonal basis",
+          "[mgard-x][hybrid]") {
   const float inf = std::numeric_limits<float>::infinity();
 
-  REQUIRE(resolve_hybrid_projection_mode(
-              hybrid_projection_mode_type::Auto, inf) ==
-          hybrid_projection_mode_type::Hierarchical);
-  REQUIRE(resolve_hybrid_projection_mode(
-              hybrid_projection_mode_type::Auto, 0.0f) ==
+  REQUIRE(Config().hybrid_projection_mode ==
           hybrid_projection_mode_type::Orthogonal);
   REQUIRE(resolve_hybrid_projection_mode(
               hybrid_projection_mode_type::Orthogonal, inf) ==
           hybrid_projection_mode_type::Orthogonal);
   REQUIRE_THROWS_AS(resolve_hybrid_projection_mode(
                         hybrid_projection_mode_type::Hierarchical, 0.0f),
+                    ProcessingException);
+  REQUIRE_THROWS_AS(resolve_hybrid_projection_mode(
+                        static_cast<hybrid_projection_mode_type>(255), inf),
                     ProcessingException);
 }
 
