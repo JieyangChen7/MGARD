@@ -7,7 +7,7 @@ MGARD-X is a portable implementation of the MGARD lossy compressor supporting va
 
 ## Supporting features
 * **Data type:** Double and single precision floating-point data
-* **Dimensions:** 1D-5D
+* **Dimensions:** 1D-5D (the hybrid hierarchy supports 1D-3D only)
 * **Error-bound type:** L\_Inf error and L\_2 error
 * **Error-bound mode:** Absoluate and relative
 * **Data structure:** Uniform and non-uniform spaced Cartisan gird
@@ -95,7 +95,6 @@ MGARD can bound error `tol` in two ways (using L<sup>&infin;</sup> norm as an ex
 * ***Absolute*** error mode can guarantee ***| u - u' |<sub>&infin;</sub> < tol***
 * ***Relative*** error mode can guarantee ***| u - u' |<sub>&infin;</sub> < tol * | u |<sub>&infin;</sub>***
 
-
 ## Using command line interface (CLI)
 An executable ```mgard-x``` will be built after building the MGARD-X library. To use the ```mgard-x``` CLI, here are the options:
 
@@ -115,7 +114,24 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
     + ```-r <0|1>``` internal data layout (0: Higher throughput | 1: Higher compression ratio)
     + ```-b <0|1>``` domain decomposition type (0: 1D max dimension (default) | 1: N-D block)
     + ```-f <bytes>``` maximum memory footprint in bytes (if not specify: no limit)
-    + ```-l <0|1|2>``` choose lossless compressor (0:Huffman | 1:Huffman+LZ4 (NVIDIA GPU only) | 2:Huffman@ZSTD)
+    + ```-l / --lossless <type>``` choose lossless compressor:
+        + ```huffman```: Huffman coding
+        + ```huffman-lz4```: Huffman coding followed by LZ4
+        + ```lz4```: LZ4 applied directly to the quantized integer stream
+        + ```huffman-zstd```: Huffman coding followed by ZSTD
+        + ```blockdelta``` or ```blockdelta-delta```: BlockDelta with delta encoding
+        + ```blockdelta-fixed```: BlockDelta with fixed-length encoding
+        + ```blockdelta-outlier```: BlockDelta with delta encoding and outlier handling
+        + ```zerorle-rans```: zero-run-length encoding followed by byte-alphabet rANS
+        + ```symbol-rans```: symbol-alphabet rANS
+    + ```-hh / --hybrid``` use the hybrid hierarchy (1D-3D only)
+    + ```-ll / --local-levels <int>``` number of block-local refactoring levels (default: 1)
+    + ```-gl / --global-levels <int>``` number of global refactoring levels (default: 0)
+    + ```-hp / --hybrid-projection <auto|orthogonal|hierarchical>``` select the projection mode used by the hybrid hierarchy (default: auto)
+        + ```auto```: use the hierarchical basis for L<sup>&infin;</sup> and the orthogonal basis for finite-```s``` norms
+        + ```orthogonal```: retain the L<sup>2</sup> projection
+        + ```hierarchical```: remove the L<sup>2</sup> projection (L<sup>&infin;</sup> only)
+    + ```-nkf / --no-kernel-fusion``` disable fused local decomposition and quantization kernels for the hybrid hierarchy
 + ```-x```: enable decompression mode
     + ```-c <path>``` path to compressed file
     + ```-o <path>``` path to decompressed file
@@ -129,6 +145,7 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
 * **Include the header file.**
     + Use ```mgard/compress_x.hpp``` for ***high-level*** compression/decompression APIs
     + Use ```mgard/compress_x_lowlevel.hpp``` for ***low-level*** compression/decompression APIs
+    + *Note:* The hybrid hierarchy is currently supported through the command line interface and high-level APIs. It supports 1D-3D data and is not exposed through the public low-level API.
 * **Configure using ```mgard_x::Config```** Both high-level APIs and low-level APIs have an optional parameter for users to configure the compression/decomrpession process via ```mgard_x::Config``` class. To configure, create a ```mgard_x::Config``` object and configure its fields:
     + ```dev_type```: sepcifying the processor for compression/decompression:
         + ```mgard_x::device_type::Auto```: Auto detect the best processor (***Default***)
@@ -157,6 +174,15 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
     + ```decomposition```: controls multi-level decomposition:
         + ```mgard_x::decomposition_type::MultiDim```: N-D decomposition (***Default***)
         + ```mgard_x::decomposition_type::SingleDim```: 1D-at-a-time decomposition
+        + ```mgard_x::decomposition_type::Hybrid```: hybrid hierarchy with block-local and global decomposition (1D-3D only; high-level APIs only)
+    + ```num_local_refactoring_level```: controls the number of block-local refactoring levels in the hybrid hierarchy (***Default: 1***)
+    + ```num_global_refactoring_level```: controls the number of global refactoring levels in the hybrid hierarchy (***Default: 0***)
+    + ```hybrid_projection_mode```: controls the projection mode used by the hybrid hierarchy:
+        + ```mgard_x::hybrid_projection_mode_type::Auto```: use the hierarchical basis for L<sup>&infin;</sup> and the orthogonal basis for finite-```s``` norms (***Default***)
+        + ```mgard_x::hybrid_projection_mode_type::Orthogonal```: retain the L<sup>2</sup> projection
+        + ```mgard_x::hybrid_projection_mode_type::Hierarchical```: remove the L<sup>2</sup> projection (L<sup>&infin;</sup> only)
+    + ```fuse_decompose_quantize```: controls fused local decomposition and quantization for the hybrid hierarchy (***Default: true***)
+    + ```fuse_dequantize_recompose```: controls fused local dequantization and recomposition for the hybrid hierarchy (***Default: true***)
     + ```max_larget_level```: controls max level of multi-level decomposition (***Default: 0 (no limit)***)
     + ```prefetch```(for high-level APIs only): controls whether or not to enable prefetch pipeline optimization (***Default: true***)
     + ```max_memory_footprint```(for high-level APIs only): controls maximum memory footprint in bytes (***Default: inf (no limit)***)
@@ -288,4 +314,3 @@ The figures below show the compression and decompression throughput of MGARD-X o
 
 [high-level-example]:../examples/mgard-x/HighLevelAPIs
 [low-level-example]:../examples/mgard-x/LowLevelAPIs
-

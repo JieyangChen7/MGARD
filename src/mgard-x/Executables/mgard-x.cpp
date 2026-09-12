@@ -44,13 +44,13 @@ void print_usage_message(std::string error) {
 \t\t -r / --roi-tolerance-map <path>: path to ROI tolerance map file\n\
 \t\t -roi / -enable-roi enable ROI mode (use per-block tolerances from -r)\n\
 \t\t -s / --smoothness <float>: smoothness parameter\n\
-\t\t -l / --lossless <huffman|huffman-lz4|lz4|huffman-zstd|blockdelta[-fixed|-delta|-outlier]>: lossless compression\n\
+\t\t -l / --lossless <huffman|huffman-lz4|lz4|huffman-zstd|blockdelta[-fixed|-delta|-outlier]|zerorle-rans|symbol-rans>: lossless compression\n\
 \t\t -d / --device <auto|serial|cuda|hip>: device type\n\
 \t\t (optional) -hh / --hybrid: use hybrid (block-local + global) hierarchy\n\
 \t\t (optional) -ll / --local-levels <int>: number of local refactoring levels (default: 1)\n\
 \t\t (optional) -gl / --global-levels <int>: number of global refactoring levels (default: 0)\n\
 \t\t (optional) -hp / --hybrid-projection <auto|orthogonal|hierarchical>:\n\
-\t\t\t BlockMGARD basis (default: auto; hierarchical is L-inf only)\n\
+\t\t\t hybrid hierarchy projection mode (default: auto; hierarchical is L-inf only)\n\
 \t\t (optional) -nkf / --no-kernel-fusion: run the hybrid local stage as\n\
 \t\t\t separate decompose and quantize passes instead of fused kernels\n\
 \t\t\t (same reconstruction either way, but slower -- use it to time the\n\
