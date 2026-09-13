@@ -542,8 +542,7 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
       hybrid.set_num_local_levels(hybrid_num_local_levels);
       hybrid.set_num_global_levels(hybrid_num_global_levels);
       hybrid.set_local_block_size(hybrid_local_block_size);
-      if (hybrid_projection_mode ==
-          hybrid_projection_mode_type::Hierarchical) {
+      if (hybrid_projection_mode == hybrid_projection_mode_type::Hierarchical) {
         hybrid.set_projection(mgard::pb::HybridHierarchy::HIERARCHICAL);
       } else if (hybrid_projection_mode ==
                  hybrid_projection_mode_type::Orthogonal) {
@@ -849,8 +848,7 @@ void MetadataBase::Deserialize(
       hybrid_local_block_size = hybrid.local_block_size();
       switch (hybrid.projection()) {
       case mgard::pb::HybridHierarchy::HIERARCHICAL:
-        hybrid_projection_mode =
-            hybrid_projection_mode_type::Hierarchical;
+        hybrid_projection_mode = hybrid_projection_mode_type::Hierarchical;
         break;
       case mgard::pb::HybridHierarchy::PROJECTION_UNSPECIFIED:
       case mgard::pb::HybridHierarchy::ORTHOGONAL:

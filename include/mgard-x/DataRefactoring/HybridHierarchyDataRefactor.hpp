@@ -145,8 +145,8 @@ public:
 
   // Need revise further to exclude copy time
   void Decompose(SubArray<D, T, DeviceType> data,
-                 SubArray<1, T, DeviceType> decomposed_data,
-                 int queue_idx, bool orthogonal_projection = true) {
+                 SubArray<1, T, DeviceType> decomposed_data, int queue_idx,
+                 bool orthogonal_projection = true) {
     if (this->L == 0 && this->M == 0) {
       throw ProcessingException("Both L and M cannot be zero");
     }
@@ -194,8 +194,8 @@ public:
 
   // Need revise further to exclude copy time
   void Recompose(SubArray<D, T, DeviceType> data,
-                 SubArray<1, T, DeviceType> decomposed_data,
-                 int queue_idx, bool orthogonal_projection = true) {
+                 SubArray<1, T, DeviceType> decomposed_data, int queue_idx,
+                 bool orthogonal_projection = true) {
     if (this->L == 0 && this->M == 0) {
       throw ProcessingException("Both L and M cannot be zero");
     }

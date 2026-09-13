@@ -39,11 +39,13 @@ void decompose(SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
   if constexpr (D == 1) {
     DeviceLauncher<DeviceType>::Execute(
         Decompose8Kernel<D, T, DeviceType>(v, coarse, coeff,
-                                           orthogonal_projection), queue_idx);
+                                           orthogonal_projection),
+        queue_idx);
   } else if constexpr (D == 2) {
     DeviceLauncher<DeviceType>::Execute(
         Decompose8x8Kernel<D, T, DeviceType>(v, coarse, coeff,
-                                             orthogonal_projection), queue_idx);
+                                             orthogonal_projection),
+        queue_idx);
   } else if constexpr (D == 3) {
     DeviceLauncher<DeviceType>::Execute(
         Decompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff,
@@ -91,11 +93,13 @@ void recompose(SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
   if constexpr (D == 1) {
     DeviceLauncher<DeviceType>::Execute(
         Recompose8Kernel<D, T, DeviceType>(v, coarse, coeff,
-                                           orthogonal_projection), queue_idx);
+                                           orthogonal_projection),
+        queue_idx);
   } else if constexpr (D == 2) {
     DeviceLauncher<DeviceType>::Execute(
         Recompose8x8Kernel<D, T, DeviceType>(v, coarse, coeff,
-                                             orthogonal_projection), queue_idx);
+                                             orthogonal_projection),
+        queue_idx);
   } else if constexpr (D == 3) {
     DeviceLauncher<DeviceType>::Execute(
         Recompose8x8x8Kernel<D, T, DeviceType>(v, coarse, coeff,

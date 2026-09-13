@@ -942,8 +942,8 @@ bool try_compression(int argc, char *argv[]) {
   mgard_x::hybrid_projection_mode_type projection_mode =
       mgard_x::hybrid_projection_mode_type::Orthogonal;
   if (has_arg(argc, argv, "-hp", "--hybrid-projection")) {
-    std::string value = get_arg<std::string>(
-        argc, argv, "Hybrid projection", "-hp", "--hybrid-projection");
+    std::string value = get_arg<std::string>(argc, argv, "Hybrid projection",
+                                             "-hp", "--hybrid-projection");
     if (value == "orthogonal") {
       projection_mode = mgard_x::hybrid_projection_mode_type::Orthogonal;
     } else if (value == "hierarchical") {
@@ -980,15 +980,13 @@ bool try_compression(int argc, char *argv[]) {
         shape.size(), dtype, input_file.c_str(), output_file.c_str(), shape,
         tol, tol_map, enable_roi, s, mode, lossless, domain_decomposition,
         block_size, dev_type, verbose, max_memory_footprint, num_local_levels,
-        num_global_levels, use_hybrid, warm_up, kernel_fusion,
-        projection_mode);
+        num_global_levels, use_hybrid, warm_up, kernel_fusion, projection_mode);
   } else if (dtype == mgard_x::data_type::Float) {
     launch_compress<float>(
         shape.size(), dtype, input_file.c_str(), output_file.c_str(), shape,
         tol, tol_map, enable_roi, s, mode, lossless, domain_decomposition,
         block_size, dev_type, verbose, max_memory_footprint, num_local_levels,
-        num_global_levels, use_hybrid, warm_up, kernel_fusion,
-        projection_mode);
+        num_global_levels, use_hybrid, warm_up, kernel_fusion, projection_mode);
   }
   mgard_x::release_cache(mgard_x::Config());
   return true;

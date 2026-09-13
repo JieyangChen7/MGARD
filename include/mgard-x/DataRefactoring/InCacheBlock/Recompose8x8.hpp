@@ -293,14 +293,11 @@ public:
   constexpr static bool EnableAutoTuning() { return false; }
   constexpr static std::string_view Name = "lwpk_2d_fq";
   MGARDX_CONT
-  RecomposeDequantize8x8Kernel(SubArray<D, T, DeviceType> v,
-                               SubArray<D, T, DeviceType> coarse,
-                               SubArray<1, Q, DeviceType> quantized_coeff,
-                               T quantizer,
-                               SubArray<1, T, DeviceType> block_quantizers,
-                               bool use_block_quantizers, bool prep_huffman,
-                               SIZE dict_size,
-                               bool orthogonal_projection = true)
+  RecomposeDequantize8x8Kernel(
+      SubArray<D, T, DeviceType> v, SubArray<D, T, DeviceType> coarse,
+      SubArray<1, Q, DeviceType> quantized_coeff, T quantizer,
+      SubArray<1, T, DeviceType> block_quantizers, bool use_block_quantizers,
+      bool prep_huffman, SIZE dict_size, bool orthogonal_projection = true)
       : v(v), coarse(coarse), quantized_coeff(quantized_coeff),
         quantizer(quantizer), block_quantizers(block_quantizers),
         use_block_quantizers(use_block_quantizers), prep_huffman(prep_huffman),

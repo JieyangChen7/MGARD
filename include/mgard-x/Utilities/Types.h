@@ -47,10 +47,7 @@ enum class decomposition_basis_type : uint8_t { Orthoganal, Hierarchical };
 // default and retains the original L2 projection. Unlike kernel fusion this
 // changes the coefficient stream, so the choice is recorded in the
 // compressed-file metadata.
-enum class hybrid_projection_mode_type : uint8_t {
-  Orthogonal,
-  Hierarchical
-};
+enum class hybrid_projection_mode_type : uint8_t { Orthogonal, Hierarchical };
 
 enum class processor_type : uint8_t {
   CPU,

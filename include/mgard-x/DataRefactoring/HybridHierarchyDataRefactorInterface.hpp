@@ -15,12 +15,10 @@ template <DIM D, typename T, typename DeviceType>
 class HybridHierarchyDataRefactorInterface {
   virtual void Decompose(SubArray<D, T, DeviceType> data,
                          SubArray<1, T, DeviceType> decomposed_data,
-                         int queue_idx,
-                         bool orthogonal_projection = true) = 0;
+                         int queue_idx, bool orthogonal_projection = true) = 0;
   virtual void Recompose(SubArray<D, T, DeviceType> data,
                          SubArray<1, T, DeviceType> decomposed_data,
-                         int queue_idx,
-                         bool orthogonal_projection = true) = 0;
+                         int queue_idx, bool orthogonal_projection = true) = 0;
 };
 
 } // namespace data_refactoring

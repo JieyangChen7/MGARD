@@ -319,8 +319,7 @@ public:
                              T quantizer,
                              SubArray<1, T, DeviceType> block_quantizers,
                              bool use_block_quantizers, bool prep_huffman,
-                             SIZE dict_size,
-                             bool orthogonal_projection = true)
+                             SIZE dict_size, bool orthogonal_projection = true)
       : v(v), coarse(coarse), quantized_coeff(quantized_coeff),
         quantizer(quantizer), block_quantizers(block_quantizers),
         use_block_quantizers(use_block_quantizers), prep_huffman(prep_huffman),

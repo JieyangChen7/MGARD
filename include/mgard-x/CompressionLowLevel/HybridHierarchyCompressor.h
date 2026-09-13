@@ -26,8 +26,8 @@
 namespace mgard_x {
 
 template <typename T>
-inline hybrid_projection_mode_type resolve_hybrid_projection_mode(
-    hybrid_projection_mode_type mode, T s) {
+inline hybrid_projection_mode_type
+resolve_hybrid_projection_mode(hybrid_projection_mode_type mode, T s) {
   if (mode == hybrid_projection_mode_type::Hierarchical) {
     if (s != std::numeric_limits<T>::infinity()) {
       throw ProcessingException(
@@ -43,8 +43,8 @@ inline hybrid_projection_mode_type resolve_hybrid_projection_mode(
 }
 
 template <typename T>
-inline bool infer_hybrid_orthogonal_projection(
-    hybrid_projection_mode_type mode, T s) {
+inline bool infer_hybrid_orthogonal_projection(hybrid_projection_mode_type mode,
+                                               T s) {
   return resolve_hybrid_projection_mode(mode, s) ==
          hybrid_projection_mode_type::Orthogonal;
 }

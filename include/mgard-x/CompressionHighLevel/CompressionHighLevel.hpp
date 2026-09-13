@@ -104,8 +104,8 @@ general_compress_pipeline(std::vector<SIZE> shape, T tol, T s,
   // Resolve the BlockMGARD basis before DomainDecomposer and compressor-cache
   // construction. The resolved value is also what gets written to metadata.
   if (config.decomposition == decomposition_type::Hybrid) {
-    config.hybrid_projection_mode = resolve_hybrid_projection_mode(
-        config.hybrid_projection_mode, s);
+    config.hybrid_projection_mode =
+        resolve_hybrid_projection_mode(config.hybrid_projection_mode, s);
   }
 
   log::info("adjust_shape: " + std::to_string(config.adjust_shape));

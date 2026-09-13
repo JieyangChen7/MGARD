@@ -183,8 +183,8 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::Quantize(
     Array<D, T, DeviceType> &original_data, enum error_bound_type ebtype, T tol,
     T s, T norm, int queue_idx) {
-  orthogonal_projection = infer_hybrid_orthogonal_projection(
-      config.hybrid_projection_mode, s);
+  orthogonal_projection =
+      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
   SIZE total_num_elems_1D = hybrid_refactor.DecomposedDataSize();
 
@@ -248,8 +248,8 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::Dequantize(
     Array<D, T, DeviceType> &decompressed_data, enum error_bound_type ebtype,
     T tol, T s, T norm, int queue_idx) {
-  orthogonal_projection = infer_hybrid_orthogonal_projection(
-      config.hybrid_projection_mode, s);
+  orthogonal_projection =
+      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
   SIZE total_num_elems_1D = hybrid_refactor.DecomposedDataSize();
   SubArray<1, T, DeviceType> decompressed_data_subarray(
@@ -264,8 +264,8 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::DequantizeRecompose(
     Array<D, T, DeviceType> &decompressed_data, enum error_bound_type ebtype,
     T tol, T s, T norm, int queue_idx) {
-  orthogonal_projection = infer_hybrid_orthogonal_projection(
-      config.hybrid_projection_mode, s);
+  orthogonal_projection =
+      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
   if (config.fuse_dequantize_recompose && hybrid_quantizer.CanFuseQuantize(s)) {
     log::info("Local dequantize+recompose kernels: fused");
@@ -330,8 +330,8 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Compress(
     timer_total.start();
   }
 
-  orthogonal_projection = infer_hybrid_orthogonal_projection(
-      config.hybrid_projection_mode, s);
+  orthogonal_projection =
+      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
 
   CalculateNorm(original_data, ebtype, s, norm, queue_idx);
@@ -404,8 +404,8 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Decompress(
   if (log::level & log::TIME)
     timer_total.start();
 
-  orthogonal_projection = infer_hybrid_orthogonal_projection(
-      config.hybrid_projection_mode, s);
+  orthogonal_projection =
+      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
 
   decompressed_data.resize(hierarchy->level_shape(hierarchy->l_target()));
