@@ -298,7 +298,7 @@ For achieving the best performance:
 The figures below show the compression and decompression throughput of MGARD-X on single CPU (multi-core) and GPU. XGC fusion simulation data is used for compression and decompression.
 
 [<img src="images/MGARD-X-CPU.png" width="400" />](images/MGARD-X-CPU.png)
-[<img src="images/MGARD-X-GPU.png" width="400" />](images/MGARD-X-GPU.png)
+[<img src="images/MGARD-X-GPU-2.png" width="400" />](images/MGARD-X-GPU-2.png)
 
 The figures below show the compression and decompression throughput of MGARD-X on multiple NVIDIA V100 and AMD MI-250X GPUs. XGC fusion simulation data is used for compression and decompression.
 
