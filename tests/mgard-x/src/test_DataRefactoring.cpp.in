@@ -219,13 +219,13 @@ void run_in_cache_block_test(std::vector<SIZE> shape) {
   Array<1, T, DevType> coeff({in_cache_num_coeff(shape)});
 
   in_cache_block::decompose<D, T, DevType>(SubArray(v), SubArray(coarse),
-                                           SubArray(coeff), 0);
+                                           SubArray(coeff), true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
 
   // Zero v so the reconstruction can only come from coarse + coeff.
   v.memset(0, 0);
   in_cache_block::recompose<D, T, DevType>(SubArray(v), SubArray(coarse),
-                                           SubArray(coeff), 0);
+                                           SubArray(coeff), true, 0);
   T *result = v.hostCopy(false, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
 
@@ -254,7 +254,7 @@ void run_in_cache_block_constant_test(std::vector<SIZE> shape) {
   Array<1, T, DevType> coeff({num_coeff});
 
   in_cache_block::decompose<D, T, DevType>(SubArray(v), SubArray(coarse),
-                                           SubArray(coeff), 0);
+                                           SubArray(coeff), true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
 
   std::vector<T> coeff_h = device_to_host(coeff, num_coeff);
@@ -299,7 +299,7 @@ void run_in_cache_block_fused_test(std::vector<SIZE> shape, bool prep_huffman) {
   Array<D, T, DevType> coarse_ref(coarse_shape);
   Array<1, T, DevType> coeff_ref({num_coeff});
   in_cache_block::decompose<D, T, DevType>(
-      SubArray(v_ref), SubArray(coarse_ref), SubArray(coeff_ref), 0);
+      SubArray(v_ref), SubArray(coarse_ref), SubArray(coeff_ref), true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> coarse_ref_h = device_to_host(coarse_ref, num_coarse);
   std::vector<T> coeff_ref_h = device_to_host(coeff_ref, num_coeff);
@@ -311,7 +311,7 @@ void run_in_cache_block_fused_test(std::vector<SIZE> shape, bool prep_huffman) {
   Array<1, Q, DevType> quantized({num_coeff});
   in_cache_block::decompose_quantize<D, T, Q, DevType>(
       SubArray(v), SubArray(coarse_fused), SubArray(quantized), quantizer,
-      SubArray<1, T, DevType>(), false, prep_huffman, dict_size, 0);
+      SubArray<1, T, DevType>(), false, prep_huffman, dict_size, true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> coarse_fused_h = device_to_host(coarse_fused, num_coarse);
   std::vector<Q> quantized_h = device_to_host(quantized, num_coeff);
@@ -342,7 +342,7 @@ void run_in_cache_block_fused_test(std::vector<SIZE> shape, bool prep_huffman) {
   Array<D, T, DevType> v_unfused(shape);
   v_unfused.memset(0, 0);
   in_cache_block::recompose<D, T, DevType>(
-      SubArray(v_unfused), SubArray(coarse_ref), SubArray(coeff_deq), 0);
+      SubArray(v_unfused), SubArray(coarse_ref), SubArray(coeff_deq), true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> unfused_h = device_to_host(v_unfused, n);
 
@@ -351,7 +351,7 @@ void run_in_cache_block_fused_test(std::vector<SIZE> shape, bool prep_huffman) {
   in_cache_block::recompose_dequantize<D, T, Q, DevType>(
       SubArray(v_fused), SubArray(coarse_fused), SubArray(quantized),
       dequantizer, SubArray<1, T, DevType>(), false, prep_huffman, dict_size,
-      0);
+      true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> fused_h = device_to_host(v_fused, n);
 
@@ -419,7 +419,7 @@ void run_in_cache_block_padding_test(std::vector<SIZE> shape) {
   Array<D, T, DevType> coarse_ref(coarse_shape);
   Array<1, T, DevType> coeff_ref({num_coeff});
   in_cache_block::decompose<D, T, DevType>(
-      SubArray(v_padded), SubArray(coarse_ref), SubArray(coeff_ref), 0);
+      SubArray(v_padded), SubArray(coarse_ref), SubArray(coeff_ref), true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> coarse_ref_h = device_to_host(coarse_ref, num_coarse);
   std::vector<T> coeff_ref_h = device_to_host(coeff_ref, num_coeff);
@@ -431,7 +431,7 @@ void run_in_cache_block_padding_test(std::vector<SIZE> shape) {
   Array<1, Q, DevType> quantized({num_coeff});
   in_cache_block::decompose_quantize<D, T, Q, DevType>(
       SubArray(v), SubArray(coarse_fused), SubArray(quantized), quantizer,
-      SubArray<1, T, DevType>(), false, false, dict_size, 0);
+      SubArray<1, T, DevType>(), false, false, dict_size, true, 0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> coarse_fused_h = device_to_host(coarse_fused, num_coarse);
   std::vector<Q> quantized_h = device_to_host(quantized, num_coeff);
@@ -461,7 +461,8 @@ void run_in_cache_block_padding_test(std::vector<SIZE> shape) {
   Array<D, T, DevType> v_padded_out(padded_shape);
   v_padded_out.memset(0, 0);
   in_cache_block::recompose<D, T, DevType>(
-      SubArray(v_padded_out), SubArray(coarse_ref), SubArray(coeff_deq), 0);
+      SubArray(v_padded_out), SubArray(coarse_ref), SubArray(coeff_deq), true,
+      0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> padded_out_h = device_to_host(v_padded_out, n_padded);
 
@@ -474,7 +475,8 @@ void run_in_cache_block_padding_test(std::vector<SIZE> shape) {
   v_fused.load(seeded.data());
   in_cache_block::recompose_dequantize<D, T, Q, DevType>(
       SubArray(v_fused), SubArray(coarse_fused), SubArray(quantized),
-      dequantizer, SubArray<1, T, DevType>(), false, false, dict_size, 0);
+      dequantizer, SubArray<1, T, DevType>(), false, false, dict_size, true,
+      0);
   DeviceRuntime<DevType>::SyncQueue(0);
   std::vector<T> fused_h = device_to_host(v_fused, n);
 
