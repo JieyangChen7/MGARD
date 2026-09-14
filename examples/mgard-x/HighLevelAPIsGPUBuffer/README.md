@@ -1,7 +1,7 @@
-# Compressing with MGARD-X High-level APIs
+# Compressing with MGARD-X High-level APIs (GPU-resident buffers)
 
 First, build and install MGARD-X.
-Then, run the following in `examples/mgard-x/HighLevelAPIs`.
+Then, run the following in `examples/mgard-x/HighLevelAPIsGPUBuffer`.
 
 Build with CMake as follows or use the 'build_scripts.sh'.
 ```console
@@ -11,5 +11,5 @@ $ build/Example
 ```
 
 
-`build/main` creates a dataset, compresses it with MGARD-X on NVIDIA GPU, and decomrpess it on CPU.
-Read `Example.cpp` to see how the high-level compression API is used.
+`build/Example` creates a dataset, compresses it with MGARD-X on NVIDIA GPU, and decomrpess it on CPU, passing GPU-resident buffers directly to the high-level API instead of host buffers.
+Read `Example.cu` to see how the high-level compression API is used with GPU buffers.

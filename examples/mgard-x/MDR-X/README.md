@@ -7,23 +7,19 @@ Build with CMake as follows or use the 'build_scripts.sh'.
 ```console
 $ cmake -S . -B build
 $ cmake --build build
-$ build/Example
+$ build/refactor <args>
 ```
 
+`build/refactor` reads in a dataset, refactors it with MDR-X on GPU or CPU, and then progressively reconstructs it in-memory at each of the given error bounds, printing the reconstruction error against the original data.
+Read `refactor.cpp/refactor.cu` to see how the MDR-X API (`mgard_x::MDR::ComposedRefactor`/`ComposedReconstructor`) is used.
 
-`build/main` read in a dataset, refactor it with MDR-X on GPU or CPU, and reconstruct it according to the given error bounds.
-Read `refactor.cpp/refactor.cu` and `reconstructor.cpp/reconstructor.cu` to see how the MDR-X API is used.
+The `refactor` executable takes:
 
-The exectuables `refactor` and `reconstructor` can be used as follows:
+* `<input data>`
+* `<number of decomposition levels>`
+* `<number of bitplanes>`
+* `<number of dimensions N> <dim 1> <dim 2> .. <dim N>` (currently 3D only)
+* `<number of tolerances M> <tol 1> <tol 2> ... <tol M>`: L-infinity error bounds to reconstruct at, one after another
+* `<s>`: smoothness parameter (use `0` for L2-style error control)
 
-* `refactor` 
-	- `<input data>`
-	- `<number of decomposition levels>` 
-	- `<number of bitplanes>`
-	- `<number of dimensions N> <dim 1> <dim 2> .. <dim N>`
-
-* `reconstructor`
- 	- `<original data>`
- 	- `<error mode>`: 0 for L\_inf error; 1 for L\_2 error
- 	- `<number of tolerances M> <tol 1> <tol 2> ... <tol M>`
- 	- `<s>`
+Example: `build/refactor data.bin 3 32 3 64 64 64 3 0.1 0.01 0.001 0`

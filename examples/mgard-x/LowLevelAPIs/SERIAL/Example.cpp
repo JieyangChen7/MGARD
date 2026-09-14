@@ -14,7 +14,9 @@ int main() {
   //... load data into in_array_cpu
   std::vector<mgard_x::SIZE> shape{n1, n2, n3};
   mgard_x::Config config;
-  config.lossless = mgard_x::lossless_type::Huffman_LZ4;
+  // Huffman_LZ4 currently has a known buffer-sizing bug in the library
+  // (tracked separately); use Huffman_Zstd here until that is fixed.
+  config.lossless = mgard_x::lossless_type::Huffman_Zstd;
   mgard_x::Hierarchy<3, double, mgard_x::SERIAL> hierarchy(shape, config);
   mgard_x::Array<3, double, mgard_x::SERIAL> in_array(shape);
   in_array.load(in_array_cpu);

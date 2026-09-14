@@ -1,4 +1,5 @@
-#include "mgard/mdr_x.hpp"
+#include "mgard/mdr_x_lowlevel.hpp"
+#include "mgard/mgard-x/Utilities/ErrorCalculator.h"
 #include <bitset>
 #include <cmath>
 #include <cstdlib>
@@ -8,37 +9,105 @@
 #include <vector>
 using namespace std;
 
-template <mgard_x::DIM D, class T_data, class T_bitplane, class T_error,
-          typename DeviceType, class Decomposer, class Interleaver,
-          class Encoder, class Compressor, class ErrorCollector, class Writer>
-void test(string filename, const vector<mgard_x::SIZE> &dims, int target_level,
-          int num_bitplanes,
-          mgard_x::Hierarchy<D, T_data, DeviceType> &hierarchy,
-          Decomposer decomposer, Interleaver interleaver, Encoder encoder,
-          Compressor compressor, ErrorCollector collector, Writer writer) {
+template <class T_data>
+void print_statistics(const T_data *data_ori, const T_data *data_dec,
+                      size_t data_size) {
+  double max_val = data_ori[0];
+  double min_val = data_ori[0];
+  double max_abs = fabs(data_ori[0]);
+  for (int i = 0; i < data_size; i++) {
+    if (data_ori[i] > max_val)
+      max_val = data_ori[i];
+    if (data_ori[i] < min_val)
+      min_val = data_ori[i];
+    if (fabs(data_ori[i]) > max_abs)
+      max_abs = fabs(data_ori[i]);
+  }
+  double max_err = 0;
+  int pos = 0;
+  double mse = 0;
+  for (int i = 0; i < data_size; i++) {
+    double err = data_ori[i] - data_dec[i];
+    mse += err * err;
+    if (fabs(err) > max_err) {
+      pos = i;
+      max_err = fabs(err);
+    }
+  }
+  mse /= data_size;
+  double psnr = 20 * log10((max_val - min_val) / sqrt(mse));
+  cout << "Max value = " << max_val << ", min value = " << min_val << endl;
+  cout << "Max error = " << max_err << ", pos = " << pos << endl;
+  cout << "MSE = " << mse << ", PSNR = " << psnr << endl;
+  cout << "L2 error = "
+       << mgard_x::L_2_error({(mgard_x::SIZE)data_size}, data_ori, data_dec,
+                             mgard_x::error_bound_type::ABS, 0)
+       << endl;
+  cout << "L_inf error = "
+       << mgard_x::L_inf_error(data_size, data_ori, data_dec,
+                               mgard_x::error_bound_type::ABS)
+       << endl;
+}
 
-  auto refactor =
-      mgard_x::MDR::ComposedRefactor<D, T_data, T_bitplane, T_error, Decomposer,
-                                     Interleaver, Encoder, Compressor,
-                                     ErrorCollector, Writer, DeviceType>(
-          hierarchy, decomposer, interleaver, encoder, compressor, collector,
-          writer);
+template <mgard_x::DIM D, class T_data, typename DeviceType>
+void test(string filename, int num_bitplanes,
+          mgard_x::Hierarchy<D, T_data, DeviceType> &hierarchy,
+          std::string metadata_file, std::vector<std::string> files,
+          const vector<double> &tolerance, double s) {
+
   size_t num_elements = 1;
 
   printf("loading file\n");
   FILE *pFile;
   pFile = fopen(filename.c_str(), "rb");
-  for (int d = 0; d < dims.size(); d++)
-    num_elements *= dims[d];
-  vector<T_data> data(
-      num_elements); // MGARD::readfile<T>(filename.c_str(), num_elements);
+  for (int d = 0; d < D; d++)
+    num_elements *= hierarchy.level_shape(hierarchy.l_target(), d);
+  vector<T_data> data(num_elements);
   fread(data.data(), 1, num_elements * sizeof(T_data), pFile);
   fclose(pFile);
   printf("done loading file\n");
-  mgard_x::Array<D, T_data, DeviceType> input_array(dims);
+  mgard_x::Array<D, T_data, DeviceType> input_array(
+      hierarchy.level_shape(hierarchy.l_target()));
   input_array.load(data.data());
-  refactor.refactor(input_array, dims, target_level, num_bitplanes);
-  // evaluate(data, dims, target_level, num_bitplanes, refactor);
+  mgard_x::log::level |= mgard_x::log::TIME;
+
+  mgard_x::Config config;
+  mgard_x::MDR::MDRData<DeviceType> mdr_data;
+  mgard_x::MDR::MDRMetadata mdr_metadata;
+  {
+    auto refactor = mgard_x::MDR::ComposedRefactor<D, T_data, DeviceType>(
+        hierarchy, config);
+    refactor.Refactor(input_array, mdr_metadata, mdr_data, 0);
+    refactor.Compress(mdr_metadata, mdr_data, 0);
+    refactor.StoreMetadata(mdr_metadata, mdr_data, 0);
+  }
+
+  {
+    auto reconstructor =
+        mgard_x::MDR::ComposedReconstructor<D, T_data, DeviceType>(hierarchy,
+                                                                   config);
+
+    mdr_metadata.InitializeForReconstruction();
+    mgard_x::Array<D, T_data, DeviceType> reconstructed_data(
+        hierarchy.level_shape(hierarchy.l_target()));
+    reconstructed_data.memset(0);
+    for (int i = 0; i < tolerance.size(); i++) {
+      mgard_x::log::level |= mgard_x::log::TIME;
+      mdr_metadata.requested_tol = tolerance[i];
+      mdr_metadata.requested_s = s;
+      reconstructor.GenerateRequest(mdr_metadata);
+      mdr_metadata.PrintStatus();
+      mdr_metadata.DoneLoadingBitplans();
+      reconstructor.ProgressiveReconstruct(mdr_metadata, mdr_data, false,
+                                           reconstructed_data, 0);
+      auto dims = reconstructor.get_dimensions();
+      size_t size = 1;
+      for (int d = 0; d < D; d++) {
+        size *= hierarchy.level_shape(hierarchy.l_target(), d);
+      }
+      print_statistics(data.data(), reconstructed_data.hostCopy(), size);
+    }
+  }
 }
 
 int main(int argc, char **argv) {
@@ -58,6 +127,13 @@ int main(int argc, char **argv) {
     dims[i] = atoi(argv[argv_id++]);
   }
 
+  int num_tolerance = atoi(argv[argv_id++]);
+  vector<double> tolerance(num_tolerance, 0);
+  for (int i = 0; i < num_tolerance; i++) {
+    tolerance[i] = atof(argv[argv_id++]);
+  }
+  double s = atof(argv[argv_id++]);
+
   string metadata_file = "refactored_data/metadata.bin";
   vector<string> files;
   for (int i = 0; i <= target_level; i++) {
@@ -65,8 +141,6 @@ int main(int argc, char **argv) {
     files.push_back(filename);
   }
   using T = float;
-  using T_stream = uint32_t;
-  using T_error = double;
   using DeviceType = mgard_x::HIP;
   if (num_bitplanes > 32) {
     num_bitplanes = 32;
@@ -75,60 +149,14 @@ int main(int argc, char **argv) {
               << std::endl;
   }
   const mgard_x::DIM D = 3;
-  printf("dims: %lu %lu %lu\n", dims[2], dims[1], dims[0]);
+  printf("dims: %lu %lu %lu\n", dims[0], dims[1], dims[2]);
 
+  mgard_x::log::level |= mgard_x::log::INFO;
   mgard_x::Config config;
-  mgard_x::Hierarchy<D, T, DeviceType> hierarchy(dims, config, target_level);
+  config.max_larget_level = target_level;
+  mgard_x::Hierarchy<D, T, DeviceType> hierarchy(dims, config);
 
-  // if (false) {
-  auto decomposer =
-      mgard_x::MDR::MGARDOrthoganalDecomposer<D, T, DeviceType>(hierarchy);
-
-  auto interleaver =
-      mgard_x::MDR::DirectInterleaver<D, T, DeviceType>(hierarchy);
-  // auto interleaver = mgard_x::MDR::SFCInterleaver<T>();
-  // auto interleaver = mgard_x::MDR::BlockedInterleaver<T>();
-
-  // auto encoder = mgard_x::MDR::GroupedBPEncoder<T, T_stream, T_error,
-  // DeviceType>();
-  auto encoder =
-      mgard_x::MDR::GroupedWarpBPEncoder<T, T_stream, T_error, DeviceType>();
-
-  auto compressor =
-      mgard_x::MDR::DefaultLevelCompressor<T_stream, DeviceType>();
-  // auto compressor = mgard_x::MDR::AdaptiveLevelCompressor(32);
-  // auto compressor = mgard_x::MDR::NullLevelCompressor();
-
-  // auto collector = mgard_x::MDR::SquaredErrorCollector<T>();
-  auto collector = mgard_x::MDR::MaxErrorCollector<T>();
-
-  auto writer = mgard_x::MDR::ConcatLevelFileWriter(metadata_file, files);
-  // auto writer = mgard_x::MDR::HPSSFileWriter(metadata_file, files, 2048,
-  // 512 * 1024 * 1024);
-
-  test<D, T, T_stream, T_error, DeviceType>(
-      filename, dims, target_level, num_bitplanes, hierarchy, decomposer,
-      interleaver, encoder, compressor, collector, writer);
-
-  // test2<T>(filename, dims, target_level, num_bitplanes, decomposer,
-  //         interleaver, encoder, compressor, collector, writer);
-  // }
-
-  // if (true) {
-  //   std::vector<mgard_x::Array<1, bool, mgard_x::CUDA>> level_signs;
-
-  // auto decomposer = mgard_x::MDR::MGARDOrthoganalDecomposer<D, T>(hierarchy);
-  // auto interleaver = mgard_x::MDR::DirectInterleaver<D, T>(hierarchy);
-  // auto encoder = mgard_x::MDR::GroupedBPEncoder<T, T_stream, T_error>();
-  //   auto encoder =
-  //       mgard_m::MDR::GroupedWarpBPEncoder<D, T, T_stream, T_error>();
-  //   auto compressor =
-  //       mgard_m::MDR::DefaultLevelCompressor<D, T_stream>();
-  //   auto collector = mgard_x::MDR::SquaredErrorCollector<T>();
-  //   auto writer = mgard_x::MDR::ConcatLevelFileWriter(metadata_file, files);
-  //   test2<D, T, T_stream>(
-  //       filename, dims, target_level, num_bitplanes, hierarchy, decomposer,
-  //       interleaver, encoder, compressor, collector, writer);
-  // }
+  test<D, T, DeviceType>(filename, num_bitplanes, hierarchy, metadata_file,
+                         files, tolerance, s);
   return 0;
 }
