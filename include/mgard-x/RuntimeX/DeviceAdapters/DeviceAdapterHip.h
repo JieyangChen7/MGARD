@@ -433,6 +433,8 @@ template <> class DeviceSpecification<HIP> {
 public:
   MGARDX_CONT
   DeviceSpecification() {
+    int original_device = 0;
+    hipGetDevice(&original_device);
     hipGetDeviceCount(&NumDevices);
     MaxSharedMemorySize = new int[NumDevices];
     WarpSize = new int[NumDevices];
@@ -469,6 +471,16 @@ public:
       // DeviceNames[d] = std::string(prop.name); // Not working in HIP
       DeviceNames[d] = std::string("AMD GPU");
     }
+    // This loop's per-device hipSetDevice(d) calls otherwise leave the
+    // active HIP device at NumDevices-1 for the rest of the process,
+    // silently out of sync with DeviceRuntime<HIP>::hip_dev_id (which
+    // stays at its default of 0 unless explicitly changed). Streams and
+    // allocations made before the mismatch is next resolved end up tied to
+    // the wrong device's context, which can surface much later as an
+    // unrelated illegal memory access. Restore the device that was active
+    // before this query loop ran. (Same bug as the CUDA backend's
+    // DeviceSpecification, confirmed and fixed there first.)
+    gpuErrchk(hipSetDevice(original_device));
   }
 
   MGARDX_CONT int GetNumDevices() { return NumDevices; }
@@ -540,6 +552,8 @@ public:
   void Initialize() {
     if (!initialized) {
       log::dbg("Calling DeviceQueues<HIP>::Initialize");
+      int original_device = 0;
+      hipGetDevice(&original_device);
       hipGetDeviceCount(&NumDevices);
       streams = new hipStream_t *[NumDevices];
       for (int d = 0; d < NumDevices; d++) {
@@ -549,6 +563,9 @@ public:
           gpuErrchk(hipStreamCreate(&streams[d][i]));
         }
       }
+      // See DeviceSpecification's constructor for why this restore matters:
+      // otherwise the active device is left at NumDevices-1 here too.
+      gpuErrchk(hipSetDevice(original_device));
       initialized = true;
     }
   }
@@ -557,6 +574,8 @@ public:
   void Destroy() {
     if (initialized) {
       log::dbg("Calling DeviceQueues<HIP>::Destroy");
+      int original_device = 0;
+      hipGetDevice(&original_device);
       for (int d = 0; d < NumDevices; d++) {
         gpuErrchk(hipSetDevice(d));
         for (int i = 0; i < MGARDX_NUM_QUEUES; i++) {
@@ -564,6 +583,7 @@ public:
         }
         delete[] streams[d];
       }
+      gpuErrchk(hipSetDevice(original_device));
       delete[] streams;
       streams = nullptr;
       initialized = false;

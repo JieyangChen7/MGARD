@@ -545,6 +545,8 @@ template <> class DeviceSpecification<CUDA> {
 public:
   MGARDX_CONT
   DeviceSpecification() {
+    int original_device = 0;
+    cudaGetDevice(&original_device);
     cudaGetDeviceCount(&NumDevices);
     MaxSharedMemorySize = new int[NumDevices];
     WarpSize = new int[NumDevices];
@@ -575,6 +577,15 @@ public:
       cudaGetDeviceProperties(&prop, d);
       DeviceNames[d] = std::string(prop.name);
     }
+    // This loop's per-device cudaSetDevice(d) calls otherwise leave the
+    // active CUDA device at NumDevices-1 for the rest of the process,
+    // silently out of sync with DeviceRuntime<CUDA>::cuda_dev_id (which
+    // stays at its default of 0 unless explicitly changed). Streams and
+    // allocations made before the mismatch is next resolved end up tied to
+    // the wrong device's context, which can surface much later as an
+    // unrelated illegal memory access. Restore the device that was active
+    // before this query loop ran.
+    gpuErrchk(cudaSetDevice(original_device));
   }
 
   MGARDX_CONT int GetNumDevices() { return NumDevices; }
@@ -647,6 +658,8 @@ public:
   void Initialize() {
     if (!initialized) {
       log::dbg("Calling DeviceQueues<CUDA>::Initialize");
+      int original_device = 0;
+      cudaGetDevice(&original_device);
       cudaGetDeviceCount(&NumDevices);
       streams = new cudaStream_t *[NumDevices];
       for (int d = 0; d < NumDevices; d++) {
@@ -656,6 +669,9 @@ public:
           gpuErrchk(cudaStreamCreate(&streams[d][i]));
         }
       }
+      // See DeviceSpecification's constructor for why this restore matters:
+      // otherwise the active device is left at NumDevices-1 here too.
+      gpuErrchk(cudaSetDevice(original_device));
       initialized = true;
     }
   }
@@ -664,6 +680,8 @@ public:
   void Destroy() {
     if (initialized) {
       log::dbg("Calling DeviceQueues<CUDA>::Destroy");
+      int original_device = 0;
+      cudaGetDevice(&original_device);
       for (int d = 0; d < NumDevices; d++) {
         gpuErrchk(cudaSetDevice(d));
         for (int i = 0; i < MGARDX_NUM_QUEUES; i++) {
@@ -671,6 +689,7 @@ public:
         }
         delete[] streams[d];
       }
+      gpuErrchk(cudaSetDevice(original_device));
       delete[] streams;
       streams = nullptr;
       initialized = false;

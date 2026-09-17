@@ -6,13 +6,17 @@
 # Date: April 2, 2021
 # Script for building MGARD-X
 #
-# Runtime note for multi-GPU MI300 nodes (e.g. odyssey, 4x MI300A): hipcub's
-# cooperative-kernel-launch path (used by the Huffman/norm reduction stages)
-# segfaults with an illegal memory access when more than one GPU is visible
-# to the process, even though only one device is ever selected/used. Set
-# HIP_VISIBLE_DEVICES=0 (or another single index) before running any
-# HIP binary built by this script to avoid it. This is a ROCm/driver
-# environment issue, not an MGARD-X bug.
+# Historical note for multi-GPU MI300 nodes (e.g. odyssey, 4x MI300A): this
+# used to require HIP_VISIBLE_DEVICES=0 to avoid an illegal-memory-access
+# segfault in the Huffman/norm reduction stages when more than one GPU was
+# visible. That was actually an MGARD-X bug, not a ROCm/driver issue:
+# DeviceSpecification's and DeviceQueues's per-device query/setup loops in
+# DeviceAdapterHip.h called hipSetDevice(d) for every device without
+# restoring the originally-active one afterward, leaving the real active
+# HIP device out of sync with the library's own bookkeeping on any node
+# with more than one GPU. Fixed; HIP_VISIBLE_DEVICES should no longer be
+# necessary (verified with repeated runs of the affected tests on odyssey
+# with all 4 GPUs visible).
 
 set -e
 set -x
