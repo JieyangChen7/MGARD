@@ -18,8 +18,8 @@ MGARD-X is a portable implementation of the MGARD lossy compressor supporting va
 |x86 CPUs|Yes|Intel CPUs, AMD CPUs|
 |Power CPUs|Yes|IMB Power9 CPUs|
 |ARM CPUs|Yes|Apple M2|
-|NVIDIA GPUs|Yes*|V100, RTX2080 Ti, RTX 3090|
-|AMD GPUs|Yes|MI-100, MI-250X|
+|NVIDIA GPUs|Yes|V100, A100, H100, B6000, RTX2080 Ti, RTX 3090|
+|AMD GPUs|Yes|MI100, MI250X, MI300|
 |Intel GPUs|Yes|Gen9|
 |Integrated GPUs|Yes|Gen9|
 
@@ -40,7 +40,7 @@ MGARD-X is a portable implementation of the MGARD lossy compressor supporting va
 
 ### For Multi-core CPUs
 
-* GCC 7.5.0+ (x86, Power)
+* GCC 9+ (x86, Power)
 * Clang 14+ (Apple silicon)
 * OpenMP 3.1+
 * CMake 3.19+
@@ -49,6 +49,7 @@ MGARD-X is a portable implementation of the MGARD lossy compressor supporting va
 
 * CUDA 11.0+ or NVIDIA HPC 22.0+
 * CMake 3.19+
+* ***Known issue:*** On Blackwell GPUs (sm\_120, e.g. RTX PRO 6000 Blackwell) built with CUDA 13.3/CCCL 3.x, the histogram-based lossless stages (Rans, Huffman+Zstd, Huffman+LZ4) fail with an "invalid argument" CUDA error. This is specific to the CUDA 13.3/CCCL 3.x toolchain on Blackwell; Until resolved, prefer CUDA 12.8 for Blackwell GPUs.
 
 ### For AMD GPUs
 
@@ -62,11 +63,13 @@ MGARD-X is a portable implementation of the MGARD lossy compressor supporting va
 
 
 ## Software dependencies 
-* [ZSTD v1.5.0][zstd]
-* [Protobuf v3.19.4][protobuf]
+* [ZSTD v1.5.6][zstd]
+* [Protobuf v3.21.12][protobuf]
+* [Catch2 v3.3.2][catch2] (only needed for building tests)
 
 [zstd]: https://github.com/facebook/zstd.git
 [protobuf]: https://github.com/protocolbuffers/protobuf.git
+[catch2]: https://github.com/catchorg/Catch2.git
 ## Configure and build
 * **Option 1:** One-step configure and build scripts are available [here][build_scripts].
 * **Option 2:** Manually confiugre and build with CMake
