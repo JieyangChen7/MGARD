@@ -1,0 +1,178 @@
+/*
+ * Copyright 2026, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+// One (encoder, T_data, T_bitplane, NegaBinary, CONTROL_L2) configuration per
+// generated file -- see tests/mgard-x/CMakeLists.txt. BPEncoderRegisterBlock's
+// progressive_decode() unconditionally macro-unrolls 64 kernel variants per
+// compile-time configuration it is instantiated with; cramming more than a
+// couple of configurations into one translation unit exhausts the CUDA/HIP
+// device compiler, so each configuration gets its own small file instead of
+// one file looping over all of them (the same reason the library itself
+// generates e.g. Compressor_1D_double_CUDA.cpp per type/dim combination
+// rather than templating across them in one TU).
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/Hierarchy/Hierarchy.hpp"
+#include "mgard-x/MDR-X/BitplaneEncoder/BitplaneEncoder.hpp"
+#include "mgard-x/RuntimeX/RuntimeX.h"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+using T_data = @T_DATA@;
+using T_bitplane = @T_BITPLANE@;
+constexpr bool NegaBinary = @NEGA_BINARY@;
+constexpr bool CollectError = @COLLECT_ERROR@;
+constexpr SIZE BP_TEST_N = @BP_TEST_N@;
+
+// Bitplane encoders work on a flat SubArray<1, ...> and never use the
+// Hierarchy's dimensionality beyond passing it through, so every case below
+// uses a fixed placeholder D.
+constexpr DIM BP_TEST_D = 1;
+
+// Deterministic data with a pinned exact max magnitude (so the exponent the
+// encoders derive via frexp, and hence the expected quantization step, is
+// known exactly) plus an exact zero to exercise the sign/zero edge case.
+//
+// `static`: every generated configuration file defines a function with this
+// exact name and signature, and they all link into the same test executable,
+// so this needs internal linkage to avoid an ODR violation at link time.
+static std::vector<T_data> make_bitplane_test_data(SIZE n) {
+  std::vector<T_data> data(n);
+  std::srand(42);
+  for (SIZE i = 0; i < n; i++) {
+    double frac = (double)std::rand() / (double)RAND_MAX; // [0, 1)
+    double sign = (std::rand() % 2 == 0) ? 1.0 : -1.0;
+    data[i] = static_cast<T_data>(sign * frac * 14.0); // stay clear of +/-15
+  }
+  data[0] = (T_data)0;         // exact zero
+  data[n / 2] = (T_data)15.0;  // pins abs-max to an exactly representable value
+  return data;
+}
+
+// Encodes `original` at full precision (MAX_BITPLANES bitplanes), then
+// decodes it back twice: once from all the bitplanes (round trip should be
+// limited only by floating point rounding, not by quantization) and once
+// from half of them (to confirm progressive_decode actually is progressive,
+// i.e. it produces a coarser but still correctly bounded result rather than
+// silently reusing the full decode).
+//
+// `static`: see make_bitplane_test_data above -- same name/signature in every
+// generated configuration file, linked into the same test executable.
+static void run_bitplane_encoder_roundtrip(SIZE n) {
+  using T_error = double;
+  using Encoder = MDR::@ENCODER_NAME@<BP_TEST_D, T_data, T_bitplane, T_error,
+                                     NegaBinary, CollectError, TestDevice>;
+  constexpr int MAX_BITPLANES = Encoder::MAX_BITPLANES;
+
+  DeviceRuntime<TestDevice>::Initialize();
+
+  std::vector<T_data> original = make_bitplane_test_data(n);
+
+  // Adapt() sizes the encoder's internal error-reduction workspace from
+  // hierarchy.level_num_elems(hierarchy.l_target()), which for a real
+  // multilevel Hierarchy is only the finest level's own coefficient count --
+  // roughly half of the hierarchy's total shape, not `n`. Since this test
+  // drives the encoder directly on a flat n-element buffer (bypassing actual
+  // multilevel decomposition), the sizing hierarchy has to be built oversized
+  // so that its "finest level" count still covers n; otherwise the CollectError
+  // workspace is undersized and encode() overruns it.
+  Hierarchy<BP_TEST_D, T_data, TestDevice> hierarchy({n * 4}, Config());
+  Encoder encoder(hierarchy);
+
+  Array<1, T_data, TestDevice> v_array({n});
+  v_array.load(original.data());
+
+  Array<1, T_data, TestDevice> abs_max_array({1});
+  Array<1, Byte, TestDevice> abs_max_workspace;
+  DeviceCollective<TestDevice>::AbsMax(n, SubArray<1, T_data, TestDevice>(),
+                                      SubArray<1, T_data, TestDevice>(),
+                                      abs_max_workspace, false, 0);
+  DeviceCollective<TestDevice>::AbsMax(
+      n, SubArray(v_array), SubArray(abs_max_array), abs_max_workspace, true,
+      0);
+  // hostCopy's device-to-host copy runs on TestDevice's queue/stream (async
+  // on a real GPU backend), so the pointer it returns must not be dereferenced
+  // until after the matching SyncQueue -- reading it first (as an earlier
+  // version of this test did) silently returned stale/zero host memory on
+  // CUDA/HIP while happening to work on SERIAL, where everything is
+  // synchronous anyway.
+  T_data *abs_max_host = abs_max_array.hostCopy(false, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+  T_data abs_max = abs_max_host[0];
+  // Sanity check on the pinned test data itself, not the encoder: if this
+  // ever fails, make_bitplane_test_data (or AbsMax) is the place to look, not
+  // the round trip below.
+  REQUIRE((double)abs_max == 15.0);
+
+  Array<2, T_bitplane, TestDevice> encoded_bitplanes_array(
+      {(SIZE)MAX_BITPLANES, Encoder::bitplane_length(n)});
+  Array<1, T_error, TestDevice> level_errors_array({(SIZE)MAX_BITPLANES + 1});
+
+  encoder.encode(n, MAX_BITPLANES, SubArray(abs_max_array), SubArray(v_array),
+                 SubArray(encoded_bitplanes_array),
+                 SubArray(level_errors_array), 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  auto decode_and_check = [&](int num_bitplanes, double tolerance) {
+    Array<1, bool, TestDevice> signs_array({n});
+    Array<1, T_data, TestDevice> decoded_array({n});
+    decoded_array.memset(0, 0);
+    encoder.progressive_decode(n, 0, num_bitplanes, SubArray(abs_max_array),
+                               SubArray(encoded_bitplanes_array),
+                               SubArray(signs_array), 0,
+                               SubArray(decoded_array), 0);
+    DeviceRuntime<TestDevice>::SyncQueue(0);
+    T_data *result = decoded_array.hostCopy(false, 0);
+    DeviceRuntime<TestDevice>::SyncQueue(0);
+
+    double max_err = 0;
+    for (SIZE i = 0; i < n; i++)
+      max_err = std::max(
+          max_err, std::fabs((double)original[i] - (double)result[i]));
+    CAPTURE(num_bitplanes, max_err, tolerance);
+    REQUIRE(max_err <= tolerance);
+  };
+
+  // Full precision: the only error left is float/double round trip through
+  // the fixed-point representation, not bitplane truncation.
+  const double full_tolerance =
+      (double)abs_max * (std::is_same<T_data, double>::value ? 1e-12 : 1e-5);
+  decode_and_check(MAX_BITPLANES, full_tolerance);
+
+  // Half the bitplanes: the quantization step is ~abs_max * 2^-(k -
+  // headroom); the headroom covers the +2 exponent shift the NegaBinary path
+  // applies before truncating.
+  const int half_bitplanes = MAX_BITPLANES / 2;
+  const double half_tolerance =
+      (double)abs_max * std::pow(2.0, -(half_bitplanes - 3));
+  decode_and_check(half_bitplanes, half_tolerance);
+
+  if constexpr (CollectError) {
+    T_error *errors = level_errors_array.hostCopy(false, 0);
+    DeviceRuntime<TestDevice>::SyncQueue(0);
+    for (int i = 0; i <= MAX_BITPLANES; i++) {
+      CAPTURE(i, errors[i]);
+      REQUIRE(errors[i] >= 0.0);
+      REQUIRE(std::isfinite(errors[i]));
+    }
+  }
+}
+
+TEST_CASE("MDR-X @ENCODER_NAME@ bitplane round trip "
+          "[@T_DATA@/@T_BITPLANE@/nega=@NEGA_BINARY@/L2=@COLLECT_ERROR@]",
+          "[mgard-x][mdr-x][bitplane-encoder][@DEVICE_TYPE@]") {
+  run_bitplane_encoder_roundtrip(BP_TEST_N);
+}
+
+} // namespace mgard_x

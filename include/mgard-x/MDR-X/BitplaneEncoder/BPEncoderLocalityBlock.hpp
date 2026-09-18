@@ -217,6 +217,13 @@ public:
       // print_bits(encoded_bitplanes[0 * b + batch_idx * 2 + 1], batch_size);
 
       if constexpr (CollectError) {
+        // errors[] persists across grid-stride batch iterations, so it must
+        // be reset here -- otherwise each batch's recorded error is
+        // contaminated by (and, on the very first iteration, reads
+        // uninitialized) prior state.
+        for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
+          errors[bp_idx] = 0;
+        }
         error_collect_binary(shifted_data, errors, num_bitplanes, exp);
         for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
           *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
@@ -267,6 +274,13 @@ public:
       }
 
       if constexpr (CollectError) {
+        // errors[] persists across grid-stride batch iterations, so it must
+        // be reset here -- otherwise each batch's recorded error is
+        // contaminated by (and, on the very first iteration, reads
+        // uninitialized) prior state.
+        for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
+          errors[bp_idx] = 0;
+        }
         error_collect_negabinary(shifted_data, errors, num_bitplanes, exp);
         for (int bp_idx = 0; bp_idx < num_bitplanes + 1; bp_idx++) {
           *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
@@ -414,11 +428,15 @@ public:
         encoded_sign[0] = *encoded_bitplanes(0, num_batches + batch_idx);
         decode_batch(fp_sign, encoded_sign, 1);
         for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-          *signs(batch_idx * BATCH_SIZE + data_idx) = fp_sign[data_idx];
+          if (batch_idx * BATCH_SIZE + data_idx < n) {
+            *signs(batch_idx * BATCH_SIZE + data_idx) = fp_sign[data_idx];
+          }
         }
       } else {
         for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-          fp_sign[data_idx] = *signs(batch_idx * BATCH_SIZE + data_idx);
+          if (batch_idx * BATCH_SIZE + data_idx < n) {
+            fp_sign[data_idx] = *signs(batch_idx * BATCH_SIZE + data_idx);
+          }
         }
       }
 

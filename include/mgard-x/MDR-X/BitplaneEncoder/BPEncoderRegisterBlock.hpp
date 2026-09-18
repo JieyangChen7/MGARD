@@ -152,8 +152,12 @@ public:
     }
 
     // encode sign
+    // Shift amount runs up to BATCH_SIZE - 1 (bits of T_bitplane), so the
+    // value being shifted must be T_bitplane, not T_fp: when T_bitplane is
+    // wider than T_fp (e.g. uint64_t bitplanes with float data, T_fp =
+    // uint32_t), shifting a T_fp by >= 32 is undefined behavior.
     for (int data_idx = 0; data_idx < BATCH_SIZE; data_idx++) {
-      encoded_sign += (T_fp)(signbit(shifted_data[data_idx]) == 0 ? 0 : 1)
+      encoded_sign += (T_bitplane)(signbit(shifted_data[data_idx]) == 0 ? 0 : 1)
                       << (BATCH_SIZE - 1 - data_idx);
     }
     // encode data
@@ -173,6 +177,11 @@ public:
       *encoded_bitplanes(bp_idx, num_full_batches + batch_idx) = (T_bitplane)0;
     }
     if constexpr (CollectError) {
+      // errors[] is uninitialized stack memory; error_collect_binary
+      // accumulates into it with +=, so it must be zeroed first.
+      for (int bp_idx = 0; bp_idx < NUM_BITPLANES + 1; bp_idx++) {
+        errors[bp_idx] = 0;
+      }
       error_collect_binary(shifted_data, errors, exp);
       for (int bp_idx = 0; bp_idx < NUM_BITPLANES + 1; bp_idx++) {
         *level_errors_workspace(bp_idx, batch_idx) = errors[bp_idx];
@@ -234,6 +243,12 @@ public:
     }
 
     if constexpr (CollectError) {
+      // errors[] is uninitialized stack memory; error_collect_negabinary
+      // accumulates into it with +=, so it must be zeroed first.
+#pragma unroll
+      for (int bp_idx = 0; bp_idx < NUM_BITPLANES + 1; bp_idx++) {
+        errors[bp_idx] = 0;
+      }
       error_collect_negabinary(shifted_data, errors, exp);
 #pragma unroll
       for (int bp_idx = 0; bp_idx < NUM_BITPLANES + 1; bp_idx++) {

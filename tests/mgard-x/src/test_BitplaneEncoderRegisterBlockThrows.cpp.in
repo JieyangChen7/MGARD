@@ -1,0 +1,56 @@
+/*
+ * Copyright 2026, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <stdexcept>
+#include <vector>
+
+#include "mgard-x/Hierarchy/Hierarchy.hpp"
+#include "mgard-x/MDR-X/BitplaneEncoder/BitplaneEncoder.hpp"
+#include "mgard-x/RuntimeX/RuntimeX.h"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+constexpr DIM BP_TEST_D = 1;
+
+// Unlike BPEncoderLocalityBlock, RegisterBlock requires n to be a multiple of
+// its batch size (bits of T_bitplane); this pins that guard rather than
+// letting a misaligned caller silently corrupt memory.
+TEST_CASE("MDR-X BPEncoderRegisterBlock rejects sizes not a batch multiple",
+          "[mgard-x][mdr-x][bitplane-encoder][@DEVICE_TYPE@]") {
+  using T_data = float;
+  using T_bitplane = uint32_t;
+  using T_error = double;
+  using Encoder =
+      MDR::BPEncoderRegisterBlock<BP_TEST_D, T_data, T_bitplane, T_error,
+                                  /*NegaBinary=*/false, /*CollectError=*/false,
+                                  TestDevice>;
+  DeviceRuntime<TestDevice>::Initialize();
+  const SIZE n = 100; // not a multiple of 32
+  Hierarchy<BP_TEST_D, T_data, TestDevice> hierarchy({n}, Config());
+  Encoder encoder(hierarchy);
+
+  std::vector<T_data> original(n, 1.0f);
+  Array<1, T_data, TestDevice> v_array({n});
+  v_array.load(original.data());
+  Array<1, T_data, TestDevice> abs_max_array({1});
+  abs_max_array.memset(0, 0);
+  Array<2, T_bitplane, TestDevice> encoded_bitplanes_array(
+      {(SIZE)Encoder::MAX_BITPLANES, Encoder::bitplane_length(n)});
+  Array<1, T_error, TestDevice> level_errors_array(
+      {(SIZE)Encoder::MAX_BITPLANES + 1});
+
+  REQUIRE_THROWS_AS(
+      encoder.encode(n, Encoder::MAX_BITPLANES, SubArray(abs_max_array),
+                     SubArray(v_array), SubArray(encoded_bitplanes_array),
+                     SubArray(level_errors_array), 0),
+      std::runtime_error);
+}
+
+} // namespace mgard_x
