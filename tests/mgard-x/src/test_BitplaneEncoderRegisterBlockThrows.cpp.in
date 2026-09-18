@@ -29,7 +29,7 @@ TEST_CASE("MDR-X BPEncoderRegisterBlock rejects sizes not a batch multiple",
   using T_error = double;
   using Encoder =
       MDR::BPEncoderRegisterBlock<BP_TEST_D, T_data, T_bitplane, T_error,
-                                  /*NegaBinary=*/false, /*CollectError=*/false,
+                                  /*NegaBinary=*/false, /*ControlL2=*/false,
                                   TestDevice>;
   DeviceRuntime<TestDevice>::Initialize();
   const SIZE n = 100; // not a multiple of 32

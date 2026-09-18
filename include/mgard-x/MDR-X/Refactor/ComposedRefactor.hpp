@@ -16,40 +16,38 @@ namespace mgard_x {
 namespace MDR {
 // a decomposition-based scientific data refactor: compose a refactor using
 // decomposer, interleaver, encoder, and error collector
-template <DIM D, typename T_data, typename DeviceType>
+template <DIM D, typename T_data, typename DeviceType,
+          bool ControlL2 = false, typename Basis = Hierarchical,
+          bool NegaBinary = false>
 class ComposedRefactor
     : public concepts::RefactorInterface<D, T_data, DeviceType> {
 public:
-  constexpr static bool CONTROL_L2 = false;
-  constexpr static bool NegaBinary = false;
   using HierarchyType = Hierarchy<D, T_data, DeviceType>;
   using T_bitplane = uint32_t;
   using T_error = double;
-  // using Basis = Orthogonal;
-  using Basis = Hierarchical;
   using Decomposer = MGARDDecomposer<D, T_data, Basis, DeviceType>;
   using Interleaver = DirectInterleaver<D, T_data, DeviceType>;
 
   constexpr static bool ProfileBPEncoder = false;
   // using Encoder = GroupedBPEncoder<D, T_data, T_bitplane, T_error,
-  //                                CONTROL_L2, DeviceType>;
+  //                                ControlL2, DeviceType>;
   // using Encoder = BPEncoderLocalityBlock<D, T_data, T_bitplane, T_error,
   // NegaBinary,
-  //                                CONTROL_L2, DeviceType>;
+  //                                ControlL2, DeviceType>;
   using Encoder = BPEncoderRegisterBlock<D, T_data, T_bitplane, T_error,
-                                         NegaBinary, CONTROL_L2, DeviceType>;
+                                         NegaBinary, ControlL2, DeviceType>;
   // using Encoder = BPEncoderRegisterShift<D, T_data, T_bitplane, T_error,
   // NegaBinary,
-  //                              CONTROL_L2, DeviceType>;
+  //                              ControlL2, DeviceType>;
   // using Encoder = BPEncoderRegisterBallot<D, T_data, T_bitplane, T_error,
   // NegaBinary,
-  //                              CONTROL_L2, DeviceType>;
+  //                              ControlL2, DeviceType>;
   // using Encoder = BPEncoderRegisterReduceAll<D, T_data, T_bitplane, T_error,
   // NegaBinary,
-  //                              CONTROL_L2, DeviceType>;
+  //                              ControlL2, DeviceType>;
   // using Encoder = BPEncoderRegisterMatchAny<D, T_data, T_bitplane, T_error,
   // NegaBinary,
-  //                              CONTROL_L2, DeviceType>;
+  //                              ControlL2, DeviceType>;
 
   // using Compressor = DefaultLevelCompressor<T_bitplane, HUFFMAN, DeviceType>;
   // using Compressor = DefaultLevelCompressor<T_bitplane, RLE, DeviceType>;
@@ -90,8 +88,7 @@ public:
     // batched_encoder.Adapt(hierarchy, queue_idx);
     compressor.Adapt(encoder.bitplane_length(
                          hierarchy.level_num_elems(hierarchy.l_target())),
-                     hierarchy.l_target() + 1, Encoder::MAX_BITPLANES, config,
-                     queue_idx);
+                     Encoder::MAX_BITPLANES, config, queue_idx);
 
     level_data_array.resize(hierarchy.l_target() + 1);
     level_data_subarray.resize(hierarchy.l_target() + 1);

@@ -10,7 +10,7 @@ namespace mgard_x {
 namespace MDR {
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, bool NegaBinary, bool CollectError,
+          typename T_error, bool NegaBinary, bool ControlL2,
           typename DeviceType>
 class BPEncoderLocalityBlockFunctor : public Functor<DeviceType> {
 public:
@@ -216,7 +216,7 @@ public:
       // encode_batch(signs, encoded_sign, BATCH_SIZE, 1);
       // print_bits(encoded_bitplanes[0 * b + batch_idx * 2 + 1], batch_size);
 
-      if constexpr (CollectError) {
+      if constexpr (ControlL2) {
         // errors[] persists across grid-stride batch iterations, so it must
         // be reset here -- otherwise each batch's recorded error is
         // contaminated by (and, on the very first iteration, reads
@@ -273,7 +273,7 @@ public:
         // batch_size);
       }
 
-      if constexpr (CollectError) {
+      if constexpr (ControlL2) {
         // errors[] persists across grid-stride batch iterations, so it must
         // be reset here -- otherwise each batch's recorded error is
         // contaminated by (and, on the very first iteration, reads
@@ -315,7 +315,7 @@ private:
 };
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, bool NegaBinary, bool CollectError,
+          typename T_error, bool NegaBinary, bool ControlL2,
           typename DeviceType>
 class BPEncoderLocalityBlockKernel : public Kernel {
 public:
@@ -333,7 +333,7 @@ public:
 
   using FunctorType =
       BPEncoderLocalityBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                                    NegaBinary, CollectError, DeviceType>;
+                                    NegaBinary, ControlL2, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -575,10 +575,10 @@ private:
 // general bitplane encoder that encodes data by block using T_stream type
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
-          bool NegaBinary, bool CollectError, typename DeviceType>
+          bool NegaBinary, bool ControlL2, typename DeviceType>
 class BPEncoderLocalityBlock
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
-                                                CollectError, DeviceType> {
+                                                ControlL2, DeviceType> {
 public:
   static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
@@ -661,11 +661,11 @@ public:
 
     DeviceLauncher<DeviceType>::Execute(
         BPEncoderLocalityBlockKernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                                     NegaBinary, CollectError, DeviceType>(
+                                     NegaBinary, ControlL2, DeviceType>(
             n, num_bitplanes, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
 
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       SIZE reduce_size = num_blocks(n);
       for (int i = 0; i < num_bitplanes + 1; i++) {
         SubArray<1, T_error, DeviceType> curr_errors({reduce_size},

@@ -11,7 +11,7 @@ namespace MDR {
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, int NUM_BITPLANES, bool NegaBinary,
-          bool CollectError, typename DeviceType>
+          bool ControlL2, typename DeviceType>
 class BPEncoderRegisterBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
@@ -176,7 +176,7 @@ public:
     for (int bp_idx = 1; bp_idx < NUM_BITPLANES; bp_idx++) {
       *encoded_bitplanes(bp_idx, num_full_batches + batch_idx) = (T_bitplane)0;
     }
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       // errors[] is uninitialized stack memory; error_collect_binary
       // accumulates into it with +=, so it must be zeroed first.
       for (int bp_idx = 0; bp_idx < NUM_BITPLANES + 1; bp_idx++) {
@@ -242,7 +242,7 @@ public:
       *encoded_bitplanes(bp_idx, batch_idx) = encoded_data[bp_idx];
     }
 
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       // errors[] is uninitialized stack memory; error_collect_negabinary
       // accumulates into it with +=, so it must be zeroed first.
 #pragma unroll
@@ -282,7 +282,7 @@ private:
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, int NUM_BITPLANES, bool NegaBinary,
-          bool CollectError, typename DeviceType>
+          bool ControlL2, typename DeviceType>
 class BPEncoderRegisterBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
@@ -299,7 +299,7 @@ public:
 
   using FunctorType =
       BPEncoderRegisterBlockFunctor<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                                    NUM_BITPLANES, NegaBinary, CollectError,
+                                    NUM_BITPLANES, NegaBinary, ControlL2,
                                     DeviceType>;
   using TaskType = Task<FunctorType>;
 
@@ -537,10 +537,10 @@ private:
 // general bitplane encoder that encodes data by block using T_stream type
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
-          bool NegaBinary, bool CollectError, typename DeviceType>
+          bool NegaBinary, bool ControlL2, typename DeviceType>
 class BPEncoderRegisterBlock
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
-                                                CollectError, DeviceType> {
+                                                ControlL2, DeviceType> {
 public:
   static constexpr SIZE BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
@@ -628,12 +628,12 @@ public:
 
     DeviceLauncher<DeviceType>::Execute(
         BPEncoderRegisterBlockKernel<T_data, T_fp, T_sfp, T_bitplane, T_error,
-                                     MAX_BITPLANES, NegaBinary, CollectError,
+                                     MAX_BITPLANES, NegaBinary, ControlL2,
                                      DeviceType>(
             n, abs_max, v, encoded_bitplanes, level_errors_work),
         queue_idx);
 
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       SIZE reduce_size = num_blocks(n);
       for (int i = 0; i < MAX_BITPLANES + 1; i++) {
         SubArray<1, T_error, DeviceType> curr_errors({reduce_size},

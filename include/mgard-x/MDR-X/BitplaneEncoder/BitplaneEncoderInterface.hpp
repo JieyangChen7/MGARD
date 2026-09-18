@@ -31,7 +31,7 @@ namespace MDR {
 namespace concepts {
 // concept of encoder which encodes T type data into bitstreams
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
-          bool CollectError, typename DeviceType>
+          bool ControlL2, typename DeviceType>
 class BitplaneEncoderInterface {
 public:
   virtual ~BitplaneEncoderInterface() = default;

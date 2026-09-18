@@ -27,7 +27,7 @@ macro(mgard_x_add_test SRC_NAME DEVICE_TYPE)
 endmacro()
 
 # BPEncoderRegisterBlock's progressive_decode() unconditionally macro-unrolls
-# 64 kernel variants per (T_data, T_bitplane, NegaBinary, CONTROL_L2)
+# 64 kernel variants per (T_data, T_bitplane, NegaBinary, ControlL2)
 # configuration it is instantiated with. Templating across all of them in one
 # translation unit (as test_Compressor etc. do for their own axes) overwhelms
 # the CUDA/HIP device compiler, so each configuration is generated into its
@@ -75,6 +75,50 @@ macro(mgard_x_add_bitplane_encoder_tests DEVICE_TYPE)
   mgard_x_add_test(test_BitplaneEncoderRegisterBlockThrows ${DEVICE_TYPE})
 endmacro()
 
+# Same reasoning as mgard_x_add_bitplane_encoder_tests: ComposedRefactor/
+# Reconstructor pull in BPEncoderRegisterBlock's 64-way macro-unrolled decode
+# kernels too, so each (D, T_data, Basis, ControlL2, NegaBinary) configuration
+# gets its own file. Hierarchical + ControlL2 is skipped: L2 error tracking
+# needs an orthogonal basis to be meaningful.
+set(CR_D_LIST 1 2 3)
+set(CR_T_LIST float double)
+set(CR_BASIS_LIST Hierarchical Orthogonal)
+set(CR_BOOL_LIST true false)
+
+macro(mgard_x_add_composed_refactor_tests DEVICE_TYPE)
+  foreach(CR_D IN LISTS CR_D_LIST)
+    if(CR_D STREQUAL "1")
+      set(CR_SHAPE "{4097}")
+    elseif(CR_D STREQUAL "2")
+      set(CR_SHAPE "{129, 129}")
+    else()
+      set(CR_SHAPE "{33, 33, 33}")
+    endif()
+    foreach(CR_T IN LISTS CR_T_LIST)
+      foreach(CR_BASIS IN LISTS CR_BASIS_LIST)
+        foreach(CR_CONTROL_L2 IN LISTS CR_BOOL_LIST)
+          if(NOT (CR_BASIS STREQUAL "Hierarchical" AND CR_CONTROL_L2 STREQUAL "true"))
+            foreach(CR_NEGA_BINARY IN LISTS CR_BOOL_LIST)
+              set(_src "${_MGARD_X_TEST_DIR}/src/test_ComposedRefactorReconstructor.cpp.in")
+              set(_tag "${CR_D}D_${CR_T}_${CR_BASIS}_l2${CR_CONTROL_L2}_nega${CR_NEGA_BINARY}")
+              set(_gen "${CMAKE_CURRENT_BINARY_DIR}/src/test_ComposedRefactorReconstructor_${_tag}_${DEVICE_TYPE}.cpp")
+              configure_file(${_src} ${_gen})
+              if(${DEVICE_TYPE} STREQUAL "CUDA")
+                set_source_files_properties(${_gen} PROPERTIES LANGUAGE CUDA)
+              elseif(${DEVICE_TYPE} STREQUAL "HIP")
+                set_source_files_properties(${_gen} PROPERTIES LANGUAGE HIP)
+              else()
+                set_source_files_properties(${_gen} PROPERTIES LANGUAGE CXX)
+              endif()
+              list(APPEND MGARD_X_TEST_SOURCES ${_gen})
+            endforeach()
+          endif()
+        endforeach()
+      endforeach()
+    endforeach()
+  endforeach()
+endmacro()
+
 foreach(DEVICE_TYPE IN LISTS DEVICE_TYPE_LIST)
   set(MGARD_X_TEST_SOURCES "")
 
@@ -89,6 +133,10 @@ foreach(DEVICE_TYPE IN LISTS DEVICE_TYPE_LIST)
   mgard_x_add_test(test_RLE             ${DEVICE_TYPE})
   mgard_x_add_test(test_ZeroRLE         ${DEVICE_TYPE})
   mgard_x_add_bitplane_encoder_tests(${DEVICE_TYPE})
+  mgard_x_add_test(test_DirectInterleaver ${DEVICE_TYPE})
+  mgard_x_add_test(test_MGARDDecomposer ${DEVICE_TYPE})
+  mgard_x_add_test(test_HybridLevelCompressor ${DEVICE_TYPE})
+  mgard_x_add_composed_refactor_tests(${DEVICE_TYPE})
   mgard_x_add_test(test_Rans            ${DEVICE_TYPE})
   mgard_x_add_test(test_ComposedHuffmanZstd ${DEVICE_TYPE})
 

@@ -1,0 +1,143 @@
+/*
+ * Copyright 2026, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+#include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
+
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+#include "mgard-x/Hierarchy/Hierarchy.hpp"
+#include "mgard-x/MDR-X/Interleaver/DirectInterleaver.hpp"
+#include "mgard-x/RuntimeX/RuntimeX.h"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+// Smooth, multi-dimensional test data (same generator as test_Compressor /
+// test_HybridHierarchy): a separable product of sines over the normalized
+// grid coordinates. The actual values don't matter here -- DirectInterleaver
+// only moves elements around by index, it never touches their content -- but
+// a smooth field makes it easy to spot a misplacement by eye if this ever
+// needs debugging.
+template <DIM D, typename T>
+void fill_smooth_data(std::vector<T> &data, std::vector<SIZE> shape) {
+  const double pi = std::acos(-1.0);
+  SIZE n = data.size();
+  for (SIZE idx = 0; idx < n; idx++) {
+    SIZE r = idx;
+    double v = 1.0;
+    for (int d = static_cast<int>(D) - 1; d >= 0; d--) {
+      SIZE coord = r % shape[d];
+      r /= shape[d];
+      double x = static_cast<double>(coord) / static_cast<double>(shape[d]);
+      v *= std::sin(2.0 * pi * x + 0.5 * d);
+    }
+    data[idx] = static_cast<T>(v);
+  }
+}
+
+// DirectInterleaver::interleave scatters a D-dimensional decomposed array
+// into l_target+1 flat per-level buffers by index (which MG level each grid
+// point belongs to), and reposition is the exact inverse gather. Since this
+// is a pure permutation -- no quantization, no arithmetic on the values --
+// interleave followed by reposition into a fresh, zeroed array of the same
+// shape must reproduce the original data bit-for-bit, for every element.
+template <DIM D, typename T, typename DevType>
+void run_direct_interleaver_roundtrip(std::vector<SIZE> shape) {
+  SIZE n = 1;
+  for (auto s : shape)
+    n *= s;
+
+  std::vector<T> original(n);
+  fill_smooth_data<D, T>(original, shape);
+
+  Config config;
+  Hierarchy<D, T, DevType> hierarchy(shape, config);
+  MDR::DirectInterleaver<D, T, DevType> interleaver(hierarchy);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  Array<D, T, DevType> data(shape);
+  data.load(original.data());
+
+  SIZE l_target = hierarchy.l_target();
+  std::vector<Array<1, T, DevType>> level_arrays(l_target + 1);
+  std::vector<SubArray<1, T, DevType>> level_subarrays(l_target + 1);
+  for (SIZE l = 0; l < l_target + 1; l++) {
+    level_arrays[l].resize({hierarchy.level_num_elems(l)}, 0);
+    level_subarrays[l] = SubArray<1, T, DevType>(level_arrays[l]);
+  }
+
+  interleaver.interleave(SubArray(data), level_subarrays, l_target, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  // Every level buffer must have been fully claimed: reposition reads every
+  // slot of every level buffer, so if interleave left any element
+  // unwritten (a gap in the level-to-index mapping), the round trip below
+  // would read stale/uninitialized memory there instead of failing loudly.
+  // Summing the per-level counts against the total catches that directly.
+  SIZE total_level_elems = 0;
+  for (SIZE l = 0; l < l_target + 1; l++)
+    total_level_elems += hierarchy.level_num_elems(l);
+  REQUIRE(total_level_elems == n);
+
+  Array<D, T, DevType> reconstructed(shape);
+  reconstructed.memset(0, 0);
+  interleaver.reposition(level_subarrays, SubArray(reconstructed), l_target, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  T *result = reconstructed.hostCopy(false, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  SIZE mismatches = 0;
+  for (SIZE i = 0; i < n; i++)
+    mismatches += (result[i] != original[i]);
+  CAPTURE(mismatches, n);
+  REQUIRE(mismatches == 0);
+}
+
+TEMPLATE_TEST_CASE("MDR-X DirectInterleaver round trip 1D",
+                  "[mgard-x][mdr-x][direct-interleaver][@DEVICE_TYPE@]",
+                  float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("power-of-two-ish") {
+    run_direct_interleaver_roundtrip<1, TestType, TestDevice>({1024});
+  }
+  SECTION("irregular size") {
+    run_direct_interleaver_roundtrip<1, TestType, TestDevice>({1003});
+  }
+  SECTION("smaller than one thread block") {
+    run_direct_interleaver_roundtrip<1, TestType, TestDevice>({64});
+  }
+}
+
+TEMPLATE_TEST_CASE("MDR-X DirectInterleaver round trip 2D",
+                  "[mgard-x][mdr-x][direct-interleaver][@DEVICE_TYPE@]",
+                  float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("square") {
+    run_direct_interleaver_roundtrip<2, TestType, TestDevice>({64, 64});
+  }
+  SECTION("non-square, irregular") {
+    run_direct_interleaver_roundtrip<2, TestType, TestDevice>({60, 47});
+  }
+}
+
+TEMPLATE_TEST_CASE("MDR-X DirectInterleaver round trip 3D",
+                  "[mgard-x][mdr-x][direct-interleaver][@DEVICE_TYPE@]",
+                  float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("cubic") {
+    run_direct_interleaver_roundtrip<3, TestType, TestDevice>({32, 32, 32});
+  }
+  SECTION("non-cubic, irregular") {
+    run_direct_interleaver_roundtrip<3, TestType, TestDevice>({33, 31, 17});
+  }
+}
+
+} // namespace mgard_x

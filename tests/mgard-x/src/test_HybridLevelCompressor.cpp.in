@@ -1,0 +1,155 @@
+/*
+ * Copyright 2026, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+// HybridLevelCompressor (include/mgard-x/MDR-X/LosslessCompressor/
+// HybridLevelCompressor.hpp) is the lossless back end ComposedRefactor uses
+// on the bitplanes BPEncoder{LocalityBlock,RegisterBlock} produce (see
+// test_BitplaneEncoder*): every num_merged_bitplanes (4) consecutive rows of
+// the encoded_bitplanes 2D buffer are byte-reinterpreted as one flat stream
+// and, if large enough, compressed with RLE first, then Huffman, falling
+// back to a raw copy if neither reaches cr_threshold or the stream is too
+// small to bother. decompress_level must invert whichever of the three it
+// picked. It has no dimensionality of its own (it operates on a flat
+// 2D bitplane buffer, not the D-dimensional decomposed data), so the only
+// type axis here is T_bitplane.
+
+#include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
+
+#include "mgard-x/RuntimeX/RuntimeX.h"
+// HybridLevelCompressor::Adapt takes a Config, but nothing it includes
+// brings in the Config type itself.
+#include "mgard-x/Config/Config.h"
+#include "mgard-x/MDR-X/LosslessCompressor/HybridLevelCompressor.hpp"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+
+enum class BitplaneContent { Compressible, Incompressible };
+
+// Compressible: only a handful of distinct values, repeated in long runs --
+// RLE (tried first) should win outright. Incompressible: every word
+// independent noise, so RLE and Huffman both fail to clear cr_threshold and
+// compress_level must fall back to a raw copy even though the stream is
+// large enough to have tried.
+template <typename T_bitplane>
+std::vector<T_bitplane> make_bitplane_data(SIZE num_bitplanes,
+                                           SIZE stream_length,
+                                           BitplaneContent content) {
+  std::vector<T_bitplane> data(num_bitplanes * stream_length);
+  std::srand(42);
+  for (SIZE i = 0; i < data.size(); i++) {
+    if (content == BitplaneContent::Compressible) {
+      data[i] = static_cast<T_bitplane>((i / 4096) % 3);
+    } else {
+      uint64_t hi = (uint64_t)std::rand();
+      uint64_t lo = (uint64_t)std::rand();
+      data[i] = static_cast<T_bitplane>((hi << 32) ^ lo);
+    }
+  }
+  return data;
+}
+
+// compress_level then decompress_level must reproduce the original bitplane
+// words exactly -- RLE, Huffman and the raw-copy fallback are all lossless,
+// so unlike the encoders this feeds (which quantize) there is no tolerance
+// here, only bit-for-bit equality.
+template <typename T_bitplane, typename DevType>
+void run_hybrid_level_compressor_roundtrip(SIZE num_bitplanes,
+                                           SIZE stream_length,
+                                           BitplaneContent content) {
+  using Compressor = MDR::HybridLevelCompressor<T_bitplane, DevType>;
+  constexpr SIZE merge = Compressor::num_merged_bitplanes;
+  REQUIRE(num_bitplanes % merge == 0);
+
+  Config config;
+  Compressor compressor;
+  compressor.Adapt(stream_length, num_bitplanes, config, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  std::vector<T_bitplane> original =
+      make_bitplane_data<T_bitplane>(num_bitplanes, stream_length, content);
+
+  Array<2, T_bitplane, DevType> encoded_bitplanes_array(
+      {num_bitplanes, stream_length});
+  encoded_bitplanes_array.load(original.data());
+  SubArray<2, T_bitplane, DevType> encoded_bitplanes(encoded_bitplanes_array);
+
+  std::vector<Array<1, Byte, DevType>> compressed(num_bitplanes);
+  compressor.compress_level(encoded_bitplanes, compressed, 0, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  const SIZE merged_bytes = stream_length * sizeof(T_bitplane) * merge;
+  const SIZE size_threshold = compressor.size_threshold;
+  for (SIZE bp = 0; bp < num_bitplanes; bp++) {
+    if (bp % merge == 0) {
+      SIZE compressed_size = compressed[bp].shape(0);
+      CAPTURE(bp, compressed_size, merged_bytes, size_threshold);
+      REQUIRE(compressed_size > 0);
+      if (content == BitplaneContent::Compressible &&
+          merged_bytes > size_threshold) {
+        // Large and genuinely compressible: RLE or Huffman must have been
+        // used, not the raw-copy fallback.
+        REQUIRE(compressed_size < merged_bytes);
+      }
+    } else {
+      // Every non-leading row in a merged group carries no payload of its
+      // own; its bytes were folded into the leading row's stream.
+      REQUIRE(compressed[bp].shape(0) == 0);
+    }
+  }
+
+  // Overwrite the source buffer so decompress_level can only be reading from
+  // the compressed streams, not leftover device memory.
+  encoded_bitplanes_array.memset(0xff, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  compressor.decompress_level(compressed, encoded_bitplanes, 0, num_bitplanes,
+                              0, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  T_bitplane *result = encoded_bitplanes_array.hostCopy(false, 0);
+  DeviceRuntime<DevType>::SyncQueue(0);
+
+  SIZE mismatches = 0;
+  for (SIZE i = 0; i < original.size(); i++)
+    mismatches += (result[i] != original[i]);
+  CAPTURE(mismatches);
+  REQUIRE(mismatches == 0);
+}
+
+// num_bitplanes must be a multiple of num_merged_bitplanes (4); stream_length
+// is chosen so merged_bytes = stream_length * sizeof(T_bitplane) * 4 lands
+// clearly above (100000) or below (100) HybridLevelCompressor's
+// size_threshold (1e6 bytes) for every T_bitplane this is instantiated with.
+TEMPLATE_TEST_CASE("MDR-X HybridLevelCompressor round trip",
+                  "[mgard-x][mdr-x][hybrid-level-compressor][@DEVICE_TYPE@]",
+                  uint32_t, uint64_t) {
+  DeviceRuntime<TestDevice>::Initialize();
+  SECTION("large, compressible -> RLE/Huffman actually used") {
+    run_hybrid_level_compressor_roundtrip<TestType, TestDevice>(
+        8, 100000, BitplaneContent::Compressible);
+  }
+  SECTION("large, incompressible -> falls back to raw copy") {
+    run_hybrid_level_compressor_roundtrip<TestType, TestDevice>(
+        8, 100000, BitplaneContent::Incompressible);
+  }
+  SECTION("below size threshold -> raw copy without attempting compression") {
+    run_hybrid_level_compressor_roundtrip<TestType, TestDevice>(
+        8, 100, BitplaneContent::Compressible);
+  }
+  SECTION("single merged group (num_bitplanes == num_merged_bitplanes)") {
+    run_hybrid_level_compressor_roundtrip<TestType, TestDevice>(
+        4, 100000, BitplaneContent::Compressible);
+  }
+}
+
+} // namespace mgard_x

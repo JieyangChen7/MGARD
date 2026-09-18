@@ -4,7 +4,7 @@
  * Author: Jieyang Chen (chenj3@ornl.gov)
  */
 
-// One (encoder, T_data, T_bitplane, NegaBinary, CONTROL_L2) configuration per
+// One (encoder, T_data, T_bitplane, NegaBinary, ControlL2) configuration per
 // generated file -- see tests/mgard-x/CMakeLists.txt. BPEncoderRegisterBlock's
 // progressive_decode() unconditionally macro-unrolls 64 kernel variants per
 // compile-time configuration it is instantiated with; cramming more than a
@@ -32,7 +32,7 @@ using TestDevice = @DEVICE_TYPE@;
 using T_data = @T_DATA@;
 using T_bitplane = @T_BITPLANE@;
 constexpr bool NegaBinary = @NEGA_BINARY@;
-constexpr bool CollectError = @COLLECT_ERROR@;
+constexpr bool ControlL2 = @COLLECT_ERROR@;
 constexpr SIZE BP_TEST_N = @BP_TEST_N@;
 
 // Bitplane encoders work on a flat SubArray<1, ...> and never use the
@@ -72,7 +72,7 @@ static std::vector<T_data> make_bitplane_test_data(SIZE n) {
 static void run_bitplane_encoder_roundtrip(SIZE n) {
   using T_error = double;
   using Encoder = MDR::@ENCODER_NAME@<BP_TEST_D, T_data, T_bitplane, T_error,
-                                     NegaBinary, CollectError, TestDevice>;
+                                     NegaBinary, ControlL2, TestDevice>;
   constexpr int MAX_BITPLANES = Encoder::MAX_BITPLANES;
 
   DeviceRuntime<TestDevice>::Initialize();
@@ -85,7 +85,7 @@ static void run_bitplane_encoder_roundtrip(SIZE n) {
   // roughly half of the hierarchy's total shape, not `n`. Since this test
   // drives the encoder directly on a flat n-element buffer (bypassing actual
   // multilevel decomposition), the sizing hierarchy has to be built oversized
-  // so that its "finest level" count still covers n; otherwise the CollectError
+  // so that its "finest level" count still covers n; otherwise the ControlL2
   // workspace is undersized and encode() overruns it.
   Hierarchy<BP_TEST_D, T_data, TestDevice> hierarchy({n * 4}, Config());
   Encoder encoder(hierarchy);
@@ -158,7 +158,7 @@ static void run_bitplane_encoder_roundtrip(SIZE n) {
       (double)abs_max * std::pow(2.0, -(half_bitplanes - 3));
   decode_and_check(half_bitplanes, half_tolerance);
 
-  if constexpr (CollectError) {
+  if constexpr (ControlL2) {
     T_error *errors = level_errors_array.hostCopy(false, 0);
     DeviceRuntime<TestDevice>::SyncQueue(0);
     for (int i = 0; i <= MAX_BITPLANES; i++) {

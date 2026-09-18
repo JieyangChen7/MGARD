@@ -35,8 +35,7 @@ public:
   }
   ~HybridLevelCompressor(){};
 
-  void Adapt(SIZE max_n, SIZE max_level, SIZE max_bitplanes, Config config,
-             int queue_idx) {
+  void Adapt(SIZE max_n, SIZE max_bitplanes, Config config, int queue_idx) {
     this->initialized = true;
     this->config = config;
     huffman.Resize(max_n * byte_ratio * num_merged_bitplanes, _huff_dict_size,

@@ -1,0 +1,189 @@
+/*
+ * Copyright 2026, Oak Ridge National Laboratory.
+ * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
+ * Author: Jieyang Chen (chenj3@ornl.gov)
+ */
+
+// One (D, T_data, Basis, ControlL2, NegaBinary) configuration per generated
+// file -- see tests/mgard-x/CMakeLists.txt. ComposedRefactor/Reconstructor
+// pull in the full decompose/interleave/encode/compress pipeline (including
+// BPEncoderRegisterBlock's 64-way macro-unrolled decode kernels), so
+// combining more than one configuration in a translation unit risks the same
+// CUDA/HIP compile-time blowup test_BitplaneEncoderConfig.cpp.in works
+// around.
+//
+// Semantics pinned here (from ComposedReconstructor::GenerateRequest):
+//   - s == inf drives the max-error (L-infinity) estimator, which reads
+//     level_error_bounds only -- it works for either Basis and regardless of
+//     ControlL2.
+//   - s != inf (e.g. s == 0, L2) drives an s-norm/squared-error estimator
+//     that reads level_squared_errors directly. Those are only populated
+//     with real values when the encoder actually collected them, i.e. when
+//     ControlL2 is on. So an L2 request is only meaningful with ControlL2 on,
+//     and separately, ControlL2 with a Hierarchical basis isn't a supported
+//     combination (L2 tracking needs an orthogonal basis) -- excluded at the
+//     CMake level, not tested here.
+//   - Refactor and Reconstructor are instantiated with identical template
+//     arguments; the bitplanes one writes are meaningless to the other
+//     otherwise.
+
+#include "catch2/catch_test_macros.hpp"
+
+#include <cmath>
+#include <limits>
+#include <vector>
+
+#include "mgard-x/Hierarchy/Hierarchy.hpp"
+#include "mgard-x/MDR-X/Reconstructor/ComposedReconstructor.hpp"
+#include "mgard-x/MDR-X/Refactor/ComposedRefactor.hpp"
+#include "mgard-x/RuntimeX/RuntimeX.h"
+#include "mgard-x/Utilities/ErrorCalculator.h"
+
+namespace mgard_x {
+
+using TestDevice = @DEVICE_TYPE@;
+using T_data = @CR_T@;
+using Basis = MDR::@CR_BASIS@;
+constexpr bool ControlL2 = @CR_CONTROL_L2@;
+constexpr bool NegaBinary = @CR_NEGA_BINARY@;
+constexpr DIM CR_D = @CR_D@;
+
+// Separable product of sines, amplitude in [-1, 1] -- same generator as
+// test_HybridHierarchy/test_DataRefactoring -- so a single set of absolute
+// tolerances means roughly the same thing across every shape this is called
+// with.
+static std::vector<T_data> fill_smooth_data(std::vector<SIZE> shape) {
+  const double pi = std::acos(-1.0);
+  SIZE n = 1;
+  for (auto s : shape)
+    n *= s;
+  std::vector<T_data> data(n);
+  for (SIZE idx = 0; idx < n; idx++) {
+    SIZE r = idx;
+    double v = 1.0;
+    for (int d = static_cast<int>(CR_D) - 1; d >= 0; d--) {
+      SIZE coord = r % shape[d];
+      r /= shape[d];
+      double x = static_cast<double>(coord) / static_cast<double>(shape[d]);
+      v *= std::sin(2.0 * pi * x + 0.5 * d);
+    }
+    data[idx] = static_cast<T_data>(v);
+  }
+  return data;
+}
+
+// Refactors once, then reconstructs progressively against a decreasing
+// sequence of absolute error bounds on the *same* mdr_metadata/mdr_data --
+// exactly the progressive-request pattern examples/mgard-x/MDR-X/*/
+// refactor.* drives, just with an assertion after every step instead of a
+// print. Covers "single bound" (check just the first entry), "progressive to
+// several bounds" (check every entry against the running state) and "near
+// lossless" (the tightest, last entry) all in one pass, since they are the
+// same operation repeated -- MDR's whole point is that asking again for a
+// tighter bound refines rather than redoes the previous reconstruction.
+static void
+run_composed_pipeline_test(std::vector<SIZE> shape, double s,
+                           const std::vector<double> &tolerances) {
+  std::vector<T_data> original = fill_smooth_data(shape);
+  SIZE n = original.size();
+
+  Config config;
+  Hierarchy<CR_D, T_data, TestDevice> hierarchy(shape, config);
+
+  using Refactor = MDR::ComposedRefactor<CR_D, T_data, TestDevice, ControlL2,
+                                         Basis, NegaBinary>;
+  using Reconstructor =
+      MDR::ComposedReconstructor<CR_D, T_data, TestDevice, ControlL2, Basis,
+                                 NegaBinary>;
+
+  Array<CR_D, T_data, TestDevice> input_array(shape);
+  input_array.load(original.data());
+
+  MDR::MDRData<TestDevice> mdr_data;
+  MDR::MDRMetadata mdr_metadata;
+  {
+    Refactor refactor(hierarchy, config);
+    refactor.Refactor(input_array, mdr_metadata, mdr_data, 0);
+    refactor.Compress(mdr_metadata, mdr_data, 0);
+    refactor.StoreMetadata(mdr_metadata, mdr_data, 0);
+  }
+
+  Reconstructor reconstructor(hierarchy, config);
+  mdr_metadata.InitializeForReconstruction();
+
+  Array<CR_D, T_data, TestDevice> reconstructed(shape);
+  reconstructed.memset(0, 0);
+
+  for (double tol : tolerances) {
+    mdr_metadata.requested_tol = tol;
+    mdr_metadata.requested_s = s;
+    reconstructor.GenerateRequest(mdr_metadata);
+    mdr_metadata.DoneLoadingBitplans();
+    // LoadMetadata/Decompress must run before ProgressiveReconstruct: it
+    // reads decoded bitplanes out of the reconstructor's own
+    // encoded_bitplanes buffer, which only Decompress fills in (from
+    // mdr_data.compressed_bitplanes) and only after LoadMetadata has set the
+    // per-level bitplane counts and abs-max the decoder needs. Skipping
+    // these -- as examples/mgard-x/MDR-X/*/refactor.* currently does --
+    // leaves that buffer at whatever it was (zero, on the first request),
+    // so progressive_decode silently reconstructs nothing regardless of
+    // what GenerateRequest asked for.
+    reconstructor.LoadMetadata(mdr_metadata, mdr_data, 0);
+    reconstructor.Decompress(mdr_metadata, mdr_data, 0);
+    reconstructor.ProgressiveReconstruct(mdr_metadata, mdr_data, false,
+                                         reconstructed, 0);
+    // Advances prev_used_level_num_bitplanes so the next iteration's
+    // LoadMetadata computes the incremental (not full-again) bitplane count.
+    mdr_metadata.DoneReconstruct();
+
+    T_data *result = reconstructed.hostCopy(false, 0);
+    DeviceRuntime<TestDevice>::SyncQueue(0);
+
+    double achieved;
+    if (s == std::numeric_limits<double>::infinity()) {
+      achieved = L_inf_error(n, original.data(), result, error_bound_type::ABS);
+    } else {
+      achieved =
+          L_2_error(shape, original.data(), result, error_bound_type::ABS,
+                    /*normalize_coordinates=*/false);
+    }
+    CAPTURE(tol, achieved, s);
+    REQUIRE(achieved <= tol);
+  }
+}
+
+// Tight enough to be "near lossless" without asking for less than this exact
+// transform's own floating point round trip floor delivers at full bitplane
+// precision (test_DataRefactoring/test_MGARDDecomposer pin that floor at the
+// same order of magnitude for this data range: ~1e-3 relative for float,
+// ~1e-10 for double).
+static std::vector<double> progressive_tolerances() {
+  const double floor = std::is_same<T_data, double>::value ? 1e-9 : 1e-3;
+  return {0.5, 0.1, 0.01, floor};
+}
+
+TEST_CASE("MDR-X ComposedRefactor/Reconstructor L-infinity round trip "
+          "[@CR_D@D/@CR_T@/@CR_BASIS@/l2=@CR_CONTROL_L2@/nega=@CR_NEGA_BINARY@]",
+          "[mgard-x][mdr-x][composed-refactor][@DEVICE_TYPE@]") {
+  DeviceRuntime<TestDevice>::Initialize();
+  run_composed_pipeline_test(@CR_SHAPE@,
+                             std::numeric_limits<double>::infinity(),
+                             progressive_tolerances());
+}
+
+TEST_CASE("MDR-X ComposedRefactor/Reconstructor L2 round trip "
+          "[@CR_D@D/@CR_T@/@CR_BASIS@/l2=@CR_CONTROL_L2@/nega=@CR_NEGA_BINARY@]",
+          "[mgard-x][mdr-x][composed-refactor][@DEVICE_TYPE@]") {
+  DeviceRuntime<TestDevice>::Initialize();
+  // L2 (s = 0) requests are only meaningful with ControlL2 on -- without it
+  // level_squared_errors is never populated by the encoder. Skip cleanly
+  // rather than exercise an unsupported configuration.
+  if constexpr (ControlL2) {
+    run_composed_pipeline_test(@CR_SHAPE@, 0.0, progressive_tolerances());
+  } else {
+    SUCCEED("L2 (s=0) request is only meaningful with ControlL2 on; skipped "
+            "for this configuration.");
+  }
+}
+
+} // namespace mgard_x

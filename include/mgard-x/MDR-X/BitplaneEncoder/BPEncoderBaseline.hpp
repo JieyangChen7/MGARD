@@ -43,7 +43,7 @@ MGARDX_EXEC void print_bits(T v, int num_bits, bool reverse = false) {
 
 template <typename T, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, OPTION BinaryType, OPTION EncodingAlgorithm,
-          OPTION ErrorColectingAlgorithm, bool CollectError,
+          OPTION ErrorColectingAlgorithm, bool ControlL2,
           typename DeviceType>
 class BPEncoderBaselineFunctor : public Functor<DeviceType> {
 public:
@@ -279,7 +279,7 @@ public:
     //                          FunctorBase<DeviceType>::GetThreadIdX(),
     //                          FunctorBase<DeviceType>::GetThreadIdY());
 
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       ErrorCollect<32, 32, 1>(sm_shifted, sm_temp_errors, sm_errors,
                               num_elems_per_TB, num_bitplanes,
                               FunctorBase<DeviceType>::GetThreadIdX(),
@@ -309,7 +309,7 @@ public:
       }
     }
 
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       // error
       if (local_bitplane_idx < num_bitplanes + 1) {
         sm_errors[local_bitplane_idx] = ldexp(sm_errors[local_bitplane_idx],
@@ -427,7 +427,7 @@ private:
 
 template <typename T, typename T_bitplane, typename T_error, OPTION BinaryType,
           OPTION EncodingAlgorithm, OPTION ErrorColectingAlgorithm,
-          bool CollectError, typename DeviceType>
+          bool ControlL2, typename DeviceType>
 class BPEncoderBaselineKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }
@@ -450,7 +450,7 @@ public:
   using FunctorType =
       BPEncoderBaselineFunctor<T, T_fp, T_sfp, T_bitplane, T_error, BinaryType,
                                EncodingAlgorithm, ErrorColectingAlgorithm,
-                               CollectError, DeviceType>;
+                               ControlL2, DeviceType>;
   using TaskType = Task<FunctorType>;
 
   MGARDX_CONT TaskType GenTask(int queue_idx) {
@@ -822,10 +822,10 @@ private:
 // general bitplane encoder that encodes data by block using T_stream type
 // buffer
 template <DIM D, typename T_data, typename T_bitplane, typename T_error,
-          bool CollectError, typename DeviceType>
+          bool ControlL2, typename DeviceType>
 class GroupedBPEncoder
     : public concepts::BitplaneEncoderInterface<D, T_data, T_bitplane, T_error,
-                                                CollectError, DeviceType> {
+                                                ControlL2, DeviceType> {
 public:
   static constexpr int BATCH_SIZE = sizeof(T_bitplane) * 8;
   static constexpr int MAX_BITPLANES = sizeof(T_data) * 8;
@@ -889,12 +889,12 @@ public:
     DeviceLauncher<DeviceType>::Execute(
         BPEncoderBaselineKernel<
             T_data, T_bitplane, T_error, BINARY_TYPE, DATA_ENCODING_ALGORITHM,
-            ERROR_COLLECTING_ALGORITHM, CollectError, DeviceType>(
+            ERROR_COLLECTING_ALGORITHM, ControlL2, DeviceType>(
             n, num_batches_per_TB, num_bitplanes, abs_max, v, encoded_bitplanes,
             level_errors_work),
         queue_idx);
 
-    if constexpr (CollectError) {
+    if constexpr (ControlL2) {
       SIZE reduce_size = num_blocks(n);
       for (int i = 0; i < num_bitplanes + 1; i++) {
         SubArray<1, T_error, DeviceType> curr_errors({reduce_size},
