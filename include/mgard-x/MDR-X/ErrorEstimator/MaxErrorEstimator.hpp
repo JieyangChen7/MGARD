@@ -48,22 +48,32 @@ private:
   T c = 0;
 };
 // max error estimator for hierarchical basis
-// c = 1 as all the operations are linear
+// c = 1 as all the operations are linear (before the negabinary correction
+// below: negabinary shifts the encoder's fixed-point exponent by 2 extra
+// bits of range headroom -- see BPEncoderLocalityBlock/RegisterBlock's
+// EncodeNegaBinary, `exp += 2` -- so a given bitplane count buys less
+// achievable precision under negabinary than under binary. MaxErrorEstimatorOB
+// already discounts for this ("2 more bitplane for negabinary"); this was
+// missing here, which let the greedy interpreter under-request bitplanes for
+// Hierarchical + NegaBinary and narrowly miss the requested L-infinity bound.
 template <class T> class MaxErrorEstimatorHB : public MaxErrorEstimator<T> {
 public:
-  MaxErrorEstimatorHB() {}
-  inline T estimate_error(T error, int level) const { return error; }
+  MaxErrorEstimatorHB() { c *= 4; }
+  inline T estimate_error(T error, int level) const { return c * error; }
   inline T estimate_error(T data, T reconstructed_data, int level) const {
-    return data - reconstructed_data;
+    return c * (data - reconstructed_data);
   }
   inline T estimate_error_gain(T base, T current_level_err, T next_level_err,
                                int level) const {
-    return current_level_err - next_level_err;
+    return c * (current_level_err - next_level_err);
   }
   void print() const {
     std::cout << "Max absolute error estimator for hierarchical basis."
               << std::endl;
   }
+
+private:
+  T c = 1;
 };
 } // namespace MDR
 } // namespace mgard_x
