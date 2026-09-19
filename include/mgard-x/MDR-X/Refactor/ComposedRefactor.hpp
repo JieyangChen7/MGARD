@@ -97,6 +97,17 @@ public:
       level_data_array[level_idx].resize(
           {round_up(hierarchy.level_num_elems(level_idx), BATCH_SIZE)},
           queue_idx);
+      // interleave() only ever writes the level's real elements; the
+      // round-up padding above (needed so the encoder's batch-aligned
+      // kernels can run) is otherwise left as whatever cudaMalloc/pool
+      // memory previously held. AbsMax and encode() below both operate
+      // over the full padded length, so uninitialized padding pollutes
+      // the level-wide abs_max scale factor -- harmless while the pool
+      // memory happens to be zero, but corrupts every real element's
+      // encoding once some larger, unrelated allocation has left large
+      // leftover values in that memory. Zero it once here; interleave()
+      // never touches it again for the lifetime of this object.
+      level_data_array[level_idx].memset(0, queue_idx);
       level_data_subarray[level_idx] =
           SubArray<1, T_data, DeviceType>(level_data_array[level_idx]);
       abs_max_array[level_idx].resize({1}, queue_idx);
