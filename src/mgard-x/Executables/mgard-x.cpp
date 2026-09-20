@@ -49,8 +49,9 @@ void print_usage_message(std::string error) {
 \t\t (optional) -hh / --hybrid: use hybrid (block-local + global) hierarchy\n\
 \t\t (optional) -ll / --local-levels <int>: number of local refactoring levels (default: 1)\n\
 \t\t (optional) -gl / --global-levels <int>: number of global refactoring levels (default: 0)\n\
-\t\t (optional) -hp / --hybrid-projection <orthogonal|hierarchical>:\n\
-\t\t\t hybrid hierarchy projection mode (default: orthogonal; hierarchical is L-inf only)\n\
+\t\t (optional) -pm / --projection-mode <auto|orthogonal|hierarchical>:\n\
+\t\t\t transform basis, plain or hybrid (default: auto -- hierarchical\n\
+\t\t\t under an L-inf bound, orthogonal otherwise; hierarchical is L-inf only)\n\
 \t\t (optional) -nkf / --no-kernel-fusion: run the hybrid local stage as\n\
 \t\t\t separate decompose and quantize passes instead of fused kernels\n\
 \t\t\t (same reconstruction either way, but slower -- use it to time the\n\
@@ -562,7 +563,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
                     mgard_x::SIZE max_memory_footprint, int num_local_levels,
                     int num_global_levels, bool use_hybrid, bool warm_up,
                     bool kernel_fusion,
-                    mgard_x::hybrid_projection_mode_type projection_mode) {
+                    mgard_x::compression_projection_mode_type projection_mode) {
   mgard_x::Config config;
   config.log_level = verbose_to_log_level(verbose);
   config.fuse_decompose_quantize = kernel_fusion;
@@ -576,7 +577,7 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   }
   config.num_local_refactoring_level = num_local_levels;
   config.num_global_refactoring_level = num_global_levels;
-  config.hybrid_projection_mode = projection_mode;
+  config.projection_mode = projection_mode;
 
   // Switch for ROI
   config.enable_roi = enable_roi;
@@ -939,18 +940,21 @@ bool try_compression(int argc, char *argv[]) {
 
   bool use_hybrid = has_arg(argc, argv, "-hh", "--hybrid");
 
-  mgard_x::hybrid_projection_mode_type projection_mode =
-      mgard_x::hybrid_projection_mode_type::Orthogonal;
-  if (has_arg(argc, argv, "-hp", "--hybrid-projection")) {
-    std::string value = get_arg<std::string>(argc, argv, "Hybrid projection",
-                                             "-hp", "--hybrid-projection");
-    if (value == "orthogonal") {
-      projection_mode = mgard_x::hybrid_projection_mode_type::Orthogonal;
+  mgard_x::compression_projection_mode_type projection_mode =
+      mgard_x::compression_projection_mode_type::Auto;
+  if (has_arg(argc, argv, "-pm", "--projection-mode")) {
+    std::string value = get_arg<std::string>(argc, argv, "Projection mode",
+                                             "-pm", "--projection-mode");
+    if (value == "auto") {
+      projection_mode = mgard_x::compression_projection_mode_type::Auto;
+    } else if (value == "orthogonal") {
+      projection_mode = mgard_x::compression_projection_mode_type::Orthogonal;
     } else if (value == "hierarchical") {
-      projection_mode = mgard_x::hybrid_projection_mode_type::Hierarchical;
+      projection_mode = mgard_x::compression_projection_mode_type::Hierarchical;
     } else {
       std::cout << mgard_x::log::log_err
-                << "--hybrid-projection must be orthogonal or hierarchical\n";
+                << "--projection-mode must be auto, orthogonal, or "
+                   "hierarchical\n";
       exit(-1);
     }
   }

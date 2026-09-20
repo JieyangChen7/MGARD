@@ -41,13 +41,23 @@ constexpr uint64_t hybrid_local_coeff_per_block(uint64_t num_dims) {
   return fine - coarse;
 }
 
-enum class decomposition_basis_type : uint8_t { Orthoganal, Hierarchical };
-
-// Basis selection for the hybrid (BlockMGARD) hierarchy. Orthogonal is the
-// default and retains the original L2 projection. Unlike kernel fusion this
-// changes the coefficient stream, so the choice is recorded in the
-// compressed-file metadata.
-enum class hybrid_projection_mode_type : uint8_t { Orthogonal, Hierarchical };
+// Transform basis used by the (de)compose step, shared by the plain
+// Compressor and the hybrid (BlockMGARD) HybridHierarchyCompressor via
+// Config::projection_mode -- one setting controls both.
+//
+// - Auto (default): resolved from the error-bound norm at (de)compress time
+//   -- Hierarchical under an L-infinity bound, Orthogonal otherwise. See
+//   resolve_projection_mode in Utilities/ProjectionMode.h.
+// - Orthogonal / Hierarchical: forced explicitly. Hierarchical still only
+//   supports L-infinity error control; requesting it under any other bound
+//   throws. Unlike kernel fusion, the resolved basis changes the coefficient
+//   stream, so it is recorded in the compressed-file metadata for the hybrid
+//   path.
+enum class compression_projection_mode_type : uint8_t {
+  Auto,
+  Orthogonal,
+  Hierarchical
+};
 
 enum class processor_type : uint8_t {
   CPU,

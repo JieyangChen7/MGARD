@@ -261,7 +261,7 @@ void MetadataBase::InitializeConfig(Config &config) {
   if (decomposition == decomposition_type::Hybrid) {
     config.num_local_refactoring_level = (int)hybrid_num_local_levels;
     config.num_global_refactoring_level = (int)hybrid_num_global_levels;
-    config.hybrid_projection_mode = hybrid_projection_mode;
+    config.projection_mode = hybrid_projection_mode;
     config.enable_roi = hybrid_enable_roi;
     if (hybrid_enable_roi) {
       config.roi_tolerance_map = hybrid_roi_tolerance_map;
@@ -318,7 +318,7 @@ void MetadataBase::PrintSummary() {
     std::cout << "Local block size: " << hybrid_local_block_size << "\n";
     std::cout << "Projection: "
               << (hybrid_projection_mode ==
-                          hybrid_projection_mode_type::Hierarchical
+                          compression_projection_mode_type::Hierarchical
                       ? "hierarchical"
                       : "orthogonal")
               << "\n";
@@ -542,10 +542,11 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
       hybrid.set_num_local_levels(hybrid_num_local_levels);
       hybrid.set_num_global_levels(hybrid_num_global_levels);
       hybrid.set_local_block_size(hybrid_local_block_size);
-      if (hybrid_projection_mode == hybrid_projection_mode_type::Hierarchical) {
+      if (hybrid_projection_mode ==
+          compression_projection_mode_type::Hierarchical) {
         hybrid.set_projection(mgard::pb::HybridHierarchy::HIERARCHICAL);
       } else if (hybrid_projection_mode ==
-                 hybrid_projection_mode_type::Orthogonal) {
+                 compression_projection_mode_type::Orthogonal) {
         hybrid.set_projection(mgard::pb::HybridHierarchy::ORTHOGONAL);
       } else {
         throw InvalidDataException(
@@ -848,13 +849,13 @@ void MetadataBase::Deserialize(
       hybrid_local_block_size = hybrid.local_block_size();
       switch (hybrid.projection()) {
       case mgard::pb::HybridHierarchy::HIERARCHICAL:
-        hybrid_projection_mode = hybrid_projection_mode_type::Hierarchical;
+        hybrid_projection_mode = compression_projection_mode_type::Hierarchical;
         break;
       case mgard::pb::HybridHierarchy::PROJECTION_UNSPECIFIED:
       case mgard::pb::HybridHierarchy::ORTHOGONAL:
         // A missing field denotes a legacy BlockMGARD stream, all of which
         // used the orthogonal basis.
-        hybrid_projection_mode = hybrid_projection_mode_type::Orthogonal;
+        hybrid_projection_mode = compression_projection_mode_type::Orthogonal;
         break;
       default:
         throw InvalidDataException(

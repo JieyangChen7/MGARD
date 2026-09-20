@@ -43,9 +43,12 @@ struct Config {
   int mdr_qoi_num_variables;
   std::vector<double> roi_tolerance_map;
   bool enable_roi;
-  // BlockMGARD basis policy. Orthogonal retains the original L2 projection;
-  // Hierarchical explicitly removes it for L-inf error control.
-  enum hybrid_projection_mode_type hybrid_projection_mode;
+  // Transform basis policy, shared by the plain Compressor and the hybrid
+  // (BlockMGARD) HybridHierarchyCompressor. Auto (default) picks Hierarchical
+  // under an L-infinity bound and Orthogonal otherwise; Orthogonal/
+  // Hierarchical force a specific basis (Hierarchical still requires an
+  // L-infinity bound). See compression_projection_mode_type in Types.h.
+  enum compression_projection_mode_type projection_mode;
   // The hybrid (BlockMGARD) local stage fuses its decompose/recompose kernels
   // with quantization/dequantization so coefficients never round-trip through
   // global memory as T. These select the older separate-pass implementation,

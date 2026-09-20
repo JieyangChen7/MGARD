@@ -49,8 +49,8 @@ struct MetadataBase {
   bool hybrid_enable_roi = false;
   // Resolved basis stored in a stream. Auto is a compression-side policy and
   // is never serialized.
-  hybrid_projection_mode_type hybrid_projection_mode =
-      hybrid_projection_mode_type::Orthogonal;
+  compression_projection_mode_type hybrid_projection_mode =
+      compression_projection_mode_type::Orthogonal;
   // Level-0 per-block tolerances; deeper levels are re-derived on read.
   std::vector<double> hybrid_roi_tolerance_map;
   // Number of level-0 blocks per dimension, used to validate the map above.

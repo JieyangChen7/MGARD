@@ -8,8 +8,6 @@
 #ifndef MGARD_X_HYBRID_HIERARCHY_COMPRESSOR_H
 #define MGARD_X_HYBRID_HIERARCHY_COMPRESSOR_H
 
-#include <limits>
-
 #include "../DataRefactoring/BlockLocalHierarchyDataRefactor.hpp"
 #include "../DataRefactoring/HybridHierarchyDataRefactor.hpp"
 #include "../RuntimeX/RuntimeXPublic.h"
@@ -20,34 +18,11 @@
 #include "../Lossless/Lossless.hpp"
 #include "../Quantization/HybridHierarchyLinearQuantization.hpp"
 #include "../Quantization/LocalQuantization.hpp"
+#include "../Utilities/ProjectionMode.h"
 #include "LossyCompressorInterface.hpp"
 #include "NormCalculator.hpp"
 
 namespace mgard_x {
-
-template <typename T>
-inline hybrid_projection_mode_type
-resolve_hybrid_projection_mode(hybrid_projection_mode_type mode, T s) {
-  if (mode == hybrid_projection_mode_type::Hierarchical) {
-    if (s != std::numeric_limits<T>::infinity()) {
-      throw ProcessingException(
-          "the BlockMGARD hierarchical basis only supports L-infinity error "
-          "control");
-    }
-    return mode;
-  }
-  if (mode == hybrid_projection_mode_type::Orthogonal) {
-    return mode;
-  }
-  throw ProcessingException("unknown hybrid projection mode");
-}
-
-template <typename T>
-inline bool infer_hybrid_orthogonal_projection(hybrid_projection_mode_type mode,
-                                               T s) {
-  return resolve_hybrid_projection_mode(mode, s) ==
-         hybrid_projection_mode_type::Orthogonal;
-}
 
 template <DIM D, typename T, typename DeviceType>
 class HybridHierarchyCompressor

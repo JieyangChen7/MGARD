@@ -140,7 +140,8 @@ template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::Quantize(
     Array<D, T, DeviceType> &original_data, enum error_bound_type ebtype, T tol,
     T s, T norm, int queue_idx) {
-  orthogonal_projection = infer_orthogonal_projection<D>(s);
+  orthogonal_projection =
+      infer_orthogonal_projection<D>(config.projection_mode, s);
   quantizer.Quantize(original_data, ebtype, tol, s, norm, quantized_array,
                      lossless_compressor, queue_idx, orthogonal_projection);
 }
@@ -193,7 +194,8 @@ template <DIM D, typename T, typename DeviceType>
 void Compressor<D, T, DeviceType>::Dequantize(
     Array<D, T, DeviceType> &decompressed_data, enum error_bound_type ebtype,
     T tol, T s, T norm, int queue_idx) {
-  orthogonal_projection = infer_orthogonal_projection<D>(s);
+  orthogonal_projection =
+      infer_orthogonal_projection<D>(config.projection_mode, s);
   decompressed_data.resize(hierarchy->level_shape(hierarchy->l_target()));
   quantizer.Dequantize(decompressed_data, ebtype, tol, s, norm, quantized_array,
                        lossless_compressor, queue_idx, orthogonal_projection);
@@ -232,12 +234,11 @@ void Compressor<D, T, DeviceType>::Compress(
     timer_total.start();
   }
 
-  // For L-infinity (s == inf) the hierarchical basis (no mass-matrix
-  // correction) already bounds the max error, so we skip the expensive
-  // orthogonal projection and let the quantizer widen the step accordingly.
-  // Remember the decision so Recompose (which has no s) reconstructs
-  // consistently.
-  orthogonal_projection = infer_orthogonal_projection<D>(s);
+  // Resolve config.projection_mode against s (Auto defaults to the cheap
+  // hierarchical basis under L-infinity, orthogonal otherwise). Remember the
+  // decision so Recompose (which has no s) reconstructs consistently.
+  orthogonal_projection =
+      infer_orthogonal_projection<D>(config.projection_mode, s);
 
   CalculateNorm(original_data, ebtype, s, norm, queue_idx);
   Decompose(original_data, orthogonal_projection, queue_idx);
@@ -276,7 +277,8 @@ void Compressor<D, T, DeviceType>::Decompress(
 
   // Must mirror the orthogonal-projection decision made during Compress so the
   // hierarchical fast path (s == inf) reconstructs consistently.
-  orthogonal_projection = infer_orthogonal_projection<D>(s);
+  orthogonal_projection =
+      infer_orthogonal_projection<D>(config.projection_mode, s);
 
   decompressed_data.resize(hierarchy->level_shape(hierarchy->l_target()));
   Deserialize(compressed_data, queue_idx);

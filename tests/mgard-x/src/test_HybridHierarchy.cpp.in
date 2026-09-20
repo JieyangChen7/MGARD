@@ -142,13 +142,12 @@ void run_hybrid_refactor_roundtrip(std::vector<SIZE> shape,
 
 // Full hybrid compress -> decompress round trip through serialized bytes.
 template <DIM D, typename T, typename DevType>
-void run_hybrid_compressor_test(std::vector<SIZE> shape, int num_local_levels,
-                                int num_global_levels,
-                                enum error_bound_type ebtype, T tol,
-                                bool fused = true,
-                                T s = std::numeric_limits<T>::infinity(),
-                                hybrid_projection_mode_type projection_mode =
-                                    hybrid_projection_mode_type::Orthogonal) {
+void run_hybrid_compressor_test(
+    std::vector<SIZE> shape, int num_local_levels, int num_global_levels,
+    enum error_bound_type ebtype, T tol, bool fused = true,
+    T s = std::numeric_limits<T>::infinity(),
+    compression_projection_mode_type projection_mode =
+        compression_projection_mode_type::Orthogonal) {
   SIZE n = 1;
   for (auto sz : shape)
     n *= sz;
@@ -160,7 +159,7 @@ void run_hybrid_compressor_test(std::vector<SIZE> shape, int num_local_levels,
   config.decomposition = decomposition_type::Hybrid;
   config.num_local_refactoring_level = num_local_levels;
   config.num_global_refactoring_level = num_global_levels;
-  config.hybrid_projection_mode = projection_mode;
+  config.projection_mode = projection_mode;
   // The fused and unfused local kernels are separate implementations of the
   // same transform, so both have to be driven.
   config.fuse_decompose_quantize = fused;
@@ -205,20 +204,28 @@ void run_hybrid_compressor_test(std::vector<SIZE> shape, int num_local_levels,
   REQUIRE(actual_error < static_cast<double>(tol));
 }
 
-TEST_CASE("hybrid projection defaults to the orthogonal basis",
+TEST_CASE("compression projection mode defaults to Auto",
           "[mgard-x][hybrid]") {
   const float inf = std::numeric_limits<float>::infinity();
 
-  REQUIRE(Config().hybrid_projection_mode ==
-          hybrid_projection_mode_type::Orthogonal);
-  REQUIRE(resolve_hybrid_projection_mode(
-              hybrid_projection_mode_type::Orthogonal, inf) ==
-          hybrid_projection_mode_type::Orthogonal);
-  REQUIRE_THROWS_AS(resolve_hybrid_projection_mode(
-                        hybrid_projection_mode_type::Hierarchical, 0.0f),
+  REQUIRE(Config().projection_mode == compression_projection_mode_type::Auto);
+  // Auto resolves from s alone: Hierarchical under an L-infinity bound,
+  // Orthogonal otherwise.
+  REQUIRE(resolve_projection_mode(compression_projection_mode_type::Auto,
+                                  inf) ==
+          compression_projection_mode_type::Hierarchical);
+  REQUIRE(resolve_projection_mode(compression_projection_mode_type::Auto,
+                                  0.0f) ==
+          compression_projection_mode_type::Orthogonal);
+  REQUIRE(resolve_projection_mode(
+              compression_projection_mode_type::Orthogonal, inf) ==
+          compression_projection_mode_type::Orthogonal);
+  REQUIRE_THROWS_AS(resolve_projection_mode(
+                        compression_projection_mode_type::Hierarchical, 0.0f),
                     ProcessingException);
-  REQUIRE_THROWS_AS(resolve_hybrid_projection_mode(
-                        static_cast<hybrid_projection_mode_type>(255), inf),
+  REQUIRE_THROWS_AS(resolve_projection_mode(
+                        static_cast<compression_projection_mode_type>(255),
+                        inf),
                     ProcessingException);
 }
 
@@ -289,9 +296,9 @@ TEMPLATE_TEST_CASE("Hybrid Hierarchy Compressor 3D",
                           static_cast<TestType>(1e-3));
   bool fused = GENERATE(true, false);
   const TestType s = std::numeric_limits<TestType>::infinity();
-  hybrid_projection_mode_type projection_mode =
-      GENERATE(hybrid_projection_mode_type::Orthogonal,
-               hybrid_projection_mode_type::Hierarchical);
+  compression_projection_mode_type projection_mode =
+      GENERATE(compression_projection_mode_type::Orthogonal,
+               compression_projection_mode_type::Hierarchical);
   CAPTURE(static_cast<int>(ebtype), tol, fused,
           static_cast<int>(projection_mode));
   SECTION("pure local (L=1, M=0)") {
@@ -518,9 +525,9 @@ TEMPLATE_TEST_CASE("Hybrid Hierarchy Compressor 2D",
                           static_cast<TestType>(1e-3));
   bool fused = GENERATE(true, false);
   const TestType s = std::numeric_limits<TestType>::infinity();
-  hybrid_projection_mode_type projection_mode =
-      GENERATE(hybrid_projection_mode_type::Orthogonal,
-               hybrid_projection_mode_type::Hierarchical);
+  compression_projection_mode_type projection_mode =
+      GENERATE(compression_projection_mode_type::Orthogonal,
+               compression_projection_mode_type::Hierarchical);
   CAPTURE(static_cast<int>(ebtype), tol, fused,
           static_cast<int>(projection_mode));
   SECTION("pure local (L=1, M=0)") {
@@ -549,9 +556,9 @@ TEMPLATE_TEST_CASE("Hybrid Hierarchy Compressor 1D",
                           static_cast<TestType>(1e-3));
   bool fused = GENERATE(true, false);
   const TestType s = std::numeric_limits<TestType>::infinity();
-  hybrid_projection_mode_type projection_mode =
-      GENERATE(hybrid_projection_mode_type::Orthogonal,
-               hybrid_projection_mode_type::Hierarchical);
+  compression_projection_mode_type projection_mode =
+      GENERATE(compression_projection_mode_type::Orthogonal,
+               compression_projection_mode_type::Hierarchical);
   CAPTURE(static_cast<int>(ebtype), tol, fused,
           static_cast<int>(projection_mode));
   SECTION("pure local (L=1, M=0)") {
@@ -569,6 +576,154 @@ TEMPLATE_TEST_CASE("Hybrid Hierarchy Compressor 1D",
                                                         tol, fused, s,
                                                         projection_mode);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Projection mode vs. error norm
+//
+// resolve_projection_mode() (tested directly above, in "compression
+// projection mode defaults to Auto") says the hierarchical (BlockMGARD) basis
+// only supports L-infinity error control, while the orthogonal basis supports
+// both L_inf and L_2. These cases pin that contract
+// at the level callers actually hit: a real Compress()/Decompress() round
+// trip for every combination that is supposed to work, and Compress() itself
+// throwing for the one that is not.
+//
+// An s-norm (L_2) bound has its own, separate requirement, enforced by
+// HybridHierarchyQuantizer::CheckSNormConfiguration: exactly one block-local
+// level and no global stage (L=1, M=0), since only then is every block
+// transformed independently and the error budget divides evenly across them.
+// L=1, M=0 is used throughout so that varies only what this suite is actually
+// after -- projection mode and norm -- without also tripping that unrelated
+// constraint.
+// ---------------------------------------------------------------------------
+
+TEMPLATE_TEST_CASE("Hybrid Hierarchy Compressor projection mode vs error norm",
+                   "[mgard-x][hybrid][@DEVICE_TYPE@]", float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  const TestType inf = std::numeric_limits<TestType>::infinity();
+  const TestType l2_s = static_cast<TestType>(0);
+  const TestType tol = static_cast<TestType>(1e-2);
+
+  SECTION("3D") {
+    SECTION("orthogonal, L_inf") {
+      run_hybrid_compressor_test<3, TestType, TestDevice>(
+          {64, 64, 64}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("orthogonal, L_2") {
+      run_hybrid_compressor_test<3, TestType, TestDevice>(
+          {64, 64, 64}, 1, 0, error_bound_type::REL, tol, true, l2_s,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("hierarchical, L_inf") {
+      run_hybrid_compressor_test<3, TestType, TestDevice>(
+          {64, 64, 64}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Hierarchical);
+    }
+    SECTION("auto, L_inf") {
+      run_hybrid_compressor_test<3, TestType, TestDevice>(
+          {64, 64, 64}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Auto);
+    }
+    SECTION("auto, L_2") {
+      run_hybrid_compressor_test<3, TestType, TestDevice>(
+          {64, 64, 64}, 1, 0, error_bound_type::REL, tol, true, l2_s,
+          compression_projection_mode_type::Auto);
+    }
+  }
+  SECTION("2D") {
+    SECTION("orthogonal, L_inf") {
+      run_hybrid_compressor_test<2, TestType, TestDevice>(
+          {256, 256}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("orthogonal, L_2") {
+      run_hybrid_compressor_test<2, TestType, TestDevice>(
+          {256, 256}, 1, 0, error_bound_type::REL, tol, true, l2_s,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("hierarchical, L_inf") {
+      run_hybrid_compressor_test<2, TestType, TestDevice>(
+          {256, 256}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Hierarchical);
+    }
+    SECTION("auto, L_inf") {
+      run_hybrid_compressor_test<2, TestType, TestDevice>(
+          {256, 256}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Auto);
+    }
+    SECTION("auto, L_2") {
+      run_hybrid_compressor_test<2, TestType, TestDevice>(
+          {256, 256}, 1, 0, error_bound_type::REL, tol, true, l2_s,
+          compression_projection_mode_type::Auto);
+    }
+  }
+  SECTION("1D") {
+    SECTION("orthogonal, L_inf") {
+      run_hybrid_compressor_test<1, TestType, TestDevice>(
+          {65536}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("orthogonal, L_2") {
+      run_hybrid_compressor_test<1, TestType, TestDevice>(
+          {65536}, 1, 0, error_bound_type::REL, tol, true, l2_s,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("hierarchical, L_inf") {
+      run_hybrid_compressor_test<1, TestType, TestDevice>(
+          {65536}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Hierarchical);
+    }
+    SECTION("auto, L_inf") {
+      run_hybrid_compressor_test<1, TestType, TestDevice>(
+          {65536}, 1, 0, error_bound_type::REL, tol, true, inf,
+          compression_projection_mode_type::Auto);
+    }
+    SECTION("auto, L_2") {
+      run_hybrid_compressor_test<1, TestType, TestDevice>(
+          {65536}, 1, 0, error_bound_type::REL, tol, true, l2_s,
+          compression_projection_mode_type::Auto);
+    }
+  }
+}
+
+TEMPLATE_TEST_CASE(
+    "Hybrid Hierarchy Compressor rejects hierarchical projection under L_2",
+    "[mgard-x][hybrid][@DEVICE_TYPE@]", float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  constexpr DIM D = 3;
+  std::vector<SIZE> shape{64, 64, 64};
+  SIZE n = shape[0] * shape[1] * shape[2];
+
+  std::vector<TestType> original(n);
+  fill_smooth_data<D, TestType>(original, shape);
+
+  // L=1, M=0: the one decomposition an s-norm bound is otherwise allowed to
+  // use (see CheckSNormConfiguration), so the only thing left to reject is
+  // the projection mode itself.
+  Config config;
+  config.decomposition = decomposition_type::Hybrid;
+  config.num_local_refactoring_level = 1;
+  config.num_global_refactoring_level = 0;
+  config.projection_mode = compression_projection_mode_type::Hierarchical;
+  Hierarchy<D, TestType, TestDevice> hierarchy(shape, config);
+  HybridHierarchyCompressor<D, TestType, TestDevice> compressor;
+  compressor.Adapt(hierarchy, config, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  Array<D, TestType, TestDevice> original_array(shape);
+  original_array.load(original.data());
+
+  // s = 0 selects the L_2 norm, which the hierarchical basis cannot control;
+  // Compress() must surface that rather than silently mishandling it.
+  TestType norm = 0;
+  Array<1, Byte, TestDevice> compressed_array;
+  REQUIRE_THROWS_AS(
+      compressor.Compress(original_array, error_bound_type::REL,
+                          static_cast<TestType>(1e-2),
+                          static_cast<TestType>(0), norm, compressed_array, 0),
+      ProcessingException);
 }
 
 // ---------------------------------------------------------------------------

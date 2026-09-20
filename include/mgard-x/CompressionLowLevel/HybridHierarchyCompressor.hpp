@@ -183,9 +183,8 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::Quantize(
     Array<D, T, DeviceType> &original_data, enum error_bound_type ebtype, T tol,
     T s, T norm, int queue_idx) {
-  orthogonal_projection =
-      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
-  hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
+  // Only called from Compress(), which has already resolved
+  // orthogonal_projection and set it on hybrid_quantizer.
   SIZE total_num_elems_1D = hybrid_refactor.DecomposedDataSize();
 
   SubArray<1, T, DeviceType> data_subarray({total_num_elems_1D},
@@ -199,7 +198,8 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::DecomposeQuantize(
     Array<D, T, DeviceType> &original_data, enum error_bound_type ebtype, T tol,
     T s, T norm, int queue_idx) {
-  hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
+  // Only called from Compress(), which has already resolved
+  // orthogonal_projection and set it on hybrid_quantizer.
   SubArray<1, T, DeviceType> decomposed_subarray(hybrid_decomposed_array);
   SubArray<1, QUANTIZED_INT, DeviceType> quantized_subarray(
       hybrid_quantized_array);
@@ -248,9 +248,8 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::Dequantize(
     Array<D, T, DeviceType> &decompressed_data, enum error_bound_type ebtype,
     T tol, T s, T norm, int queue_idx) {
-  orthogonal_projection =
-      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
-  hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
+  // Only called from DequantizeRecompose(), which has already resolved
+  // orthogonal_projection and set it on hybrid_quantizer.
   SIZE total_num_elems_1D = hybrid_refactor.DecomposedDataSize();
   SubArray<1, T, DeviceType> decompressed_data_subarray(
       {total_num_elems_1D}, hybrid_decomposed_array.data());
@@ -264,8 +263,11 @@ template <DIM D, typename T, typename DeviceType>
 void HybridHierarchyCompressor<D, T, DeviceType>::DequantizeRecompose(
     Array<D, T, DeviceType> &decompressed_data, enum error_bound_type ebtype,
     T tol, T s, T norm, int queue_idx) {
-  orthogonal_projection =
-      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
+  // The decompress-side resolution point: the domain-decomposition pipelines
+  // (GPUPipelines/CPUPipelines) call this directly, bypassing Decompress(), so
+  // it has to resolve for itself rather than relying on a caller having done
+  // it already.
+  orthogonal_projection = infer_orthogonal_projection(config.projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
   if (config.fuse_dequantize_recompose && hybrid_quantizer.CanFuseQuantize(s)) {
     log::info("Local dequantize+recompose kernels: fused");
@@ -330,8 +332,9 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Compress(
     timer_total.start();
   }
 
-  orthogonal_projection =
-      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
+  // The compress-side resolution point: Decompose()/DecomposeQuantize()/
+  // Quantize() below all just consume the result.
+  orthogonal_projection = infer_orthogonal_projection(config.projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
 
   CalculateNorm(original_data, ebtype, s, norm, queue_idx);
@@ -404,13 +407,10 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Decompress(
   if (log::level & log::TIME)
     timer_total.start();
 
-  orthogonal_projection =
-      infer_hybrid_orthogonal_projection(config.hybrid_projection_mode, s);
-  hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
-
   decompressed_data.resize(hierarchy->level_shape(hierarchy->l_target()));
   Deserialize(compressed_data, queue_idx);
   LosslessDecompress(compressed_data, queue_idx);
+  // DequantizeRecompose resolves orthogonal_projection itself.
   DequantizeRecompose(decompressed_data, ebtype, tol, s, norm, queue_idx);
 
   if (log::level & log::TIME) {

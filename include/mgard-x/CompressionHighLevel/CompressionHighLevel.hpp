@@ -103,9 +103,11 @@ general_compress_pipeline(std::vector<SIZE> shape, T tol, T s,
 
   // Resolve the BlockMGARD basis before DomainDecomposer and compressor-cache
   // construction. The resolved value is also what gets written to metadata.
+  // The plain (non-hybrid) path resolves Auto/explicit the same way, but
+  // purely from s -- which round-trips through metadata on its own -- so it
+  // needs no equivalent pre-resolution or persistence here.
   if (config.decomposition == decomposition_type::Hybrid) {
-    config.hybrid_projection_mode =
-        resolve_hybrid_projection_mode(config.hybrid_projection_mode, s);
+    config.projection_mode = resolve_projection_mode(config.projection_mode, s);
   }
 
   log::info("adjust_shape: " + std::to_string(config.adjust_shape));
@@ -244,7 +246,7 @@ general_compress_pipeline(std::vector<SIZE> shape, T tol, T s,
     m.hybrid_num_local_levels = (uint64_t)config.num_local_refactoring_level;
     m.hybrid_num_global_levels = (uint64_t)config.num_global_refactoring_level;
     m.hybrid_local_block_size = MGARDX_HYBRID_LOCAL_BLOCK_SIZE;
-    m.hybrid_projection_mode = config.hybrid_projection_mode;
+    m.hybrid_projection_mode = config.projection_mode;
     m.hybrid_enable_roi = config.enable_roi;
     if (config.enable_roi) {
       // Level-0 block grid: the local refactor pads each dimension up to a

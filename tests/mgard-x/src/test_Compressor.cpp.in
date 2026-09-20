@@ -49,8 +49,10 @@ void fill_smooth_data(std::vector<T> &data, std::vector<SIZE> shape) {
 //      (L_inf when s == inf, L_2 when s == 0). The norm is only computed by
 //      Compress in REL mode, so it is only checked there.
 template <DIM D, typename T, typename DevType>
-void run_compressor_test(std::vector<SIZE> shape, enum error_bound_type ebtype,
-                         T s, T tol) {
+void run_compressor_test(
+    std::vector<SIZE> shape, enum error_bound_type ebtype, T s, T tol,
+    compression_projection_mode_type projection_mode =
+        compression_projection_mode_type::Auto) {
   SIZE n = 1;
   for (auto sz : shape)
     n *= sz;
@@ -59,6 +61,7 @@ void run_compressor_test(std::vector<SIZE> shape, enum error_bound_type ebtype,
   fill_smooth_data<D, T>(original, shape);
 
   Config config;
+  config.projection_mode = projection_mode;
 
   // Separate compressor and decompressor objects so they share no internal
   // state — the round trip only communicates through the serialized bytes
@@ -142,6 +145,177 @@ TEMPLATE_TEST_CASE("Low-Level Compressor 2D", "[mgard-x][@DEVICE_TYPE@]",
 TEMPLATE_TEST_CASE("Low-Level Compressor 3D", "[mgard-x][@DEVICE_TYPE@]",
                    float, double) {
   MGARD_X_COMPRESSOR_TEST_BODY(3, (std::vector<SIZE>{33, 33, 33}))
+}
+
+// ---------------------------------------------------------------------------
+// Projection mode vs. error norm
+//
+// Config::projection_mode is shared by this plain Compressor and
+// HybridHierarchyCompressor (see resolve_projection_mode in
+// Utilities/ProjectionMode.h): Auto (the default) resolves to the
+// hierarchical basis under an L-infinity bound and orthogonal otherwise;
+// Orthogonal/Hierarchical force a specific basis, and Hierarchical still only
+// supports L-infinity error control. These cases pin that contract through a
+// real Compress()/Decompress() round trip, for every combination that is
+// supposed to work.
+// ---------------------------------------------------------------------------
+
+TEMPLATE_TEST_CASE("Low-Level Compressor projection mode vs error norm",
+                   "[mgard-x][@DEVICE_TYPE@]", float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  const TestType inf = std::numeric_limits<TestType>::infinity();
+  const TestType l2_s = static_cast<TestType>(0);
+  const TestType tol = static_cast<TestType>(1e-2);
+
+  SECTION("3D") {
+    SECTION("orthogonal, L_inf") {
+      run_compressor_test<3, TestType, TestDevice>(
+          {33, 33, 33}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("orthogonal, L_2") {
+      run_compressor_test<3, TestType, TestDevice>(
+          {33, 33, 33}, error_bound_type::REL, l2_s, tol,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("hierarchical, L_inf") {
+      run_compressor_test<3, TestType, TestDevice>(
+          {33, 33, 33}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Hierarchical);
+    }
+    SECTION("auto, L_inf") {
+      run_compressor_test<3, TestType, TestDevice>(
+          {33, 33, 33}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Auto);
+    }
+    SECTION("auto, L_2") {
+      run_compressor_test<3, TestType, TestDevice>(
+          {33, 33, 33}, error_bound_type::REL, l2_s, tol,
+          compression_projection_mode_type::Auto);
+    }
+  }
+  SECTION("2D") {
+    SECTION("orthogonal, L_inf") {
+      run_compressor_test<2, TestType, TestDevice>(
+          {129, 129}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("orthogonal, L_2") {
+      run_compressor_test<2, TestType, TestDevice>(
+          {129, 129}, error_bound_type::REL, l2_s, tol,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("hierarchical, L_inf") {
+      run_compressor_test<2, TestType, TestDevice>(
+          {129, 129}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Hierarchical);
+    }
+    SECTION("auto, L_inf") {
+      run_compressor_test<2, TestType, TestDevice>(
+          {129, 129}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Auto);
+    }
+    SECTION("auto, L_2") {
+      run_compressor_test<2, TestType, TestDevice>(
+          {129, 129}, error_bound_type::REL, l2_s, tol,
+          compression_projection_mode_type::Auto);
+    }
+  }
+  SECTION("1D") {
+    SECTION("orthogonal, L_inf") {
+      run_compressor_test<1, TestType, TestDevice>(
+          {4097}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("orthogonal, L_2") {
+      run_compressor_test<1, TestType, TestDevice>(
+          {4097}, error_bound_type::REL, l2_s, tol,
+          compression_projection_mode_type::Orthogonal);
+    }
+    SECTION("hierarchical, L_inf") {
+      run_compressor_test<1, TestType, TestDevice>(
+          {4097}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Hierarchical);
+    }
+    SECTION("auto, L_inf") {
+      run_compressor_test<1, TestType, TestDevice>(
+          {4097}, error_bound_type::REL, inf, tol,
+          compression_projection_mode_type::Auto);
+    }
+    SECTION("auto, L_2") {
+      run_compressor_test<1, TestType, TestDevice>(
+          {4097}, error_bound_type::REL, l2_s, tol,
+          compression_projection_mode_type::Auto);
+    }
+  }
+}
+
+// The hierarchical basis rejects any error control other than L_inf, at the
+// level callers actually hit -- Compress() itself.
+TEMPLATE_TEST_CASE(
+    "Low-Level Compressor rejects hierarchical projection under L_2",
+    "[mgard-x][@DEVICE_TYPE@]", float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  constexpr DIM D = 3;
+  std::vector<SIZE> shape{33, 33, 33};
+  SIZE n = shape[0] * shape[1] * shape[2];
+
+  std::vector<TestType> original(n);
+  fill_smooth_data<D, TestType>(original, shape);
+
+  Config config;
+  config.projection_mode = compression_projection_mode_type::Hierarchical;
+  Hierarchy<D, TestType, TestDevice> hierarchy(shape, config);
+  Compressor<D, TestType, TestDevice> compressor;
+  compressor.Adapt(hierarchy, config, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  Array<D, TestType, TestDevice> original_array(shape);
+  original_array.load(original.data());
+
+  // s = 0 selects the L_2 norm, which the hierarchical basis cannot control.
+  TestType norm = 0;
+  Array<1, Byte, TestDevice> compressed_array;
+  REQUIRE_THROWS_AS(
+      compressor.Compress(original_array, error_bound_type::REL,
+                          static_cast<TestType>(1e-2),
+                          static_cast<TestType>(0), norm, compressed_array, 0),
+      ProcessingException);
+}
+
+// The hierarchical basis is only implemented for 1D/2D/3D (the
+// multi-dimensional decompose/recompose kernels only honor the flag there);
+// requesting it explicitly above 3-D must throw rather than silently falling
+// back the way Auto does.
+TEMPLATE_TEST_CASE(
+    "Low-Level Compressor rejects hierarchical projection above 3-D",
+    "[mgard-x][@DEVICE_TYPE@]", float, double) {
+  DeviceRuntime<TestDevice>::Initialize();
+  constexpr DIM D = 4;
+  std::vector<SIZE> shape{9, 9, 9, 9};
+  SIZE n = shape[0] * shape[1] * shape[2] * shape[3];
+
+  std::vector<TestType> original(n);
+  fill_smooth_data<D, TestType>(original, shape);
+
+  Config config;
+  config.projection_mode = compression_projection_mode_type::Hierarchical;
+  Hierarchy<D, TestType, TestDevice> hierarchy(shape, config);
+  Compressor<D, TestType, TestDevice> compressor;
+  compressor.Adapt(hierarchy, config, 0);
+  DeviceRuntime<TestDevice>::SyncQueue(0);
+
+  Array<D, TestType, TestDevice> original_array(shape);
+  original_array.load(original.data());
+
+  const TestType inf = std::numeric_limits<TestType>::infinity();
+  TestType norm = 0;
+  Array<1, Byte, TestDevice> compressed_array;
+  REQUIRE_THROWS_AS(
+      compressor.Compress(original_array, error_bound_type::REL,
+                          static_cast<TestType>(1e-2), inf, norm,
+                          compressed_array, 0),
+      ProcessingException);
 }
 
 } // namespace mgard_x

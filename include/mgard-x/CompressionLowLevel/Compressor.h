@@ -22,21 +22,30 @@
 
 #include "../Lossless/Lossless.hpp"
 #include "../Quantization/LinearQuantization.hpp"
+#include "../Utilities/ProjectionMode.h"
 
 #include "LossyCompressorInterface.hpp"
 
 namespace mgard_x {
 
-// L-infinity error control (s == inf) can use the cheaper hierarchical basis
-// (no mass-matrix correction) instead of the orthogonal basis: the hierarchical
-// reconstruction is a partition-of-unity prolongation whose per-level error
-// amplification is 1, so the max error stays bounded while the correction step
-// is skipped. Only D <= 3 is supported because the multi-dimensional
-// decompose/recompose honor the flag only there; higher dimensions always apply
-// the correction. Kept here so the low-level compressor and quantizer agree on
-// exactly when correction is skipped.
-template <DIM D, typename T> inline bool infer_orthogonal_projection(T s) {
-  return !(s == std::numeric_limits<T>::infinity() && D <= 3);
+// D-aware wrapper around the shared resolve_projection_mode/
+// infer_orthogonal_projection (see Utilities/ProjectionMode.h): the
+// hierarchical basis (no mass-matrix correction) is only implemented for
+// D <= 3, because the multi-dimensional decompose/recompose kernels only
+// honor the flag there -- higher dimensions always apply the correction, so
+// Auto silently stays on the orthogonal basis and an explicit Hierarchical
+// request throws instead of being silently ignored.
+template <DIM D, typename T>
+inline bool infer_orthogonal_projection(compression_projection_mode_type mode,
+                                        T s) {
+  if (D > 3) {
+    if (mode == compression_projection_mode_type::Hierarchical) {
+      throw ProcessingException(
+          "the hierarchical basis is only implemented for 1D/2D/3D data");
+    }
+    return true;
+  }
+  return infer_orthogonal_projection(mode, s);
 }
 
 template <DIM D, typename T, typename DeviceType>
@@ -105,11 +114,11 @@ public:
   bool initialized;
   Hierarchy<D, T, DeviceType> *hierarchy;
   Config config;
-  // Whether the last (de)compose should use orthogonal projection. Derived from
-  // s (see infer_orthogonal_projection) during Compress/Decompress/(De)quantize
-  // and consumed by Recompose, which does not receive s. Defaults to true so
-  // the orthogonal path is used unless s explicitly enables the hierarchical
-  // fast path.
+  // Whether the last (de)compose should use orthogonal projection. Derived
+  // from config.projection_mode and s (see infer_orthogonal_projection)
+  // during Compress/Decompress/(De)quantize and consumed by Recompose, which
+  // does not receive s. Defaults to true so the orthogonal path is used
+  // unless the config/s combination resolves to the hierarchical fast path.
   bool orthogonal_projection = true;
   Array<1, T, DeviceType> norm_tmp_array;
   Array<1, T, DeviceType> norm_array;

@@ -50,7 +50,7 @@ TEST_CASE("hybrid level counts survive a metadata round trip",
   out.hybrid_num_local_levels = 2;
   out.hybrid_num_global_levels = 1;
   out.hybrid_local_block_size = MGARDX_HYBRID_LOCAL_BLOCK_SIZE;
-  out.hybrid_projection_mode = hybrid_projection_mode_type::Hierarchical;
+  out.hybrid_projection_mode = compression_projection_mode_type::Hierarchical;
   out.hybrid_enable_roi = false;
 
   std::vector<SERIALIZED_TYPE> bytes = out.MetadataBase::Serialize();
@@ -63,7 +63,7 @@ TEST_CASE("hybrid level counts survive a metadata round trip",
   REQUIRE(in.hybrid_num_global_levels == 1);
   REQUIRE(in.hybrid_local_block_size == MGARDX_HYBRID_LOCAL_BLOCK_SIZE);
   REQUIRE(in.hybrid_projection_mode ==
-          hybrid_projection_mode_type::Hierarchical);
+          compression_projection_mode_type::Hierarchical);
   REQUIRE(in.hybrid_enable_roi == false);
 
   // The whole point of recording these: a Config that never saw the original
@@ -74,8 +74,8 @@ TEST_CASE("hybrid level counts survive a metadata round trip",
   in.InitializeConfig(config);
   REQUIRE(config.num_local_refactoring_level == 2);
   REQUIRE(config.num_global_refactoring_level == 1);
-  REQUIRE(config.hybrid_projection_mode ==
-          hybrid_projection_mode_type::Hierarchical);
+  REQUIRE(config.projection_mode ==
+          compression_projection_mode_type::Hierarchical);
   REQUIRE(config.enable_roi == false);
 }
 
@@ -86,7 +86,22 @@ TEST_CASE("an invalid hybrid projection mode is not serialized",
   out.hybrid_num_global_levels = 0;
   out.hybrid_local_block_size = MGARDX_HYBRID_LOCAL_BLOCK_SIZE;
   out.hybrid_projection_mode =
-      static_cast<hybrid_projection_mode_type>(255);
+      static_cast<compression_projection_mode_type>(255);
+
+  REQUIRE_THROWS_AS(out.MetadataBase::Serialize(), InvalidDataException);
+}
+
+// Auto is a compression-side policy resolved to a concrete basis before
+// metadata is ever filled (see resolve_projection_mode in
+// CompressionHighLevel.hpp); Serialize() must refuse it too, in case that
+// resolution step is ever skipped.
+TEST_CASE("Auto is not a valid projection mode to serialize",
+          "[HybridMetadata]") {
+  Metadata<TestDevice> out = base_metadata({64, 64, 64});
+  out.hybrid_num_local_levels = 1;
+  out.hybrid_num_global_levels = 0;
+  out.hybrid_local_block_size = MGARDX_HYBRID_LOCAL_BLOCK_SIZE;
+  out.hybrid_projection_mode = compression_projection_mode_type::Auto;
 
   REQUIRE_THROWS_AS(out.MetadataBase::Serialize(), InvalidDataException);
 }
