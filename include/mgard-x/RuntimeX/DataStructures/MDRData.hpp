@@ -40,8 +40,17 @@ public:
     level_signs.resize(num_levels);
     for (int level_idx = 0; level_idx < num_levels; level_idx++) {
       compressed_bitplanes[level_idx].resize(num_bitplanes);
-      level_signs[level_idx].resize({hierarchy.level_num_elems(level_idx)},
-                                    queue_idx);
+      // The decoder's batched bitplane kernels (e.g.
+      // BPDecoderRegisterBlockFunctor::DecodeBinary) write one sign per slot
+      // across the full BATCH_SIZE-aligned range, exactly like
+      // level_data_array in ComposedRefactor/ComposedReconstructor -- so this
+      // needs the same round_up, not the raw element count, or the decoder
+      // overruns it whenever a level's element count isn't already a
+      // multiple of the batch size.
+      level_signs[level_idx].resize(
+          {round_up(hierarchy.level_num_elems(level_idx),
+                    RefactorType::BATCH_SIZE)},
+          queue_idx);
       for (int bitplane_idx = 0; bitplane_idx < num_bitplanes; bitplane_idx++) {
         compressed_bitplanes[level_idx][bitplane_idx].resize(
             {estimation[level_idx][bitplane_idx]}, queue_idx);
@@ -145,11 +154,14 @@ public:
                                  std::to_string(level_idx) +
                                  ") No allocation found.\n");
       }
-      if (level_signs[level_idx].shape(0) !=
+      // level_signs is allocated rounded up to the decoder's batch size (see
+      // Resize above), so it is expected to be >= the raw element count, not
+      // exactly equal to it.
+      if (level_signs[level_idx].shape(0) <
           mdr_metadata.level_num_elems[level_idx]) {
         throw std::runtime_error(
             "Bitplane verification failed. level_signs(" +
-            std::to_string(level_idx) + ") Size mismatch " +
+            std::to_string(level_idx) + ") Insufficient buffer space " +
             std::to_string(level_signs[level_idx].shape(0)) + " vs. " +
             std::to_string(mdr_metadata.level_num_elems[level_idx]));
       }
