@@ -267,7 +267,8 @@ void HybridHierarchyCompressor<D, T, DeviceType>::DequantizeRecompose(
   // (GPUPipelines/CPUPipelines) call this directly, bypassing Decompress(), so
   // it has to resolve for itself rather than relying on a caller having done
   // it already.
-  orthogonal_projection = infer_orthogonal_projection(config.projection_mode, s);
+  orthogonal_projection =
+      infer_orthogonal_projection(config.projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
   if (config.fuse_dequantize_recompose && hybrid_quantizer.CanFuseQuantize(s)) {
     log::info("Local dequantize+recompose kernels: fused");
@@ -334,7 +335,8 @@ void HybridHierarchyCompressor<D, T, DeviceType>::Compress(
 
   // The compress-side resolution point: Decompose()/DecomposeQuantize()/
   // Quantize() below all just consume the result.
-  orthogonal_projection = infer_orthogonal_projection(config.projection_mode, s);
+  orthogonal_projection =
+      infer_orthogonal_projection(config.projection_mode, s);
   hybrid_quantizer.SetOrthogonalProjection(orthogonal_projection);
 
   CalculateNorm(original_data, ebtype, s, norm, queue_idx);

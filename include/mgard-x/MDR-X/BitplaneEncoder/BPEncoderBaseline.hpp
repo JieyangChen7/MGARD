@@ -43,8 +43,7 @@ MGARDX_EXEC void print_bits(T v, int num_bits, bool reverse = false) {
 
 template <typename T, typename T_fp, typename T_sfp, typename T_bitplane,
           typename T_error, OPTION BinaryType, OPTION EncodingAlgorithm,
-          OPTION ErrorColectingAlgorithm, bool ControlL2,
-          typename DeviceType>
+          OPTION ErrorColectingAlgorithm, bool ControlL2, typename DeviceType>
 class BPEncoderBaselineFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT

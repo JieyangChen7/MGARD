@@ -10,8 +10,8 @@ namespace mgard_x {
 namespace MDR {
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, int NUM_BITPLANES, bool NegaBinary,
-          bool ControlL2, typename DeviceType>
+          typename T_error, int NUM_BITPLANES, bool NegaBinary, bool ControlL2,
+          typename DeviceType>
 class BPEncoderRegisterBlockFunctor : public Functor<DeviceType> {
 public:
   MGARDX_CONT
@@ -281,8 +281,8 @@ private:
 };
 
 template <typename T_data, typename T_fp, typename T_sfp, typename T_bitplane,
-          typename T_error, int NUM_BITPLANES, bool NegaBinary,
-          bool ControlL2, typename DeviceType>
+          typename T_error, int NUM_BITPLANES, bool NegaBinary, bool ControlL2,
+          typename DeviceType>
 class BPEncoderRegisterBlockKernel : public Kernel {
 public:
   constexpr static bool EnableAutoTuning() { return false; }

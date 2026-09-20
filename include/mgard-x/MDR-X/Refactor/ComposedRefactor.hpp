@@ -16,9 +16,8 @@ namespace mgard_x {
 namespace MDR {
 // a decomposition-based scientific data refactor: compose a refactor using
 // decomposer, interleaver, encoder, and error collector
-template <DIM D, typename T_data, typename DeviceType,
-          bool ControlL2 = false, typename Basis = Hierarchical,
-          bool NegaBinary = false>
+template <DIM D, typename T_data, typename DeviceType, bool ControlL2 = false,
+          typename Basis = Hierarchical, bool NegaBinary = false>
 class ComposedRefactor
     : public concepts::RefactorInterface<D, T_data, DeviceType> {
 public:

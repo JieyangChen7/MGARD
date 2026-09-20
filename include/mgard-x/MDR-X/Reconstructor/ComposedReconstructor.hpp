@@ -21,9 +21,8 @@ namespace mgard_x {
 namespace MDR {
 // a decomposition-based scientific data reconstructor: inverse operator of
 // composed refactor
-template <DIM D, typename T_data, typename DeviceType,
-          bool ControlL2 = false, typename Basis = Hierarchical,
-          bool NegaBinary = false>
+template <DIM D, typename T_data, typename DeviceType, bool ControlL2 = false,
+          typename Basis = Hierarchical, bool NegaBinary = false>
 class ComposedReconstructor
     : public concepts::ReconstructorInterface<D, T_data, DeviceType> {
 public:
