@@ -53,7 +53,6 @@ void load(Config &config, Metadata<DeviceType> &metadata) {
   config.lossless = metadata.ltype;
   config.huff_dict_size = metadata.huff_dict_size;
   config.huff_block_size = metadata.huff_block_size;
-  config.reorder = metadata.reorder;
   config.total_num_bitplanes = metadata.number_bitplanes;
 }
 

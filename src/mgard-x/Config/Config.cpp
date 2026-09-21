@@ -44,8 +44,6 @@ Config::Config() {
   zstd_compress_level = 3;
   normalize_coordinates = true;
   lossless = lossless_type::Huffman;
-  reorder = 0;
-  prefetch = false;
   log_level = log::ERR;
   max_larget_level = std::numeric_limits<SIZE>::max(); // no limit
   auto_pin_host_buffers = true;

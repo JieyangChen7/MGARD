@@ -36,7 +36,6 @@ struct MetadataBase {
 
   enum decomposition_type decomposition;
   uint32_t l_target = 0;
-  uint32_t reorder = 0;
 
   // Hybrid (block-local + global) hierarchy, a.k.a. BlockMGARD. Only
   // meaningful when `decomposition == decomposition_type::Hybrid`; these are
@@ -97,7 +96,7 @@ template <typename DeviceType> struct Metadata : MetadataBase {
   template <typename T>
   void FillForCompression(enum error_bound_type ebtype, T tol, T s, T norm,
                           enum decomposition_type decomposition,
-                          uint32_t reorder, enum lossless_type ltype,
+                          enum lossless_type ltype,
                           uint32_t huff_dict_size, uint32_t huff_block_size,
                           std::vector<SIZE> shape, bool domain_decomposed,
                           domain_decomposition_type ddtype,
@@ -127,7 +126,6 @@ template <typename DeviceType> struct Metadata : MetadataBase {
     }
     this->norm = norm;
     this->decomposition = decomposition;
-    this->reorder = reorder;
     this->ltype = ltype;
     this->huff_dict_size = huff_dict_size;
     this->huff_block_size = huff_block_size;
@@ -148,13 +146,13 @@ template <typename DeviceType> struct Metadata : MetadataBase {
   template <typename T>
   void
   FillForCompression(enum error_bound_type ebtype, T tol, T s, T norm,
-                     enum decomposition_type decomposition, uint32_t reorder,
+                     enum decomposition_type decomposition,
                      enum lossless_type ltype, uint32_t huff_dict_size,
                      uint32_t huff_block_size, std::vector<SIZE> shape,
                      bool domain_decomposed, domain_decomposition_type ddtype,
                      uint8_t domain_decomposed_dim,
                      uint64_t domain_decomposed_size, std::vector<T *> coords) {
-    FillForCompression(ebtype, tol, s, norm, decomposition, reorder, ltype,
+    FillForCompression(ebtype, tol, s, norm, decomposition, ltype,
                        huff_dict_size, huff_block_size, shape,
                        domain_decomposed, ddtype, domain_decomposed_dim,
                        domain_decomposed_size);

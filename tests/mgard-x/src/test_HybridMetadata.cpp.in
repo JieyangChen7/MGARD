@@ -24,7 +24,7 @@ Metadata<TestDevice> base_metadata(std::vector<SIZE> shape) {
   Metadata<TestDevice> m;
   m.FillForCompression<float>(
       error_bound_type::ABS, (float)1e-3, std::numeric_limits<float>::infinity(),
-      (float)1.0, decomposition_type::Hybrid, /*reorder=*/0,
+      (float)1.0, decomposition_type::Hybrid,
       lossless_type::Huffman, /*huff_dict_size=*/8192,
       /*huff_block_size=*/1024, shape, /*domain_decomposed=*/false,
       domain_decomposition_type::MaxDim, /*domain_decomposed_dim=*/0,

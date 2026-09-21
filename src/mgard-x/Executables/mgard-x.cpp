@@ -629,7 +629,6 @@ int launch_compress(mgard_x::DIM D, enum mgard_x::data_type dtype,
   config.estimate_outlier_ratio = 1.0;
 
   config.dev_type = dev_type;
-  config.reorder = 0;
   config.auto_pin_host_buffers = true;
   config.max_memory_footprint = max_memory_footprint;
   // config.huff_dict_size = 32768;

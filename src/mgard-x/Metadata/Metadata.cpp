@@ -251,7 +251,6 @@ void MetadataBase::InitializeConfig(Config &config) {
   if (block_delta_block_size != 0) {
     config.block_delta_block_size = block_delta_block_size;
   }
-  config.reorder = reorder;
   // The hybrid parameters are only meaningful for a hybrid file, and
   // Deserialize refuses to produce a hybrid file without them, so a Hybrid
   // decomposition here always carries a full set. For non-hybrid files leave
@@ -336,7 +335,6 @@ void MetadataBase::PrintSummary() {
       std::cout << "disabled\n";
     }
   }
-  std::cout << "Reorder: " << reorder << "\n";
   std::cout << "Domain Decomposition: ";
   if (domain_decomposed) {
     if (ddtype == domain_decomposition_type::MaxDim) {
@@ -604,11 +602,7 @@ std::vector<SERIALIZED_TYPE> MetadataBase::Serialize() {
 
   { // Encoding
     mgard::pb::Encoding &encoding = *header.mutable_encoding();
-    if (reorder == 0) {
-      encoding.set_preprocessor(mgard::pb::Encoding::NOOP_PREPROCESSOR);
-    } else {
-      encoding.set_preprocessor(mgard::pb::Encoding::SHUFFLE);
-    }
+    encoding.set_preprocessor(mgard::pb::Encoding::NOOP_PREPROCESSOR);
     if (ltype == mgard_x::lossless_type::Huffman) {
       encoding.set_compressor(mgard::pb::Encoding::X_HUFFMAN);
       encoding.set_huffman_dictionary_size(huff_dict_size);
@@ -969,11 +963,6 @@ void MetadataBase::Deserialize(
 
   { // Encoding
     const mgard::pb::Encoding encoding = header.encoding();
-    if (encoding.preprocessor() == mgard::pb::Encoding::SHUFFLE) {
-      reorder = 1;
-    } else {
-      reorder = 0;
-    }
     if (encoding.compressor() == mgard::pb::Encoding::X_HUFFMAN) {
       ltype = mgard_x::lossless_type::Huffman;
       huff_dict_size = encoding.huffman_dictionary_size();

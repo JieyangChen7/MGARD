@@ -48,9 +48,22 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 
 [mgard format]: doc/MGARD-format.md
 
-## Publications
+## Version history
+Detailed release notes (features added, changes, and bug fixes) are linked below for each version.
+* [MGARD 1.7.0](doc/release%20notes/1.7.0.md) (Unreleased) — Delivered ***HP-MDR***, a high-performance MDR-X refactoring and reconstruction pipeline; introduced ***BlockMGARD***, a block-based hybrid hierarchy compression pipeline with region-of-interest support; deprecated and removed the legacy standalone MGARD-CUDA backend in favor of ***MGARD-X***; added new rANS and BlockDelta lossless backends and a portable warp-cooperative LZ4 implementation; added Blackwell (sm_120) GPU build support; numerous performance improvements and bug fixes.
+* [MGARD 1.6.0](doc/release%20notes/1.6.0.md) (Aug. 2025) — Redesigned the compression/decompression pipeline for higher end-to-end throughput; improved OpenMP and Huffman CPU performance and ZSTD linking; removed the prefetch option (now always enabled) and the coordinate-normalization build option; fixed issues with LZ4 compression, thread safety, MDR-X L2 error control, ADIOS2 integration, and HIP builds.
+* [MGARD 1.5.2](doc/release%20notes/1.5.2.md) (Sep. 2023) — Added compression status reporting to the high-level API, an ADIOS2 operator build example, autotuning for Huffman kernels, asynchronous LZ4/Zstd compression, a pipeline optimized for compressing time-series data, and improved memory-usage estimation; fixed bugs in Huffman codebook generation, the domain decomposer, reduced-memory-footprint mode, and MDR-X reconstruction.
+* [MGARD 1.5.0](doc/release%20notes/1.5.0.md) (Apr. 2023) — Added the ***MGARD-$\lambda$*** pipeline for preserving non-linear QoIs in XGC data and the ***MGARD-RoI*** pipeline for region-of-interest preservation; added a GPU pipeline for out-of-core, large-scale compression; added Apple Silicon (ARM) support; fixed issues with CUDA (older versions and 12+), the NVIDIA HPC SDK, MDR-X compilation, and linear quantization overflow.
+* [MGARD 1.4.0](doc/release%20notes/1.4.0.md) (Jan. 2023) — Added multi-device support for compression/decompression, RuntimeX, and Array; added workspace pre-allocation, a new OpenMP backend, block-based domain decomposition, and high-level MDR-X APIs; modularized the compression and refactoring workflows; reduced build time via optional autotuning; fixed bugs affecting GCC 9, Huffman encoding synchronization, Xcode, and the SYCL backend.
+* [MGARD 1.3.0](doc/release%20notes/1.3.0.md) (Sep. 2022) — Introduced ***MGARD-X***: portable compression for CPU (serial and multi-threaded), NVIDIA GPUs, AMD GPUs, and Intel GPUs, with a self-describing format, automatic domain decomposition, multi-GPU parallel compression, and high-/low-level APIs. Introduced ***MDR-X*** for portable multi-precision data refactoring on CPU and GPU.
+* [MGARD 1.0.0](doc/release%20notes/1.0.0.md) (Sep. 2021) — Improved CPU compression/decompression speed (iterator optimizations, index precomputation, memory-access-pattern improvements); added OpenMP parallelization; added a self-describing command-line executable and high-level APIs; added support pluggable lossless compressors; fixed several multilevel-decomposition bugs.
+* [MGARD 0.1.0](doc/release%20notes/0.1.0.md) (Sep. 2020) — Added initial support for unstructured data; restructured code for extensibility; added Nvidia GPU support for 2D/3D; added Huffman entropy encoding and ZSTD integration; added FP64 support; added continuous integration (Travis CI).
+* [MGARD 0.0.0.2](doc/release%20notes/0.0.0.2.md) (Sep. 2019) — Initial public release. Lossy compression with preservation of $L_\infty$, $L_2$ and S-norm on primary data, and linear QoIs; added FP32 support.
 
-### Fundamental Theory
+## Publications
+The following works either contribute to the MGARD framework and/or extend and apply MGARD for various applications, systems, and use cases.
+### MGARD Foundations
+* Qian Gong et al. [MGARD: A multigrid framework for high-performance, error-controlled data compression and refactoring.][mgard-softwarex] *SoftwareX*, Dec. 2023
 * Xin Liang et al. [MGARD+: Optimizing Multilevel Methods for Error-bounded Scientific Data Reduction.][mgard+] *IEEE Transactions on Computers*, 2021
 * Mark Ainsworth et al. [Multilevel Techniques for Compression and Reduction of Scientific Data—The Unstructured Case.][unstructured] *SIAM Journal on Scientific Computing*, 42 (2), A1402–A1427, 2020.
 * Mark Ainsworth et al. [Multilevel Techniques for Compression and Reduction of Scientific Data—Quantitative Control of Accuracy in Derived Quantities.][quantities] *SIAM Journal on Scientific Computing* 41 (4), A2146–A2171, 2019.
@@ -59,7 +72,14 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 * Ben Whitney. [Multilevel Techniques for Compression and Reduction of Scientific Data.][thesis] PhD thesis, Brown University, 2018.
 
 ### Preserving Quantities of Interest (QoIs)
-* Xuan Wu et al. [Error-controlled Progressive Retrieval of Scientific Data under Derivable Quantities of Interest.][qoi] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2024*, Nov. 2024 
+* Qian Gong et al. [Physics-Aware Adaptive Checkpointing with Shadow Systems for Nonlinear PDE Simulations.][shadow-pde] *Journal of Computational Science*, Sep. 2026
+* Jaemoon Lee et al. [Error-Guaranteed Compression with Preservation of Downstream Quantities for Electron Microscopy.][em-qoi] *Microscopy and Microanalysis*, Aug. 2026
+* Qian Gong et al. [Stability-preserving Lossy Compression for Large-scale Partial Differential Equations.][stability-pde] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2025*, Nov. 2025
+* Richard Dodson et al. [Optimising the Processing and Storage of Visibilities using lossy compression.][visibilities] *Publications of the Astronomical Society of Australia*, Jul. 2025
+* Qian Gong et al. [A General Framework for Error-controlled Unstructured Scientific Data Compression.][unstructured-framework] *2024 IEEE 20th International Conference on e-Science (e-Science)*, Sep. 2024
+* Tania Banerjee et al. [Fast Algorithms for Scientific Data Compression.][fast-algo] *2023 IEEE 30th International Conference on High Performance Computing, Data, and Analytics (HiPC)*, Dec. 2023
+* Qian Gong et al. [Spatiotemporally adaptive compression for scientific dataset with feature preservation–a case study on simulation data with extreme climate events analysis.][climate-qoi] *2023 IEEE 19th International Conference on e-Science (e-Science)*, Oct. 2023
+* Tania Banerjee et al. [Online and Scalable Data Compression Pipeline with Guarantees on Quantities of Interest.][online-qoi] *2023 IEEE 19th International Conference on e-Science (e-Science)*, Oct. 2023
 * Tania Banerjee et al. [Scalable Hybrid Learning Techniques for Scientific Data Compression.][pp3], *Arxiv*, 2022
 * Qian Gong et al. [Region-adaptive, Error-controlled Scientific Data Compression using Multilevel Decomposition.][roi2] *the 34th International Conference on Scientific and Statistical Database Management*, Jul. 2022
 * Tania Benerjee et al. [An algorithmic and software pipeline for very large-scale scientific data compression with error guarantees.][qoi2] *International Conference on High Performance Computing, Data, and Analytics*, 2022
@@ -67,7 +87,9 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 * Qian Gong et al. [Maintaining trust in reduction: Preserving the accuracy of quantities of interest for lossy compression.][roi] *21st Smoky Mountains Computational Sciences and Engineering Conference*, Oct. 2021
 
 ### Progressive Retrieval
+* Wenbo Li et al. [QProR: An Efficient Framework for Quantity-of-Interest Based Progressive Retrieval with Guaranteed Error Control.][qpror] *the 35th International Symposium on High-Performance Parallel and Distributed Computing*, Jul. 2026
 * Yanliang Li et al. [HP-MDR: High-performance and Portable Data Refactoring and Progressive Retrieval with Advanced GPUs.][hp-mdr] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2025*, Nov 2025
+* Xuan Wu et al. [Error-controlled Progressive Retrieval of Scientific Data under Derivable Quantities of Interest.][qoi] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2024*, Nov. 2024 
 * Jinzheng Wang et al. [Improving Progressive Retrieval for HPC Scientific Data using Deep Neural Network.][progressive-dnn] *IEEE International Conference on Data Engineering (ICDE)*, 2023 
 * Xin Liang et al. [Error-controlled, progressive, and adaptable retrieval of scientific data with multilevel decomposition.][mdr] *the International Conference for High Performance Computing, Networking, Storage and Analysis 2021*, Nov. 2021
 
@@ -78,10 +100,12 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 * Jieyang Chen et al. [Accelerating Multigrid-based Hierarchical Scientific Data Refactoring on GPUs.][gpu] *35th IEEE International Parallel & Distributed Processing Symposium*, May. 2021.
 
 ### System Optimizations
+* Vladislav Esaulov et al. [JANUS: Resilient and Adaptive Data Transmission for Enabling Timely and Efficient Cross-Facility Scientific Workflows.][janus] *Arxiv*, Jun. 2025
 * Lipeng Wan et al. [RAPIDS: Reconciling Availability, Accuracy, and Performance in Managing Geo-Distributed Scientific Data.][rapids] *The International ACM Symposium on High-Performance Parallel and Distributed Computing*, Jun. 2023
 * Xinying Wang et al. [Unbalanced Parallel I/O: An Often-Neglected Side Effect of Lossy Scientific Data Compression.][unbalanced-io] *7th International Workshop on Data Analysis and Reduction for Big Scientific Data*, Nov. 2021
 
 [thesis]: https://doi.org/10.26300/ya1v-hn97
+[mgard-softwarex]: https://doi.org/10.1016/j.softx.2023.101590
 [univariate]: https://doi.org/10.1007/s00791-018-00303-9
 [multivariate]: https://doi.org/10.1137/18M1166651
 [quantities]: https://doi.org/10.1137/18M1208885
@@ -102,6 +126,16 @@ Data produced by MGARD, MGARD-X, and MDR-X are designed to follow a unified self
 [rapids]: https://dl.acm.org/doi/10.1145/3588195.3592983
 [progressive-dnn]: https://ieeexplore.ieee.org/document/10184595/
 [qoi2]: https://ieeexplore.ieee.org/document/10106324
+[em-qoi]: https://doi.org/10.1093/mam/ozag084
+[stability-pde]: https://dl.acm.org/doi/10.1145/3712285.3759878
+[shadow-pde]: https://doi.org/10.1016/j.jocs.2026.102986
+[janus]: https://arxiv.org/abs/2506.17084
+[visibilities]: https://doi.org/10.1017/pasa.2025.29
+[qpror]: https://doi.org/10.1145/3806645.3807579
+[online-qoi]: https://ieeexplore.ieee.org/document/10254934/
+[climate-qoi]: https://arxiv.org/abs/2401.03317
+[fast-algo]: https://doi.org/10.1109/HiPC58850.2023.00030
+[unstructured-framework]: https://ieeexplore.ieee.org/document/10678699/
 
 
 

@@ -159,7 +159,6 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
         
     + ```dev_id```: sepcifying a specific GPU to use in multi-GPU systems (***Default: 0***)
     + ```num_dev```: sepcifying the number of GPU to use in multi-GPU systems (***Default: 1***)
-    + ```reorder```: sepcifying an internal data layout (0: Higher throughput | 1: Higher compression ratio) (***Default: 0***)
     + ```lossless```: control the lossless compression used: 
         + ```mgard_x::lossless_type::Huffman```: Huffman compression (***Default***)
         + ```mgard_x::lossless_type::Huffman_LZ4```: Huffman and LZ4 compression 
@@ -185,7 +184,6 @@ An executable ```mgard-x``` will be built after building the MGARD-X library. To
     + ```fuse_decompose_quantize```: controls fused local decomposition and quantization for the hybrid hierarchy (***Default: true***)
     + ```fuse_dequantize_recompose```: controls fused local dequantization and recomposition for the hybrid hierarchy (***Default: true***)
     + ```max_larget_level```: controls max level of multi-level decomposition (***Default: 0 (no limit)***)
-    + ```prefetch```(for high-level APIs only): controls whether or not to enable prefetch pipeline optimization (***Default: true***)
     + ```max_memory_footprint```(for high-level APIs only): controls maximum memory footprint in bytes (***Default: inf (no limit)***)
     + ```adjust_shape```(for high-level APIs only): controls whether or not to enable shape adjustment for better decomposition performance (***Default: false***)
 ## Using high-level APIs
@@ -294,8 +292,8 @@ For achieving the best performance:
     + **Tune for a specific backend:** run ```mgard-x-autotuner -d <serial|openmp|cuda|hip|sycl>```
     + **Tune for a specific shape of data on a specific backend :** run ```mgard-x-autotuner -d <auto|serial|openmp|cuda|hip|sycl> -n <ndim> [dim1] [dim2] ... [dimN]```.
     + ***Note:*** MGARD-X needs to be recompiled after auto tuning to make it effective.
-* **Use large data and turn on prefetch**: Using larger input data will help MGARD-X achieve more efficient compression and decompression pipeline. The high-level API allows users to provide data larger than the available memory size on the GPU. In this case, MGARD-X can achieve much better performance with pipeline optimization. Please be sure to set ```Config.prefetch = true```.
-* **Use decompsition operation**: MGARD-X can be configured to reornagize the input data to imporve the performance of its multilevel decompsition process. To enable such optimization, set ```Config.prefetch = adjust_shape```.
+* **Use large data**: Using larger input data will help MGARD-X achieve more efficient compression and decompression pipeline. The high-level API allows users to provide data larger than the available memory size on the GPU. In this case, MGARD-X can achieve much better performance with pipeline optimization (always enabled).
+* **Use decompsition operation**: MGARD-X can be configured to reornagize the input data to imporve the performance of its multilevel decompsition process. To enable such optimization, set ```Config.adjust_shape = true```.
 
 ## Performance
 The figures below show the compression and decompression throughput of MGARD-X on single CPU (multi-core) and GPU. XGC fusion simulation data is used for compression and decompression.
