@@ -96,9 +96,9 @@ template <typename DeviceType> struct Metadata : MetadataBase {
   template <typename T>
   void FillForCompression(enum error_bound_type ebtype, T tol, T s, T norm,
                           enum decomposition_type decomposition,
-                          enum lossless_type ltype,
-                          uint32_t huff_dict_size, uint32_t huff_block_size,
-                          std::vector<SIZE> shape, bool domain_decomposed,
+                          enum lossless_type ltype, uint32_t huff_dict_size,
+                          uint32_t huff_block_size, std::vector<SIZE> shape,
+                          bool domain_decomposed,
                           domain_decomposition_type ddtype,
                           uint8_t domain_decomposed_dim,
                           uint64_t domain_decomposed_size) {

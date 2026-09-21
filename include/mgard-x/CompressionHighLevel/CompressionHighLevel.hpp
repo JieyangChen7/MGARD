@@ -283,15 +283,15 @@ general_compress_pipeline(std::vector<SIZE> shape, T tol, T s,
   }
   if (uniform) {
     m.FillForCompression(
-        ebtype, tol, s, norm, config.decomposition,
-        config.lossless, config.huff_dict_size, config.huff_block_size, shape,
+        ebtype, tol, s, norm, config.decomposition, config.lossless,
+        config.huff_dict_size, config.huff_block_size, shape,
         domain_decomposer.domain_decomposed(), config.domain_decomposition,
         domain_decomposer.domain_decomposed_dim(),
         domain_decomposer.domain_decomposed_size());
   } else {
     m.FillForCompression(
-        ebtype, tol, s, norm, config.decomposition,
-        config.lossless, config.huff_dict_size, config.huff_block_size, shape,
+        ebtype, tol, s, norm, config.decomposition, config.lossless,
+        config.huff_dict_size, config.huff_block_size, shape,
         domain_decomposer.domain_decomposed(), config.domain_decomposition,
         domain_decomposer.domain_decomposed_dim(),
         domain_decomposer.domain_decomposed_size(), coords);
@@ -330,15 +330,15 @@ general_compress_pipeline(std::vector<SIZE> shape, T tol, T s,
     timer_each.start();
   if (uniform) {
     m.FillForCompression(
-        ebtype, tol, s, norm, config.decomposition,
-        config.lossless, config.huff_dict_size, config.huff_block_size, shape,
+        ebtype, tol, s, norm, config.decomposition, config.lossless,
+        config.huff_dict_size, config.huff_block_size, shape,
         domain_decomposer.domain_decomposed(), config.domain_decomposition,
         domain_decomposer.domain_decomposed_dim(),
         domain_decomposer.domain_decomposed_size());
   } else {
     m.FillForCompression(
-        ebtype, tol, s, norm, config.decomposition,
-        config.lossless, config.huff_dict_size, config.huff_block_size, shape,
+        ebtype, tol, s, norm, config.decomposition, config.lossless,
+        config.huff_dict_size, config.huff_block_size, shape,
         domain_decomposer.domain_decomposed(), config.domain_decomposition,
         domain_decomposer.domain_decomposed_dim(),
         domain_decomposer.domain_decomposed_size(), coords);
