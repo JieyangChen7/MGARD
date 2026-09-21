@@ -1,7 +1,7 @@
 /*
  * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
- * Author: Jieyang Chen (chenj3@ornl.gov)
- * Date: Jul 20, 2021
+ * Author: Jieyang Chen (jieyang@uoregon.edu)
+ * Date: September 21, 2026
  */
 
 #ifndef MGARD_X_SUBARRAY_HPP

@@ -1,8 +1,8 @@
 /*
- * Copyright 2021, Oak Ridge National Laboratory.
+ * Copyright 2026, Oak Ridge National Laboratory.
  * MGARD-GPU: MultiGrid Adaptive Reduction of Data Accelerated by GPUs
- * Author: Jieyang Chen (chenj3@ornl.gov)
- * Date: April 2, 2021
+ * Author: Jieyang Chen (jieyang@uoregon.edu)
+ * Date: September 21, 2026
  */
 
 #include <chrono>

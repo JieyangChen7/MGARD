@@ -1,8 +1,8 @@
 /*
- * Copyright 2023, Oak Ridge National Laboratory.
+ * Copyright 2026, Oak Ridge National Laboratory.
  * MGARD-X: MultiGrid Adaptive Reduction of Data Portable across GPUs and CPUs
- * Author: Jieyang Chen (chenj3@ornl.gov)
- * Date: Jan. 15, 2023
+ * Author: Jieyang Chen (jieyang@uoregon.edu)
+ * Date: September 21, 2026
  */
 
 #ifndef MGARD_X_RECOMPOSE_8x8x8_KERNEL_TEMPLATE
